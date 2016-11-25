@@ -1,0 +1,34 @@
+<%@ page language="java" contentType="text/html; charset=UTF-8"%>
+<%
+	String path = request.getContextPath();
+	String basePath = request.getScheme() + "://" + request.getServerName() + ":" + request.getServerPort() + path + "/";
+%>
+<script>
+	window.basePath = "<%=basePath %>";
+</script>
+
+<title>个人后台首页</title>
+<link rel="stylesheet" type="text/css"
+	href="<%=request.getContextPath()%>/statics/css/glbdy.css" />
+<link rel="stylesheet" type="text/css"
+	href="<%=request.getContextPath()%>/statics/css/index.css" />
+<link rel="stylesheet" type="text/css"
+	href="<%=request.getContextPath()%>/statics/css/mzh_dd.css" />
+<link rel="stylesheet" type="text/css"
+	href="<%=request.getContextPath()%>/statics/css/style.default.css" />
+<link rel="stylesheet" type="text/css"
+	href="<%=request.getContextPath()%>/statics/css/jquery-breadcrumbs.css" />
+
+<script type="text/javascript"
+	src="<%=request.getContextPath()%>/statics/js/jquery-1.11.2.js"></script>
+<script type="text/javascript"
+	src="<%=request.getContextPath()%>/statics/js/default.main.js"></script>
+<script type="text/javascript"
+	src="<%=request.getContextPath()%>/statics/js/extends_fn.js"></script>
+<script type="text/javascript"
+	src="<%=request.getContextPath()%>/statics/js/spin.min.js"></script>
+<script type="text/javascript"
+	src="<%=request.getContextPath()%>/statics/js/pagination.js"></script>
+	
+<script type="text/javascript"
+	src="<%=request.getContextPath()%>/statics/js/jquery-breadcrumbs.js"></script>

@@ -1,0 +1,48 @@
+package com.okwei.myportal.bean.vo;
+
+public class ProcessModelVO
+{
+    /**
+     * 序号索引
+     */
+    private int index;
+    /**
+     * 流程名称
+     */
+    private String processName;
+    /**
+     * 时间
+     */
+    private String processTime;
+
+    public int getIndex()
+    {
+        return index;
+    }
+
+    public void setIndex(int index)
+    {
+        this.index = index;
+    }
+
+    public String getProcessName()
+    {
+        return processName;
+    }
+
+    public void setProcessName(String processName)
+    {
+        this.processName = processName;
+    }
+
+    public String getProcessTime()
+    {
+        return processTime;
+    }
+
+    public void setProcessTime(String processTime)
+    {
+        this.processTime = processTime;
+    }
+
+}

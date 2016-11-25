@@ -1,0 +1,629 @@
+package com.okwei.supplyportal.service.impl;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.Iterator;
+import java.util.List;
+
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.okwei.bean.domain.PParamKey;
+import com.okwei.bean.domain.PParamModel;
+import com.okwei.bean.domain.PParamValues;
+import com.okwei.bean.domain.PPostAgeModel;
+import com.okwei.bean.domain.PPreOrder;
+import com.okwei.bean.domain.PProductBatchPrice;
+import com.okwei.bean.domain.PProductClass;
+import com.okwei.bean.domain.PProductImg;
+import com.okwei.bean.domain.PProductKeyWords;
+import com.okwei.bean.domain.PProductParamKv;
+import com.okwei.bean.domain.PProductSellKey;
+import com.okwei.bean.domain.PProductSellValue;
+import com.okwei.bean.domain.PProductStyleKv;
+import com.okwei.bean.domain.PProductStyles;
+import com.okwei.bean.domain.PProducts;
+import com.okwei.bean.domain.PShopClass;
+import com.okwei.bean.domain.UBatchSupplyer;
+import com.okwei.bean.domain.UYunSupplier;
+import com.okwei.supplyportal.bean.enums.BaseResultStateEnum;
+import com.okwei.supplyportal.bean.enums.SupplierStatusEnum;
+import com.okwei.supplyportal.bean.vo.BaseProduct;
+import com.okwei.supplyportal.bean.vo.BaseResultVO;
+import com.okwei.supplyportal.bean.vo.EditProductVO;
+import com.okwei.supplyportal.bean.vo.PPreOrderVO;
+import com.okwei.supplyportal.bean.vo.PostAgeModelVO;
+import com.okwei.supplyportal.bean.vo.ProductBatchPriceVO;
+import com.okwei.supplyportal.bean.vo.ProductClassVO;
+import com.okwei.supplyportal.bean.vo.ProductImgVO;
+import com.okwei.supplyportal.bean.vo.ProductParamKeyVO;
+import com.okwei.supplyportal.bean.vo.ProductParamModelVO;
+import com.okwei.supplyportal.bean.vo.ProductParamVO;
+import com.okwei.supplyportal.bean.vo.ProductParamValueVO;
+import com.okwei.supplyportal.bean.vo.ProductSellKeyVO;
+import com.okwei.supplyportal.bean.vo.ProductSellValueVO;
+import com.okwei.supplyportal.bean.vo.ProductStyleKVVO;
+import com.okwei.supplyportal.bean.vo.ProductStylesVO;
+import com.okwei.supplyportal.bean.vo.ShopClassVO;
+import com.okwei.supplyportal.dao.IEditProductInfoDAO;
+import com.okwei.supplyportal.service.IEditProductInfoService;
+import com.okwei.service.impl.BaseService;
+import com.okwei.util.ImgDomain;
+
+@Service
+public class EditProductInfoService extends BaseService implements IEditProductInfoService {
+	
+	@Autowired	
+	private IEditProductInfoDAO editProductInfoDAO;
+	
+	@Override
+	public boolean getPower(long weiID) {
+		//产品发布限制  
+		// 1.正式的云商 与 批发号 才能发布产品
+		UYunSupplier yunSupplier = editProductInfoDAO.getYunSupplier(weiID);
+		UBatchSupplyer batchSupplyer = editProductInfoDAO.getBatchSupplyer(weiID);
+		
+		// 2.判断该供应商 是否被限制发布 暂时不处理
+		
+		// 3.每个供应商每天最多发布2000
+		long todayPNum =  editProductInfoDAO.getTodayCreateProduct(weiID);
+		if((yunSupplier.getStatus() == Short.parseShort(SupplierStatusEnum.PayIn.toString())  || 
+				batchSupplyer.getStatus() == Short.parseShort(SupplierStatusEnum.PayIn.toString()))
+				&& todayPNum <2000)
+		{
+			return true;
+		}
+		// 4.审核通过  未交钱的 云商 与 批发号 只能发10个。
+		if((yunSupplier.getStatus() == Short.parseShort(SupplierStatusEnum.Pass.toString())  || 
+				batchSupplyer.getStatus() == Short.parseShort(SupplierStatusEnum.Pass.toString()))
+				&& todayPNum <10)
+		{
+			return true;
+		}
+		
+		return false;
+	}
+
+	@Override
+	public EditProductVO getProductInfo(long productID) {
+		EditProductVO baseProduct = new EditProductVO();
+		
+		//1.商品主表
+		PProducts product = editProductInfoDAO.getProduct(productID);
+		if(product ==null)
+		{
+			return baseProduct;
+		}
+		
+		baseProduct.setCommission(product.getDefaultConmision());
+		baseProduct.setFreightId(product.getFreightId());
+		baseProduct.setPrice(product.getDefaultPrice());
+		baseProduct.setProductId(product.getProductId());
+		baseProduct.setProductImg(product.getDefaultImg());
+		baseProduct.setProductMinTitle(product.getProductMinTitle());
+		baseProduct.setProductTitle(product.getProductTitle());
+		baseProduct.setSid(product.getSid());
+		baseProduct.setSupplyerWeiid(product.getSupplierWeiId());
+		baseProduct.setClassId(product.getClassId());
+		baseProduct.setmID(product.getMid());
+		
+		//6.产品关键词
+		List<PProductKeyWords> keyWordList = editProductInfoDAO.getKeyWordList(productID);
+		if(keyWordList !=null && keyWordList.size()>0)
+		{
+			String keywords = "";
+			for (PProductKeyWords item : keyWordList) {
+				keywords += item.getKeyWord() +" ";
+			}
+			baseProduct.setKeyWords(keywords);
+		}
+		//2.商品属性
+		List<PProductParamKv> paramList = editProductInfoDAO.getParamList(productID);
+		if(paramList != null && paramList.size()>0)
+		{
+			List<ProductParamVO> paramVOList = new ArrayList<ProductParamVO>();
+			for (PProductParamKv item : paramList) {
+				ProductParamVO paramVO = new ProductParamVO();
+				paramVO.setParamName(item.getParamName());
+				paramVO.setParamValue(item.getParamName());
+				paramVO.setSysAVID(item.getSysAVID());
+				paramVO.setSysAttributeID(item.getSysAttributeID());
+				paramVO.setKvid(item.getKvid());
+				
+				paramVOList.add(paramVO);
+			}
+			baseProduct.setParamList(paramVOList);
+		}
+		//3.商品图片
+		List<PProductImg> imgList = editProductInfoDAO.getImgList(productID);
+		if(imgList !=null && imgList.size()>0)
+		{
+			List<ProductImgVO> imgVOList = new ArrayList<ProductImgVO>();
+			for (PProductImg item : imgList) {
+				ProductImgVO imgVO = new ProductImgVO();
+				imgVO.setImgPath( ImgDomain.GetFullImgUrl(item.getImgPath()));
+				imgVO.setProductImgId(item.getProductImgId());
+			
+				imgVOList.add(imgVO);
+			}
+			baseProduct.setImgList(imgVOList);
+		}
+		//4.商品销售属性
+		//a.属性Key
+		List<PProductSellKey> sellKeyList = editProductInfoDAO.getSellKeyList(productID);
+		List<PProductSellValue> sellValueList = editProductInfoDAO.getSellValueList(productID);
+		if(sellKeyList != null && sellKeyList.size()>0)
+		{
+			List<ProductSellKeyVO> sellkeyVOList = new ArrayList<ProductSellKeyVO>();
+			for (PProductSellKey keyitem : sellKeyList) {
+				ProductSellKeyVO sellKeyVO = new ProductSellKeyVO();
+				sellKeyVO.setAttributeId(keyitem.getAttributeId());
+				sellKeyVO.setAttributeName(keyitem.getAttributeName());
+				sellKeyVO.setSort(keyitem.getSort());
+				if(sellValueList !=null && sellValueList.size()>0)
+				{
+					List<ProductSellValueVO> sellValueVOList = new ArrayList<ProductSellValueVO>();
+					for (PProductSellValue valueItem : sellValueList) {						
+						if((long)keyitem.getAttributeId() == (long)valueItem.getAttributeId())
+						{
+							ProductSellValueVO sellValueVO = new ProductSellValueVO();
+							sellValueVO.setAttributeId(valueItem.getAttributeId());
+							sellValueVO.setClassId(valueItem.getClassId());
+							sellValueVO.setDefaultImg(ImgDomain.GetFullImgUrl(valueItem.getDefaultImg()));
+							sellValueVO.setKeyId(valueItem.getKeyId());
+							sellValueVO.setProductId(valueItem.getProductId());
+							sellValueVO.setValue(valueItem.getValue());
+							
+							sellValueVOList.add(sellValueVO);
+						}
+					}
+					sellKeyVO.setSellValueList(sellValueVOList);
+				}				
+				sellkeyVOList.add(sellKeyVO);
+			}
+			baseProduct.setSellKeyList(sellkeyVOList);
+		}
+			
+		//c. 款式 属性Kv
+		List<PProductStyles> styleList = editProductInfoDAO.getStyleList(productID);
+		List<PProductStyleKv> styleKVList = editProductInfoDAO.getStyleKvList(productID);
+		if(styleList !=null && styleKVList.size()>0)
+		{
+			List<ProductStylesVO> stylesVOList = new ArrayList<ProductStylesVO>();
+			for (PProductStyles styleItem : styleList) {
+				ProductStylesVO stylesVO = new ProductStylesVO();
+				stylesVO.setBussinessNo(styleItem.getBussinessNo());
+				stylesVO.setConmision(styleItem.getConmision());
+				stylesVO.setCount(styleItem.getCount());
+				stylesVO.setDefaultImg(styleItem.getDefaultImg());
+				stylesVO.setPrice(styleItem.getPrice());
+				stylesVO.setStylesId(styleItem.getStylesId());
+				
+				List<ProductStyleKVVO> styleKVVOList = new ArrayList<ProductStyleKVVO>();
+				for (PProductStyleKv kvItem : styleKVList) {
+					if((long)kvItem.getStylesId() == (long)styleItem.getStylesId())
+					{
+						ProductStyleKVVO styleKVVO = new ProductStyleKVVO();
+						styleKVVO.setAttributeId(kvItem.getAttributeId());
+						styleKVVO.setKeyId(kvItem.getKeyId());
+						styleKVVO.setKvid(kvItem.getKvid());
+						styleKVVO.setStylesId(kvItem.getStylesId());
+						for (PProductSellKey keyItem : sellKeyList) {
+							if((long)kvItem.getAttributeId() == (long)keyItem.getAttributeId())
+							{
+								styleKVVO.setAttrbuteName(keyItem.getAttributeName());
+								break;
+							}
+						}
+						for (PProductSellValue valueItem : sellValueList) {
+							if((long)kvItem.getKeyId() == (long) valueItem.getKeyId())
+							{
+								styleKVVO.setValueName(valueItem.getValue());
+							}
+						}
+						//键值对 添加到列表
+						styleKVVOList.add(styleKVVO);
+					}
+				}
+				//设置款式的属性键值对
+				stylesVO.setStyleKVList(styleKVVOList);
+				//款式添加到款式列表中
+				stylesVOList.add(stylesVO);
+			}
+			baseProduct.setStyleList(stylesVOList);
+		}
+		//5.批发阶梯价格
+		List<PProductBatchPrice> batchPriceList = editProductInfoDAO.getBatchPriceList(productID);
+		if(batchPriceList !=null && batchPriceList.size()>0)
+		{
+			List<ProductBatchPriceVO> batchPriceVOList = new ArrayList<ProductBatchPriceVO>();
+			for (PProductBatchPrice item : batchPriceList) {
+				ProductBatchPriceVO bPriceVO = new ProductBatchPriceVO();
+				bPriceVO.setBid(item.getBid());
+				bPriceVO.setCount(item.getCount());
+				bPriceVO.setPirce(item.getPirce());
+				bPriceVO.setStylesId(item.getStylesId());
+				
+				batchPriceVOList.add(bPriceVO);
+			}
+			baseProduct.setBatchPriceList(batchPriceVOList);			
+		}
+		//6.预定价格
+		PPreOrder preOrder = editProductInfoDAO.getPreOrder(productID);
+		if(preOrder !=null)
+		{
+			PPreOrderVO preOrderVO = new PPreOrderVO();
+			preOrderVO.setContent(preOrder.getContent());
+			preOrderVO.setPreOrderPrice(preOrder.getPreOrderPrice());
+			
+			baseProduct.setPreOrder(preOrderVO);
+		}
+		
+		return baseProduct;
+	}
+
+	@Override
+	public ProductClassVO getClassInfo(int classID) {
+		if(classID<1)
+		{
+			return null;
+		}
+		PProductClass pClass = editProductInfoDAO.getProductClass(classID);
+		if(pClass !=null)
+		{
+			ProductClassVO result = new ProductClassVO();
+			result.setClassID(pClass.getClassId());
+			result.setClssName(pClass.getClassName());
+			
+			PProductClass pClass2 = editProductInfoDAO.getProductClass(pClass.getParentId());
+			if(pClass2 !=null)
+			{
+				result.setTwoClassID(pClass2.getClassId());
+				result.setTwoClassName(pClass2.getClassName());
+				
+				PProductClass pClass1 = editProductInfoDAO.getProductClass(pClass2.getParentId());
+				if(pClass1 !=null)
+				{
+					result.setOneClassID(pClass.getClassId());
+					result.setOneClassName(pClass2.getClassName());
+				}
+			}
+			
+			return result;
+		}
+			
+		return null;
+	}
+	
+	@Override
+	public List<PostAgeModelVO> getPostAgeList(long weiID) {
+		List<PPostAgeModel> modelList = editProductInfoDAO.getPostAgeModelList(weiID);
+		
+		if(modelList !=null && modelList.size()>0)
+		{
+			List<PostAgeModelVO> result = new ArrayList<PostAgeModelVO>();
+			for (PPostAgeModel item : modelList) {
+				PostAgeModelVO modelVO = new PostAgeModelVO();
+				modelVO.setBillingType(item.getBillingType());
+				modelVO.setDeliveryAddress(item.getDeliveryAddress());
+				modelVO.setDeliverytime(item.getDeliverytime());
+				modelVO.setFree(item.getFree());
+				modelVO.setFreightId(item.getFreightId());
+				modelVO.setPostAgeName(item.getPostAgeName());
+				modelVO.setStatus(item.getStatus());
+				modelVO.setSupplierWeiId(item.getSupplierWeiId());
+				
+				result.add(modelVO);
+			}			
+			return result;
+		}
+		return null;
+	}
+
+	@Override
+	public List<ShopClassVO> getShopClassList(long weiID) {
+		List<PShopClass> shopClasseList = editProductInfoDAO.getShopClasseList(weiID);
+		if(shopClasseList !=null && shopClasseList.size()>0)
+		{
+			List<ShopClassVO> result = new ArrayList<ShopClassVO>();
+			for (PShopClass item : shopClasseList) {
+				ShopClassVO classVO = new ShopClassVO();
+				classVO.setSid(item.getSid());
+				classVO.setSname(item.getSname());
+				classVO.setSort(item.getSort());
+				classVO.setState(item.getState());
+				classVO.setType(item.getType());
+				classVO.setWeiid(item.getWeiid());
+				
+				result.add(classVO);
+			}
+			return result;
+		}
+		
+		return null;
+	}
+
+	@Override
+	public BaseResultVO saveProductParam(ProductParamModelVO paramModel) {
+		BaseResultVO result = new BaseResultVO();
+		result.setMessage("数据提交失败，请稍后重试！");
+		result.setState(BaseResultStateEnum.Failure);
+		
+		long mnum = editProductInfoDAO.getIsHavePMName(paramModel.getSupplierWeiId(), paramModel.getMname());
+		if(mnum >0){
+			result.setMessage("该模板名称已存在！");
+			return result;
+		}
+		
+		PParamModel pModel = new PParamModel();
+		pModel.setClassId(paramModel.getClassId());
+		pModel.setMname(paramModel.getMname());
+		pModel.setState((short)1);
+		pModel.setSupplierWeiId(paramModel.getSupplierWeiId());
+		pModel.setCreateTime(new Date());
+		int mid =editProductInfoDAO.saveParamModel(pModel);
+		if(mid<1){
+			return result;
+		}
+			
+		for (ProductParamKeyVO keyVO : paramModel.getKeyList()) {
+			PParamKey km = editProductInfoDAO.getParamKeyModel(keyVO.getAttributeId());
+			PParamKey keyModel = new PParamKey();
+			keyModel.setMid(mid);
+			keyModel.setAttributeName(keyVO.getAttributeName());
+			keyModel.setClassid(paramModel.getClassId());
+			keyModel.setCreateTime(new Date());
+			keyModel.setSort((short)1);
+			if(km !=null){
+				keyModel.setIsMust(km.getIsMust());
+				keyModel.setShowtype(km.getShowtype());			
+				keyModel.setSysAttributeID(km.getSysAttributeID());
+			}else{
+				keyModel.setIsMust((short)0);
+				keyModel.setShowtype((short)1);			
+				keyModel.setSysAttributeID(0);
+			}
+			
+			int keyID = editProductInfoDAO.saveParamKey(keyModel);
+			if(keyID<1){
+				return result;
+			}
+			
+			for (ProductParamValueVO valueVO : keyVO.getValueList()) {	
+				if(valueVO.getValue()==null || valueVO.getValue() ==""){
+					continue;
+				}
+				PParamValues valueModel = new PParamValues();
+				valueModel.setAttributeId(keyID);
+				valueModel.setCreateTime(new Date());
+				valueModel.setIsDefault(valueVO.getIsDefault());
+				valueModel.setState((short)1);				
+				valueModel.setValue(valueVO.getValue());
+				//获取系统属性模板值ID
+				PParamValues vm =editProductInfoDAO.getParamValueModel(valueVO.getAvid());
+				if(vm !=null ){
+					valueModel.setSysAVID(vm.getSysAVID());
+				}else{
+					valueModel.setSysAVID(0);
+				}
+				
+				editProductInfoDAO.saveParamValue(valueModel);
+			}			
+		}
+		
+		result.setMessage(Integer.toString(mid));
+		result.setState(BaseResultStateEnum.Success);		
+		return result;
+	}
+	
+	@Override
+	public BaseResultVO saveShopClass(String scName,long weiID) {
+		
+		BaseResultVO result = new BaseResultVO();
+		long num = editProductInfoDAO.getIsHaveShopName(weiID, scName);
+		if(num>0){
+			result.setState(BaseResultStateEnum.Failure);
+			result.setMessage("该分类名称已存在！");
+			return result;
+		}
+		
+		PShopClass psClass = new PShopClass();
+		psClass.setCreateTime(new Date());
+		psClass.setSname(scName);
+		psClass.setWeiid(weiID);
+		psClass.setSort((short)0);
+		psClass.setState((short)1);
+		psClass.setType((short)1);	
+		
+		long scID = editProductInfoDAO.saveShopClass(psClass);
+		if(scID>0){
+			result.setState(BaseResultStateEnum.Success);
+			result.setMessage(Long.toString(scID));
+		}else{
+			result.setState(BaseResultStateEnum.Failure);
+			result.setMessage("提交失败");
+		}
+		
+		return result;
+	}
+	
+	@Override
+	public BaseResultVO editProductInfo(BaseProduct product) {
+		// 1.修改产品 必须判断该商品是否是自己的
+		return null;
+	}
+
+	@Override
+	public ProductParamModelVO getParamModel(int tempID) {		
+		PParamModel model = editProductInfoDAO.getParamModel(tempID);
+		if(model ==null)
+		{
+			return null;
+		}
+		ProductParamModelVO result = new ProductParamModelVO(); 	
+		result.setMname(model.getMname());
+		result.setMid(model.getMid());
+		//获取Key列表
+		List<PParamKey> keyList = editProductInfoDAO.getParamKeyList(tempID);
+		if(keyList !=null && keyList.size()>0)
+		{
+			Integer[] keys = new Integer[keyList.size()];
+			List<ProductParamKeyVO> keyVOList = new ArrayList<ProductParamKeyVO>();
+			for(int i=0;i<keyList.size();i++)
+			{
+				PParamKey itemKey = keyList.get(i);				
+				if(itemKey !=null)
+				{
+					ProductParamKeyVO keyVO = new ProductParamKeyVO();
+					keys[i] = itemKey.getAttributeId();	
+					keyVO.setAttributeName(itemKey.getAttributeName());
+					keyVO.setAttributeId(itemKey.getAttributeId());
+					keyVO.setIschooseparam(itemKey.getIschooseparam());
+					keyVO.setShowtype(itemKey.getShowtype());
+					keyVO.setSort(itemKey.getSort());	
+					keyVO.setSysAttributeID(itemKey.getSysAttributeID());
+					keyVO.setIsMust(itemKey.getIsMust());
+					keyVOList.add(keyVO);
+				}				
+			}
+			
+			//获取所有的value  列表
+			List<PParamValues> valueList = editProductInfoDAO.getParamValueList(keys);
+			if(valueList !=null && valueList.size()>0)
+			{
+				//设置key的值列表
+				for (ProductParamKeyVO keyItem : keyVOList) {
+					List<ProductParamValueVO> valueVOList = new ArrayList<ProductParamValueVO>();
+					for (PParamValues valueItem : valueList) {					
+						if((int)keyItem.getAttributeId() ==(int)valueItem.getAttributeId())
+						{
+							ProductParamValueVO valueVO = new ProductParamValueVO();
+							valueVO.setAttributeId(valueItem.getAttributeId());
+							valueVO.setAvid(valueItem.getAvid());
+							valueVO.setIsDefault(valueItem.getIsDefault());
+							valueVO.setState(valueItem.getState());
+							valueVO.setSysAVID(valueItem.getSysAVID());
+							valueVO.setValue(valueItem.getValue());
+							if(valueItem.getIsDefault() ==1){
+								if(keyItem.getValueName() !=null && keyItem.getValueName() !=""){
+									keyItem.setValueName(keyItem.getValueName() +" " +valueItem.getValue());
+								}else{
+									keyItem.setValueName(valueItem.getValue());
+								}
+							}
+							valueVOList.add(valueVO);
+						}						
+					}
+					//如果系统属性是没有值的。 弄一个空值给它 留着 不删 
+					/*if(valueVOList.size()==0){
+						ProductParamValueVO valueVO = new ProductParamValueVO();
+						valueVO.setAttributeId(0);
+						valueVO.setAvid(0);
+						valueVO.setIsDefault((short)0);
+						valueVO.setState((short)1);
+						valueVO.setSysAVID(0);
+						valueVO.setValue("");
+						valueVOList.add(valueVO);
+					}*/
+					keyItem.setValueList(valueVOList);
+				}
+			}
+			result.setKeyList(keyVOList);
+			return result;
+		}
+		
+		return null;
+	}
+
+	@Override
+	public ProductParamModelVO getProductParamModel(int mid, long productID) {
+		//1.先获取该模板信息
+		ProductParamModelVO paramModelVO = this.getParamModel(mid);
+		//2.获取该商品的商品属性
+		List<PProductParamKv> paramList = editProductInfoDAO.getParamList(productID);
+		//模板不存在 且该商品参数为空 
+		if(paramModelVO ==null &&(paramList ==null || paramList.size()<1))
+		{
+			return null;
+		}
+		else if(paramList ==null || paramList.size()<1)
+		{
+			return paramModelVO;
+		}
+		else if(paramModelVO == null)
+		{
+			paramModelVO = new ProductParamModelVO();
+		}
+		//遍历模板的key列表
+		if(paramModelVO.getKeyList() !=null && paramModelVO.getKeyList().size()>0){
+			//遍历商品的参数 如果是系统的参数 使用后删除
+			Iterator<PProductParamKv> iter = paramList.iterator();  
+			//设置key的值 
+			for (ProductParamKeyVO modelKey : paramModelVO.getKeyList()) {
+				while(iter.hasNext()){  
+					PProductParamKv paramKv = iter.next();  
+					if((int) modelKey.getAttributeId() ==(int) paramKv.getAttributeID()){
+						modelKey.setValueName(paramKv.getParamValue());
+						//根据不同的展示方式 还原模板
+						if(modelKey.getShowtype() !=1){
+							if(modelKey.getValueList() !=null && modelKey.getValueList().size()>0){								
+								for (ProductParamValueVO pv : modelKey.getValueList()) {
+									if((int)pv.getAvid() == (int)paramKv.getaVID()){
+										pv.setIsDefault((short)1);
+									}
+								}
+							}
+						}else{//如果是普通的文本框
+							 // 直接覆盖模板中的值							
+							if(modelKey.getValueList() !=null && modelKey.getValueList().size()>0){
+								modelKey.getValueList().get(0).setValue(paramKv.getParamValue());
+							}else{
+								List<ProductParamValueVO> pvList = new ArrayList<ProductParamValueVO>();
+								ProductParamValueVO pv = new  ProductParamValueVO();
+								pv.setAttributeId(paramKv.getAttributeID());
+								pv.setAvid(paramKv.getaVID());
+								pv.setSysAVID(paramKv.getSysAVID());
+								pv.setValue(paramKv.getParamValue());								
+								pvList.add(pv);
+								modelKey.setValueList(pvList);
+							}							
+						}					
+						iter.remove();
+					}
+				 }				
+			}
+		}
+		
+		//设置返回的参数模板的key列表
+		List<ProductParamKeyVO> paramVOList = new ArrayList<ProductParamKeyVO>();
+		for (PProductParamKv item : paramList) {
+			//单个Key实体
+			ProductParamKeyVO paramKeyVO = new ProductParamKeyVO();			
+			paramKeyVO.setAttributeName(item.getParamName());
+			paramKeyVO.setSysAttributeID(item.getSysAttributeID());	
+			paramKeyVO.setAttributeId(item.getAttributeID());
+			paramKeyVO.setValueName(item.getParamValue());
+			paramKeyVO.setShowtype((short)1);
+			
+			List<ProductParamValueVO> pvList = new ArrayList<ProductParamValueVO>();
+			ProductParamValueVO pv = new  ProductParamValueVO();
+			pv.setAttributeId(item.getAttributeID());
+			pv.setAvid(item.getaVID());
+			pv.setSysAVID(item.getSysAVID());
+			pv.setValue(item.getParamValue());								
+			pvList.add(pv);			
+			paramKeyVO.setValueList(pvList);
+						
+			paramVOList.add(paramKeyVO);
+		}
+		//合并系统属性 与 自定义属性 列表
+		if(paramModelVO.getKeyList() ==null){
+			paramModelVO.setKeyList(paramVOList);
+		}else{
+			paramModelVO.getKeyList().addAll(paramVOList);
+		}
+		
+		return paramModelVO;
+	}
+}

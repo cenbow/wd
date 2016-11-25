@@ -1,0 +1,11 @@
+package com.okwei.supplyportal.dao;
+
+import com.okwei.bean.domain.OSupplyerOrder;
+import com.okwei.common.Limit;
+import com.okwei.common.PageResult;
+import com.okwei.supplyportal.bean.vo.ParamOrderSearch;
+
+public interface IOrderManageDAO {
+	
+	PageResult<OSupplyerOrder> getSupplyOrderlistResult(ParamOrderSearch param, Limit limit);
+}

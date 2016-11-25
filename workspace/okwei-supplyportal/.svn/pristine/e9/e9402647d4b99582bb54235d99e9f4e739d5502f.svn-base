@@ -1,0 +1,37 @@
+<%@ page language="java" contentType="text/html; charset=UTF-8"%>
+<%
+	String path = request.getContextPath();
+	String basePath = request.getScheme() + "://" + request.getServerName() + ":" + request.getServerPort() + path + "/";
+%>
+<script>
+	window.basePath = "<%=basePath %>";
+</script>
+<div id="leftMenu" class="fl conter_left">
+	<div class="p10">
+		<h2>
+			<img class="ico_5" src="<%=request.getContextPath()%>/statics/images/space.gif">产品管理<i></i>
+		</h2>
+		<ul>
+			<li><a href="3-3（供应商管理）发布产品.html">发布产品</a></li>
+			<li class="now"><a href="#">我的产品</a></li>
+		</ul>
+		<h2>
+			<img class="ico_6" src="<%=request.getContextPath()%>/statics/images/space.gif">订单管理<i></i>
+		</h2>
+		<ul>
+			<li><a href="4-1（供应商管理）已销售的产品.html">我的销售订单</a></li>
+		</ul>
+		<h2>
+			<img class="ico_3" src="<%=request.getContextPath()%>/statics/images/space.gif">商城管理<i></i>
+		</h2>
+		<ul>
+			<li><a href="5-1（供应商管理）微商城.html">微商城</a></li>
+			<li><a href="6-1（供应商管理）客服QQ.html">客服QQ</a></li>
+			<li><a href="7-1（增值认证）-品牌认证.html">品牌认证</a></li>
+		</ul>
+	</div>
+</div>
+
+
+
+

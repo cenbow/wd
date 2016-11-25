@@ -1,0 +1,235 @@
+package com.okwei.myportal.web;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+import com.okwei.bean.domain.PShopClass;
+import com.okwei.bean.vo.LoginUser;
+import com.okwei.common.JsonUtil;
+import com.okwei.common.PageResult;
+import com.okwei.myportal.bean.dto.QueryParam;
+import com.okwei.myportal.bean.enums.ShopClassStatusEnum;
+import com.okwei.myportal.bean.enums.ShopClassTypeEnum; 
+import com.okwei.myportal.bean.vo.MsgResult;
+import com.okwei.myportal.bean.vo.ShopClassNewVO;
+import com.okwei.myportal.bean.vo.ShopClassVO;
+import com.okwei.myportal.service.IShopClassService;
+import com.okwei.myportal.service.impl.ShopClassService;
+import com.okwei.util.ObjectUtil;
+import com.okwei.web.base.SSOController;
+
+@Controller
+@RequestMapping(value = "/shopClass")
+public class ShopClassController extends SSOController
+{
+    @Autowired
+    IShopClassService shopClassService;
+
+    /**
+     * （分页）查询分类列表
+     * 
+     * @param pageId
+     *            当前页数
+     * @param pageSize
+     *            每页显示的行数
+     * @param model
+     * @return
+     */
+    @RequestMapping(value = "/classList")
+    public String classList(@RequestParam(required = false,defaultValue = "1") int pageId,@RequestParam(required = false,defaultValue = "10") int pageSize,Model model)
+    {
+        LoginUser user = getUserOrSub();
+        model.addAttribute("userinfo",user);
+        int newId = 0;//是否新身份（平台号、品牌号、代理商、落地店）0-否1-是
+        if (Short.valueOf("1").equals(user.getPph()) || Short.valueOf("1").equals(user.getPth())
+				|| Short.valueOf("1").equals(user.getPthdls()) || Short.valueOf("1").equals(user.getPthldd())) {
+			newId = 1;
+		}
+//        newId = 1;
+        long weiid = user.getWeiID();
+        PageResult<ShopClassNewVO> pr = shopClassService.getShopClassListByCid(weiid,pageId,pageSize);
+        model.addAttribute("result",pr);
+        model.addAttribute("newId",newId);
+        return "shopClass/classList";
+    }
+
+    /********************************************** 异步 *********************************************/
+    /**
+     * 添加分类
+     * 
+     * @param className
+     *            分类名称
+     * @return
+     */
+    @ResponseBody
+    @RequestMapping(value = "/addClass",method =
+    {RequestMethod.POST,RequestMethod.GET})
+    public String addClass(String className)
+    {
+        className = className.trim();
+        LoginUser user = getUserOrSub();
+        long weiid = user.getWeiID();
+        short type = Short.parseShort(ShopClassTypeEnum.Ordinary.toString());
+        if(user.getYunS() != null && user.getYunS() == 1)
+        {
+            type = Short.parseShort(ShopClassTypeEnum.Supplier.toString());
+        }
+        if(user.getBatchS() != null && user.getBatchS() == 1)
+        {
+            type = Short.parseShort(ShopClassTypeEnum.Supplier.toString());
+        }
+        MsgResult mr = new MsgResult();
+        if(ObjectUtil.isEmpty(className))
+        {
+            mr.setMsg("分类名称不能为空！");
+            mr.setState(-1);
+            return JsonUtil.objectToJson(mr);
+        }
+        if(shopClassService.judgeClassName(weiid,className))
+        {
+            mr.setMsg("分类名称已存在");
+            mr.setState(-3);
+            return JsonUtil.objectToJson(mr);
+        }
+        if(shopClassService.insertPShopClass(weiid,className,type))
+        {
+            mr.setMsg("成功");
+            mr.setState(1);
+        }
+        else
+        {
+            mr.setMsg("添加失败");
+            mr.setState(-1);
+        }
+        return JsonUtil.objectToJson(mr);
+    }
+
+    /**
+     * 删除分类
+     * 
+     * @param cid
+     *            分类ID
+     * @return
+     */
+    @ResponseBody
+    @RequestMapping(value = "/delClass",method =
+    {RequestMethod.POST,RequestMethod.GET})
+    public String delClass(@RequestParam(required = false,defaultValue = "0") int cid)
+    {
+        LoginUser user = getUserOrSub();
+        long weiid = user.getWeiID();
+        MsgResult mr = new MsgResult();
+        if(cid == 0)
+        {
+            mr.setMsg("要删除的分类不能为空");
+            mr.setState(-1);
+            return JsonUtil.objectToJson(mr);
+        }
+//        int count = shopClassService.getCountByClassId(weiid,cid);
+//        if(count > 0)
+//        {
+//            mr.setMsg("该分类下还有产品，无法被删除!");
+//            mr.setState(-2);
+//            return JsonUtil.objectToJson(mr);
+//        }
+        try {
+        	if(shopClassService.deleteClassByCid(weiid,cid))
+        	{
+        		mr.setMsg("删除成功");
+        		mr.setState(1);
+        	}
+        	else
+        	{
+        		mr.setMsg("删除失败");
+        		mr.setState(-1);
+        	}
+			
+		} catch (Exception e) {
+			mr.setMsg("删除失败");
+    		mr.setState(-1);
+		}
+        return JsonUtil.objectToJson(mr);
+    }
+
+    /**
+     * 修改分类名称
+     * 
+     * @param className
+     *            分类名称
+     * @param cid
+     *            分类ID
+     * @return
+     */
+    @ResponseBody
+    @RequestMapping(value = "/updClass",method =
+    {RequestMethod.POST,RequestMethod.GET})
+    public String updClass(String className,@RequestParam(required = false,defaultValue = "0") int cid)
+    {
+        LoginUser user = getUserOrSub();
+        long weiid = user.getWeiID();
+        MsgResult mr = new MsgResult();
+        if(cid == 0)
+        {
+            mr.setMsg("要修改的分类不能为空");
+            mr.setState(-1);
+            return JsonUtil.objectToJson(mr);
+        }
+        if(ObjectUtil.isEmpty(className))
+        {
+            mr.setMsg("分类名称不能为空");
+            mr.setState(-2);
+            return JsonUtil.objectToJson(mr);
+        }
+        if(shopClassService.updateClassByName(className,weiid,cid))
+        {
+            mr.setMsg("修改成功");
+            mr.setState(1);
+        }
+        else
+        {
+            mr.setMsg("修改失败");
+            mr.setState(-1);
+        }
+        return JsonUtil.objectToJson(mr);
+    }
+
+    /**
+     * 设置置顶
+     * 
+     * @param cid
+     *            分类ID
+     * @return
+     */
+    @ResponseBody
+    @RequestMapping(value = "/setTop",method =
+    {RequestMethod.POST,RequestMethod.GET})
+    public String setTop(@RequestParam(required = false,defaultValue = "0") int cid)
+    {
+        LoginUser user = getUserOrSub();
+        long weiid = user.getWeiID();
+        MsgResult mr = new MsgResult();
+        if(cid == 0)
+        {
+            mr.setMsg("要置顶的分类不能为空");
+            mr.setState(-1);
+            return JsonUtil.objectToJson(mr);
+        }
+        if(shopClassService.placedTop(weiid,cid))
+        {
+            mr.setMsg("置顶成功");
+            mr.setState(1);
+        }
+        else
+        {
+            mr.setMsg("置顶失败");
+            mr.setState(-1);
+        }
+        return JsonUtil.objectToJson(mr);
+    }
+}

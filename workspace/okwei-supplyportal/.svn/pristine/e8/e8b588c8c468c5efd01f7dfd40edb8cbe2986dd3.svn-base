@@ -1,0 +1,23 @@
+package com.okwei.supplyportal.service;
+
+import java.util.List;
+
+public interface IConfirmRefundService
+{
+
+    /**
+     * 确认退款分钱
+     * 
+     * @param sellerID
+     *            卖家微店号
+     * @param refundID
+     *            退款ID
+     * @return
+     */
+    public List<Long> refundPenny(long sellerID,long refundID);
+
+    /**
+     * 更新微店钱包
+     */
+    public void updateByWeiId(List<Long> weiList);
+}

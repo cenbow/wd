@@ -1,0 +1,18 @@
+package com.okwei.supplyportal.service;
+
+import com.okwei.common.Limit;
+import com.okwei.common.PageResult;
+import com.okwei.service.IBaseService;
+import com.okwei.supplyportal.bean.vo.ParamOrderSearch;
+import com.okwei.supplyportal.bean.vo.SupplyOrderVO;
+
+public interface IOrderManageService  extends IBaseService 
+{
+	/**
+	 * 获取订单列表
+	 * @param param
+	 * @param limit
+	 * @return
+	 */
+	public PageResult<SupplyOrderVO> getOrderListPageResult(ParamOrderSearch param,Long supplyWeiid,Limit limit);
+}

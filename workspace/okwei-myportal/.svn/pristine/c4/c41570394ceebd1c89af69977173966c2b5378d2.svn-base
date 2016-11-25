@@ -1,0 +1,53 @@
+package com.okwei.myportal.dao;
+
+import java.util.List;
+
+import com.okwei.bean.domain.PBrand;
+import com.okwei.bean.domain.PClassForBrand;
+import com.okwei.bean.domain.PProductClass;
+import com.okwei.common.Limit;
+import com.okwei.common.PageResult;
+import com.okwei.myportal.bean.dto.BrandProveDTO;
+import com.okwei.myportal.bean.vo.BrandListVO;
+
+public interface IBrandProveDAO {
+
+	/**
+	 * 获取认证的品牌列表
+	 * @param weiID
+	 * @param dto
+	 * @param limit
+	 * @return
+	 */
+	public PageResult<BrandListVO> getBrands(long weiID,BrandProveDTO dto,Limit limit);
+	
+	/**
+	 * 获取品牌关联的分类
+	 * @param brandIDs
+	 * @return
+	 */
+	public List<PClassForBrand> getcfbList(Integer[] brandIDs);		
+	public List<PClassForBrand> getcfbList(int brandID);
+	
+	/**
+	 * 获取分类列表
+	 * @param classIDs
+	 * @return
+	 */
+	public List<PProductClass> getClassList(Integer[] classIDs);
+	
+	/**
+	 * 获取分类列表
+	 * @param parentID
+	 * @param step
+	 * @return
+	 */
+	public List<PProductClass> getPClassList(short step);
+	
+	/**
+	 * 删除品牌关联的分类
+	 * @param brandID
+	 */
+	public void deleteProductForClass(int brandID);
+	
+}

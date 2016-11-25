@@ -1,0 +1,26 @@
+
+<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<!DOCTYPE html>
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title><sitemesh:write property='title' /></title>
+<jsp:include page="/jsp/common/scriptstyle.jsp" />
+<sitemesh:write property='head' />
+</head>
+<body style="background: #f3f3f3;">
+	<jsp:include page="/jsp/common/header.jsp" />
+	<div class="content mar_au">
+		<jsp:include page="/jsp/common/breadcrumb.jsp" />
+		<jsp:include page="/jsp/common/left.jsp">
+			<jsp:param name="m" value="myadd" />
+		</jsp:include>
+		<div class="fr conter_right" id="navTab">
+			<sitemesh:write property='body' />
+		</div>
+	</div>
+	<div class="blank"></div>
+	<!-- 底部 -->
+	<jsp:include page="/jsp/common/footer.jsp" />
+</body>
+</html>

@@ -1,0 +1,83 @@
+package com.okwei.supplyportal.bean.vo;
+
+/**
+ * 单点登陆实体类
+ */
+public class LoginUser
+{
+    /**
+     * 微店号
+     */
+    private long WeiID;
+
+    /**
+     * 微店昵称
+     */
+    private String WeiName;
+
+    /**
+     * 头像
+     */
+    private String WeiImg;
+
+    /**
+     * 二维码存放地址
+     */
+    private String qrCodeUrl;
+
+    /**
+     * 签名
+     */
+    private String Remark;
+
+    public long getWeiID()
+    {
+        return WeiID;
+    }
+
+    public void setWeiID(long weiID)
+    {
+        WeiID = weiID;
+    }
+
+    public String getWeiName()
+    {
+        return WeiName;
+    }
+
+    public void setWeiName(String weiName)
+    {
+        WeiName = weiName;
+    }
+
+    public String getWeiImg()
+    {
+        return WeiImg;
+    }
+
+    public void setWeiImg(String weiImg)
+    {
+        WeiImg = weiImg;
+    }
+
+    public String getQrCodeUrl()
+    {
+        return qrCodeUrl;
+    }
+
+    public void setQrCodeUrl(String qrCodeUrl)
+    {
+        this.qrCodeUrl = qrCodeUrl;
+    }
+
+    public String getRemark()
+    {
+        return Remark;
+    }
+
+    public void setRemark(String remark)
+    {
+        Remark = remark;
+    }
+
+}

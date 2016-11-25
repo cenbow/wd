@@ -1,0 +1,35 @@
+package com.okwei.supplyportal.dao;
+
+import java.util.List;
+
+import com.okwei.bean.domain.OProductOrder;
+import com.okwei.bean.domain.OSupplyerOrder;
+import com.okwei.bean.domain.UWeiSeller;
+import com.okwei.common.Limit;
+import com.okwei.common.PageResult;
+import com.okwei.supplyportal.bean.vo.ParamOrderSearch;
+
+public interface IOrderManageDAO {
+	
+	/**
+	 * 获取供应商产品列表， 带分页、查询条件
+	 * @param param 查询条件
+	 * @param supperWeiid 供应商微店号
+	 * @param limit
+	 * @return
+	 */
+	PageResult<OSupplyerOrder> getSupplyOrderlistResult(ParamOrderSearch param,Long supperWeiid, Limit limit);
+
+	/**
+	 * 根据供应商订单号 获取 产品订单列表
+	 * @param supplyOrderIds
+	 * @return
+	 */
+	public List<OProductOrder> getProductOrderListBySupplyOrderIds(String[] supplyOrderIds);
+	/**
+	 * 根据用户Weiids获取用户列表
+	 * @param weiids
+	 * @return
+	 */
+	public List<UWeiSeller> getUsersByWeiids(Long[] weiids);
+}

@@ -1,0 +1,82 @@
+@charset "utf-8";
+.help_left{ width:200px;}
+.help_right{ width:990px;}
+.help_title{ width:200px; height:47px; line-height:47px; border-bottom:1px solid #ededed; position:relative;}
+.abimg{ position:absolute; width:12px; height:7px; top:45px; left:94px;}
+.jyibz{ width:190px; margin-left:5px; margin-top:10px;}
+.jyibz ul li{ color:#666; border-bottom:1px solid #ddd;} 
+.jyibz ul li a{ width:190px; height:40px; border-left:2px solid #fff; list-style:inside; color:#666; text-align:center; line-height:40px;  display:block;}
+.jyibz ul li a.nowred{ font-weight:bold; color:#e54949;border-left:2px solid #e54949;}
+.jyibz ul li:last-child{ border-bottom:none;} 
+.jyibz h3{ background:url(../images/help_imgtitle.png) no-repeat #ebebeb; background-position:30% 48%;}
+.conTxt{width:900px;font-family:宋体; margin-left:50px; margin-top:20px;}
+	.help_con_title{width:900px;border-bottom:2px solid #999;padding:10px 0;}
+	.help_con_title a{float:left;}
+	.help_con_title em{font-style:normal;font-size:12px;font-family:宋体;padding:0 10px 0 10px;float:left;}
+	
+	.help_item{border-bottom:1px solid #ddd;padding:20px 0 20px 0;width:900px;float:left;}
+	.help_con_txt h2{font-size:16px;font-weight:bold;padding:0 0 15px 0;width:740px;float:left;}
+	.help_con_txt p{line-height:24px;width:900px;float:left;}
+	.help_con_txt span{font-weight:bold;padding:20px 0 10px 0;color:3333;float:left;width:740px;}
+	
+	.help_item1{padding:30px 0 20px 0;width:900px;float:left;}
+	.help_item2{border-bottom:1px solid #ddd;padding:20px 0 20px 0;width:740px;float:left;}
+	.help_item3{border-bottom:1px solid #ddd;padding:20px 0 20px 0;width:740px;float:left;}
+	.help_item4{border-bottom:1px solid #ddd;padding:20px 0 20px 0;width:740px;float:left;}
+	.help_item5{border-bottom:1px solid #ddd;padding:20px 0 20px 0;width:740px;float:left;}
+	.help_item6{border-bottom:1px solid #ddd;padding:20px 0 20px 0;width:740px;float:left;}
+	.help_item6_yaoqiu{line-height:18px;border-top:1px solid #b9e8f9;border-left:1px solid #b9e8f9;width:900px;float:left;}
+	.help_item6_yaoqiu td{line-height:18px;border-bottom:1px solid #b9e8f9;border-right:1px solid #b9e8f9;padding:10px 5px 10px 5px;}
+	.help_item7{padding:30px 0 20px 0;width:900px;float:left;}
+	.help_item7 h2{font-size:16px;font-weight:bold;padding:0 0 5px 0;width:740px;float:left;}
+
+
+.help_wenti{padding:20px 0 20px 0;width:900px;float:left;}
+	.help_wenti h3{font-size:14px;font-weight:normal;padding:10px 0 20px 0;width:900px;float:left;color:#666;}
+	.help_wenti dl{font-size:14px;padding:0 0 20px 0;width:900px;float:left;}
+	.help_wenti dt{float:left;color:#333;line-height:34px;}
+	.help_wenti dt font{color:#f00;padding:0 5px 0 0;}	
+	.help_wenti dd{float:left;width:650px;}
+	.help_wenti dd .textarea_border{float:left;border:1px solid #c8c8c8;background:#fff url(http://base.okimgs.com/images/conWenti_bj1.gif) repeat-x;width:480px;}
+	.help_wenti dd .text{color:#999;}
+	.help_wenti dd .textarea_border textarea{float:left;border:0px;background:url(http://base.okimgs.com/images/conWenti_bj.gif) repeat-y;padding:5px 0 0 12px;line-height:24px;width:468px;height:120px;font-size:14px;color:#333;}
+
+	.help_wenti dd .input_border{float:left;border:1px solid #c8c8c8;background:#fff url(http://base.okimgs.com/images/conWenti_bj1.gif) repeat-x;width:480px;}
+	.help_wenti dd .input_border input{float:left;border:0px;background:url(http://base.okimgs.com/images/conWenti_bj.gif) repeat-y;padding:0 0 0 12px;width:468px;height:34px;line-height:34px;font-size:14px;color:#333;}
+	.help_wenti_button {width:900px;float:left;}
+	.help_wenti_button input{background:url(http://base.okimgs.com/images/conWenti_bj2.gif) no-repeat;width:101px;height:39px;border:0px;margin:0 0 0 82px;display:inline;font-size:14px;color:#fff;cursor:pointer;}
+	
+	.help_weiti_01 p{float:left;width:120px;padding:100px 0 0 10px;}
+	.help_weiti_02 p{float:left;width:120px;line-height:41px;padding:0 0 0 10px;}
+
+
+
+	
+	/* 加入我们 */
+	.Join{width:900px;float:left;margin:20px 0 0 0;}
+	
+	.Join_qy{width:900px;float:left;font-family:"微软雅黑";margin:20px 0 0 0;}
+	.Join_qy dt{float:left;width:900px;}
+	.Join_qy dt p{background:#ee9b46;width:110px;height:34px;line-height:34px;color:#fff;font-size:20px;text-align:center;}
+	.Join_qy dd{font-size:14px;color:#333;line-height:24px;text-indent:24px;margin:10px 0 0 0;float:left;width:740px;}
+	.Join_qy dd font{font-size:14px;color:#f10101;margin:5px 0 0 0;float:left;text-indent:0px;}
+	.Join_qy dd font a{font-size:14px;color:#f00;}
+
+	.Join_zp{width:900px;float:left;font-family:"微软雅黑";}
+	.Join_zp h2{width:780px;float:left;font-size:26px;line-height:40px;padding:36px 0 15px 0;}
+	.Join_zp dl{width:780px;float:left;margin:0 0 20px 0;}
+	.Join_zp dt{width:780px;float:left;font-size:18px;line-height:30px;}
+	.Join_zp dd{width:780px;float:left;font-size:14px;color:#333;line-height:30px;}
+
+.Join_zpCon_1{width:780px;float:left;margin:20px 0 0 0;background:url(http://base.okimgs.com/images/J_bj01.gif) no-repeat;padding:0 0 0 65px;}
+.Join_zpCon_2{width:780px;float:left;margin:20px 0 0 0;background:url(http://base.okimgs.com/images/J_bj02.gif) no-repeat;padding:0 0 0 65px;}
+.Join_zpCon_3{width:780px;float:left;margin:20px 0 0 0;background:url(http://base.okimgs.com/images/J_bj03.gif) no-repeat;padding:0 0 0 65px;}
+.Join_zpCon_4{width:780px;float:left;margin:20px 0 0 0;background:url(http://base.okimgs.com/images/J_bj04.gif) no-repeat;padding:0 0 0 65px;}
+.Join_zpCon_5{width:780px;float:left;margin:20px 0 0 0;background:url(http://base.okimgs.com/images/J_bj05.gif) no-repeat;padding:0 0 0 65px;}
+.Join_zpCon_6{width:780px;float:left;margin:20px 0 0 0;background:url(http://base.okimgs.com/images/J_bj06.gif) no-repeat;padding:0 0 0 65px;}
+.Join_zpCon_7{width:780px;float:left;margin:20px 0 0 0;background:url(http://base.okimgs.com/images/J_bj07.gif) no-repeat;padding:0 0 0 65px;}
+.Join_zpCon_8{width:780px;float:left;margin:20px 0 0 0;background:url(http://base.okimgs.com/images/J_bj08.gif) no-repeat;padding:0 0 0 65px;}
+.Join_zpCon_9{width:780px;float:left;margin:20px 0 0 0;background:url(http://base.okimgs.com/images/J_bj09.gif) no-repeat;padding:0 0 0 65px;}
+.Join_zpCon_10{width:780px;float:left;margin:20px 0 0 0;background:url(http://base.okimgs.com/images/J_bj10.gif) no-repeat;padding:0 0 0 65px;}
+
+.Join_zpTxt{width:900px;float:left;font-family:"微软雅黑";font-size:14px;line-height:24px;padding:0 0 70px 0;}

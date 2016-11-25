@@ -1,0 +1,7 @@
+package com.okwei.supplyportal.service;
+
+import com.okwei.service.IBaseService;
+
+public interface IOrderManageService  extends IBaseService {
+
+}

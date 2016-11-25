@@ -1,0 +1,399 @@
+package com.okwei.myportal.web;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
+import org.apache.commons.lang.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+import com.okwei.bean.domain.PPriceShow;
+import com.okwei.bean.domain.PProductBatchPrice;
+import com.okwei.bean.domain.PProducts;
+import com.okwei.bean.domain.PShevleBatchPrice;
+import com.okwei.bean.domain.PShopClass;
+import com.okwei.bean.domain.UChildrenUser;
+import com.okwei.bean.domain.UUserAssist;
+import com.okwei.bean.dto.ProductDTO;
+import com.okwei.bean.enums.ProductStatusEnum;
+import com.okwei.bean.vo.LoginUser;
+import com.okwei.bean.vo.ProductMgtVO;
+import com.okwei.bean.vo.ReturnModel;
+import com.okwei.bean.vo.ReturnStatus;
+import com.okwei.bean.vo.ShopClassVO;
+import com.okwei.bean.vo.product.ShelveProductParam;
+import com.okwei.common.AjaxUtil;
+import com.okwei.common.JsonUtil;
+import com.okwei.common.Limit;
+import com.okwei.common.PageResult;
+import com.okwei.myportal.bean.vo.ProductSearchVO;
+import com.okwei.myportal.bean.vo.product.MyProductInfo;
+import com.okwei.myportal.service.IMyProductService;
+import com.okwei.service.product.IBasicProductMgtService;
+import com.okwei.service.shop.IBasicShopMgtService;
+import com.okwei.util.ObjectUtil;
+import com.okwei.web.base.SSOController;
+
+@RequestMapping(value = "/myProduct")
+@Controller
+public class MyProductController extends SSOController {
+
+	private static int pageSize = 10;
+
+	@Autowired
+	private IMyProductService myProductService;
+
+	@Autowired
+	private IBasicProductMgtService productMgtService;
+	
+	@Autowired
+	private IBasicShopMgtService basicShopMgtService;
+
+	/**
+	 * 我的产品
+	 * @throws Exception 
+	 */
+	@RequestMapping(value = "/list/{productStatus}/{supShopClass}/{shopClass}")
+	public String list(@PathVariable String productStatus, @PathVariable int supShopClass, @PathVariable int shopClass, @ModelAttribute("dto") ProductDTO dto,
+			@RequestParam(required = false, defaultValue = "1") int pageId, Model model) throws Exception {
+		dto.setStatus(ProductStatusEnum.valueOf(productStatus));
+		dto.setSupShopClassId(supShopClass);
+		dto.setShopClassId(shopClass);
+		// 草稿箱，不需要类型过滤
+		if (dto.getStatus() == ProductStatusEnum.OutLine) {
+			dto.setType((short) -1);
+		}
+		// 获取所有状态:销售中数量;下架的数量;草稿箱的数量;店铺分类;我的品牌;
+		ProductSearchVO vo = new ProductSearchVO();
+		LoginUser user = getUserOrSub();
+		model.addAttribute("userinfo", user);
+		if(user.getBrandagent()==1&&user.getIsSeller()!=1){
+			// 代理商产品列表=====================================
+			PageResult<MyProductInfo> pageResult2= myProductService.find_productlist(user.getWeiID(), null, null, pageId, pageSize);
+			model.addAttribute("pageResult", pageResult2);
+			return "Product/productlistNew";
+		}
+		//*===============================================================================================================
+		if (user.getPthSupply() != null && user.getPthSupply() == 1) {// 子供应商帐号
+			dto.setWeiId(user.getAccount());
+			dto.setSupWeiId(user.getParentWeiId());
+			dto.setPTZ(true);
+			Long count = myProductService.getHandleCount(dto.getWeiId());
+			vo.setCount_ToHandle(count);// 显示"申请中"的数量
+		} else {// 非子供应商帐号
+			dto.setWeiId(user.getWeiID().toString());
+			if (user.getPth() != null && user.getPth() == 1) {
+				dto.setPTH(true);
+			}
+			if (user.getPph() != null && user.getPph() == 1) {
+				dto.setPPH(true);
+			}
+			if (user.getPthdls() != null && user.getPthdls() == 1) {
+				dto.setDLS(true);
+			}
+			if (user.getPthldd() != null && user.getPthldd() == 1) {
+				dto.setLDD(true);
+			}
+			vo = myProductService.getSearchVO(Long.parseLong(dto.getWeiId()));
+			if (user.getPth() != null && user.getPth() == 1) {// 如果是平台号
+				Long count = myProductService.getToHandleCount(Long.parseLong(dto.getWeiId()));
+				vo.setCount_ToHandle(count);// 显示"待审核"数量
+				List<UChildrenUser> childrenList = productMgtService.getChildSupplyer(user.getWeiID());
+				vo.setChildrenList(childrenList);// 显示子供应商下拉框
+			}
+			// 由于前端可能输入的店铺分类是一级或二级的，当一级时，需要转换成二级范围进行过滤
+			if (ObjectUtil.isNotEmpty(dto.getSupShopClassId()) && dto.getSupShopClassId() > 0) {
+				List<PShopClass> subs = productMgtService.getSubShopClassByid(dto.getSupShopClassId());
+				vo.setSubClassList(subs);
+				if (ObjectUtil.isNotEmpty(dto.getShopClassId()) && dto.getShopClassId() > 0) {
+					dto.getShopClassIds().add(dto.getShopClassId());
+				} else if (null != subs && subs.size() > 0) {
+					for (PShopClass sub : subs) {
+						dto.getShopClassIds().add(sub.getSid());
+					}
+				} else {
+					dto.getShopClassIds().add(dto.getSupShopClassId());
+				}
+			}
+		}
+		model.addAttribute("searchvo", vo);
+		dto.setFromSite((short) 2);
+		PageResult<ProductMgtVO> pageResult = productMgtService.getProducts(dto, Limit.buildLimit(pageId, pageSize),user);
+		model.addAttribute("pageResult", pageResult);
+		return "Product/productlist";
+		
+	}
+
+	/**
+	 * 置顶
+	 */
+	@ResponseBody
+	@RequestMapping(value = "/top", method = RequestMethod.POST)
+	public String toTop(Long productId, Integer shopClassId, Model model) {
+		LoginUser user = super.getUserOrSub();
+		boolean result = myProductService.topProduct(productId, shopClassId, user.getWeiID());
+		return result ? AjaxUtil.ajaxSuccess("置顶成功") : AjaxUtil.ajaxFail(("置顶失败"));
+	}
+
+	/**
+	 * 上架产品
+	 */
+	@ResponseBody
+	@RequestMapping(value = "/uploadProduct", method = RequestMethod.POST)
+	public String doUpput(Long productId, Long sjId, Integer sid, String prices, Integer type, Long supplierId, Model model) {
+		LoginUser user = super.getUserOrSub();
+		boolean result = myProductService.updateProduct(productId, sjId, sid, prices, type, supplierId, user.getWeiID());
+		return result ? AjaxUtil.ajaxSuccess("上架成功") : AjaxUtil.ajaxFail(("上架失败"));
+	}
+
+	/**
+	 * 直接上架产品
+	 * @throws Exception 
+	 */
+	/*@ResponseBody
+	@RequestMapping(value = "/upputProduct", method = RequestMethod.POST)
+	public String upput(String productIds, Model model) {
+		LoginUser user = super.getUserOrSub();
+		String[] ids = productIds.split(",");
+		boolean result = myProductService.raiseProduct(ids, user.getWeiID());
+		return result ? AjaxUtil.ajaxSuccess("下架成功") : AjaxUtil.ajaxFail(("下架失败"));
+	}*/
+	
+	@ResponseBody
+	@RequestMapping(value = "/upputProduct", method = RequestMethod.POST)
+	public String upput(String productIds, Model model) throws Exception {
+		ReturnModel rs = new ReturnModel();
+		rs.setStatu(ReturnStatus.ParamError);
+		rs.setStatusreson("参数错误");
+		if (StringUtils.isNotEmpty(productIds)) {
+			PProducts product = myProductService.getById(PProducts.class, Long.valueOf(productIds));
+			if (product != null && (Short.valueOf("2").equals(product.getState()) || Short.valueOf("0").equals(product.getVerStatus()))) {
+				rs.setStatu(ReturnStatus.DataError);
+				rs.setStatusreson("该产品未通过审核，请重新编辑产品!");
+			} else {
+				LoginUser user = super.getUserOrSub();
+				ShelveProductParam param = new ShelveProductParam();
+				param.setShelveWeiid(user.getWeiID());
+				param.setIds("[{'proNo':" + productIds + "}]");
+				rs = productMgtService.onShelvesProduct(param, user);
+			}
+		}
+		return JsonUtil.objectToJson(rs);
+	}
+	
+	/**
+	 * 下架产品
+	 * @throws Exception 
+	 */
+	/*@ResponseBody
+	@RequestMapping(value = "/dropProduct")
+	public String doDrop(String productIds, Model model) {
+		LoginUser user = super.getUserOrSub();
+		String[] ids = productIds.split(",");
+		boolean result = myProductService.dropProduct(ids, user.getWeiID());
+		return result ? AjaxUtil.ajaxSuccess("下架成功") : AjaxUtil.ajaxFail(("下架失败"));
+	}*/
+	
+	@ResponseBody
+	@RequestMapping(value = "/dropProduct")
+	public String doDrop(String productIds, Short state, Model model) throws Exception {
+		LoginUser user = super.getUserOrSub();
+		ShelveProductParam param = new ShelveProductParam();
+		param.setShelveWeiid(user.getWeiID());
+		param.setIds("[{'proNo':" + productIds + "}]");
+		param.setIsAll(0);
+		param.setState(state);
+		ReturnModel rs = productMgtService.offShelvesProduct(param, user);
+		return rs.getStatu() == ReturnStatus.Success ? AjaxUtil.ajaxSuccess("下架成功") : AjaxUtil.ajaxFail(("下架失败"));
+	}
+
+	/**
+	 * 删除产品
+	 * @throws Exception 
+	 */
+	/*@ResponseBody
+	@RequestMapping(value = "/deleteProduct", method = RequestMethod.POST)
+	public String delete(String productIds, Model model) {
+		LoginUser user = super.getUserOrSub();
+		String[] ids = productIds.split(",");
+		boolean result = myProductService.deleteProduct(ids, user.getWeiID());
+		return result ? AjaxUtil.ajaxSuccess("删除成功") : AjaxUtil.ajaxFail(("删除失败"));
+	}*/
+	
+	@ResponseBody
+	@RequestMapping(value = "/deleteProduct", method = RequestMethod.POST)
+	public String delete(String productIds, Short state, Model model) throws Exception {
+		LoginUser user = super.getUserOrSub();
+		ShelveProductParam param = new ShelveProductParam();
+		String[] ids = productIds.split(",");
+		StringBuilder items = new StringBuilder();
+		for (int i = 0; i < ids.length; i++) {
+			items.append("{'proNo':" + ids[i] + "},");
+		}
+		if (items.length() > 0) {
+			items.substring(0, items.length() - 1);
+		}
+		String idJson = "[" + items.toString() + "]";
+		param.setShelveWeiid(user.getWeiID());
+		param.setIds(idJson);
+		param.setIsAll(0);
+		param.setState(state);
+		ReturnModel rs = productMgtService.deleteShelvesProduct(param, user);
+		return rs.getStatu() == ReturnStatus.Success ? AjaxUtil.ajaxSuccess("删除成功") : AjaxUtil.ajaxFail(("删除失败"));
+	}
+
+	/**
+	 * 移动产品
+	 */
+	@ResponseBody
+	@RequestMapping(value = "/moveProduct", method = RequestMethod.POST)
+	public String move(String productIds, Integer shopClassId, Model model) {
+		LoginUser user = super.getUserOrSub();
+		String[] ids = productIds.split(",");
+		boolean result = myProductService.moveProduct(ids, shopClassId, user.getWeiID());
+		return result ? AjaxUtil.ajaxSuccess("移动成功") : AjaxUtil.ajaxFail(("移动失败"));
+	}
+
+	/**
+	 * 关联品牌
+	 */
+	@ResponseBody
+	@RequestMapping(value = "/connectProduct", method = RequestMethod.POST)
+	public String connect(String productIds, Integer brandId, Model model) {
+		LoginUser user = super.getUserOrSub();
+		String[] ids = productIds.split(",");
+		boolean result = myProductService.connectProduct(ids, brandId, user.getWeiID());
+		return result ? AjaxUtil.ajaxSuccess("关联成功") : AjaxUtil.ajaxFail(("关联失败"));
+	}
+
+	/**
+	 * 获取批发价区间
+	 */
+	@ResponseBody
+	@RequestMapping(value = "/getBatchPrices", method = RequestMethod.POST)
+	public String getPrices(Long productId, Short isOutLinePage, Long sjId, Model model) {
+		if (null != isOutLinePage && isOutLinePage == 1) {// 草稿箱,去P_ProductBatchPrice获取批发价
+			List<PProductBatchPrice> result = myProductService.getBatchPrices(productId);
+			return JsonUtil.objectToJson(result);
+		} else {// 销售中，已下架，到P_ShevleBatchPrice表获取批发价
+			List<PShevleBatchPrice> result = myProductService.getMyBatchPrices(sjId);
+			return JsonUtil.objectToJson(result);
+		}
+	}
+
+	/**
+	 * 产品库存预警设置
+	 * 
+	 * @param request
+	 * @param response
+	 * @param model
+	 * @return
+	 */
+	@ResponseBody
+	@RequestMapping("/setStockWarning")
+	public String setStockWarning(Integer quantity) {
+		LoginUser user = getUserOrSub();
+		if (user != null) {
+			UUserAssist uu = productMgtService.getById(UUserAssist.class, user.getWeiID());
+			if (null != uu) {
+				uu.setWarningNum(quantity);
+				productMgtService.update(uu);
+			}
+			return AjaxUtil.ajaxSuccess("设置成功");
+		}
+		return AjaxUtil.ajaxFail("设置失败");
+	}
+
+	/**
+	 * 获取产品库存预警
+	 * 
+	 * @return
+	 */
+	@ResponseBody
+	@RequestMapping("/getStockWarning")
+	public String getStockWarning() {
+		LoginUser user = getUserOrSub();
+		if (user != null) {
+			UUserAssist uu = productMgtService.getById(UUserAssist.class, user.getWeiID());
+			return JsonUtil.objectToJson(uu);
+		}
+		return AjaxUtil.ajaxFail("操作失败");
+	}
+
+	/**
+	 * 获取价格区间
+	 * 
+	 * @param weiId
+	 * @param param
+	 * @param model
+	 * @return
+	 */
+	@RequestMapping("/getPriceVisible")
+	@ResponseBody
+	public String getPriceVisible() {
+		LoginUser user = getUserOrSub();
+		PPriceShow pp = new PPriceShow();
+		if (user != null) {
+			pp = productMgtService.getById(PPriceShow.class, user.getWeiID());
+		}
+		return JsonUtil.objectToJson(pp);
+	}
+
+	/**
+	 * 价格可视范围设置
+	 * 
+	 * @param request
+	 * @param response
+	 * @param model
+	 * @return
+	 */
+	@RequestMapping("/priceVisible")
+	@ResponseBody
+	public String priceVisible(PPriceShow pv) {
+		LoginUser user = getUserOrSub();
+		if (user != null) {
+			pv.setWeiId(user.getWeiID());
+			PPriceShow original = productMgtService.getById(PPriceShow.class, user.getWeiID());
+			if (null != original) {
+				original.setAgentsVisible(pv.getAgentsVisible());
+				original.setDlFullyOpen(pv.getDlFullyOpen());
+				original.setLdAgentsVisible(pv.getLdAgentsVisible());
+				original.setOtherAgentsVisible(pv.getOtherAgentsVisible());
+				original.setOtherShopVisible(pv.getOtherShopVisible());
+				original.setShopVisible(pv.getShopVisible());
+				productMgtService.update(original);
+			} else {
+				pv.setCreateTime(new Date());
+				productMgtService.add(pv);
+			}
+			return AjaxUtil.ajaxSuccess("设置成功");
+		}
+		return AjaxUtil.ajaxFail("设置失败");
+	}
+	
+	/**
+	 * 根据一级店铺分类id获取二级分类
+	 * @return
+	 */
+	@RequestMapping("/getSecondClass")
+	@ResponseBody
+	public String getSecondClass(Integer shopClassId) {
+		LoginUser user = getUserOrSub();
+		List<ShopClassVO> list = new ArrayList<ShopClassVO>();
+		if (user != null) {
+			list = basicShopMgtService.getShopClass(shopClassId, user.getWeiID());
+		}
+		return JsonUtil.objectToJson(list);
+	}
+	
+	
+
+}

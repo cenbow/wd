@@ -1,0 +1,604 @@
+package com.okwei.myportal.web;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+import com.okwei.bean.domain.PBrand;
+import com.okwei.bean.domain.PProducts;
+import com.okwei.bean.domain.UBrandSupplyer;
+import com.okwei.bean.domain.UPlatformSupplyer;
+import com.okwei.bean.domain.USupplyDemand;
+import com.okwei.bean.enums.DemandStateEnum;
+import com.okwei.bean.enums.OrderFrom;
+import com.okwei.bean.enums.PubProductTypeEnum;
+import com.okwei.bean.vo.LoginUser;
+import com.okwei.bean.vo.ReturnModel;
+import com.okwei.bean.vo.ReturnStatus;
+import com.okwei.bean.vo.UserInfo;
+import com.okwei.bean.vo.product.BatchPriceVO;
+import com.okwei.bean.vo.product.ProductParam;
+import com.okwei.bean.vo.product.ProductSellKeyVO;
+import com.okwei.bean.vo.product.ProductStylesVO;
+import com.okwei.bean.vo.product.ShopClassVO;
+import com.okwei.common.JsonUtil;
+import com.okwei.cons.UserPowerConstants;
+import com.okwei.myportal.bean.enums.BaseResultStateEnum;
+import com.okwei.myportal.bean.util.ConfigSetting;
+import com.okwei.myportal.bean.vo.BaseResultVO;
+import com.okwei.myportal.bean.vo.EditProductVO;
+import com.okwei.myportal.bean.vo.PostAgeModelVO;
+import com.okwei.myportal.bean.vo.ProductClassVO;
+import com.okwei.myportal.bean.vo.ProductParamModelVO;
+import com.okwei.myportal.service.IEditProductInfoService;
+import com.okwei.myportal.service.ITest;
+import com.okwei.service.product.IBasicProductService;
+import com.okwei.service.product.IShopManagerService;
+import com.okwei.web.base.SSOController;
+
+@Controller
+@RequestMapping(value = "/Product")
+public class EditProductMgtController extends SSOController {
+	private final static Log logger = LogFactory.getLog(EditProductMgtController.class);
+
+	@Autowired
+	private IEditProductInfoService productService;
+	@Autowired
+	private IBasicProductService basicProductService;
+	@Autowired
+	private IShopManagerService shopManager;
+	
+	@Autowired
+	private ITest test;
+	
+	/**
+	 * 
+	 * @param productID 商品ID
+	 * @param operation 操作类型
+	 * @param model 返回实体
+	 * @return
+	 */
+    @RequestMapping(value = "/editProductInfo",method =
+    {RequestMethod.POST,RequestMethod.GET})
+	public String editProductInfo(@RequestParam(required = true,defaultValue = "0") Long productId ,
+			@RequestParam(required = false,defaultValue = "0") Short operation ,
+			@RequestParam(required = false,defaultValue = "0") Integer classID,
+			@RequestParam(required = false,defaultValue = "0") Integer tempID,
+			@RequestParam(required = false,defaultValue = "0") Integer brandId,Model model) throws Exception
+	{
+    	//operation 1 正常发布 2 从商品导入 3 修改类目后返回 4 修改商品信息 5审核产品
+		if(operation !=1 && operation !=2 && operation!=3 && operation !=4 && operation !=5){
+			return "redirect:/publishProduct/index"; 
+		}
+		//判断如果没有类目信息 参数异常
+    	if(operation ==1 || operation==3)
+    	{
+    		if(classID<1)
+    		{
+    			return "redirect:/publishProduct/index"; 
+    		}
+    	}
+    	
+    	LoginUser user = super.getUserOrSub();
+    	
+    	if (!(user.getBatchS()==1 || user.getYunS()==1 || user.getBrandsupplyer()==1 || user.getPthSupply()==1 || user.getIsChildren()==1 || user.getPph()==1 || user.getPth()==1 ))
+		{
+    		return "1";
+		}
+    	//LoginUser user=test.getLoginUser();
+    	int newId = 0;//是否新身份（平台号、品牌号、代理商、落地店）0-否1-是
+    	//身份判断
+    	UserInfo userInfo = new UserInfo();
+    	if (user != null) {
+    		if (user.getIsChildren() == 0 || Short.valueOf("1").equals(user.getPthSub())) {
+    			if (Short.valueOf("1").equals(user.getPph()) || Short.valueOf("1").equals(user.getPth())
+    					|| Short.valueOf("1").equals(user.getPthdls()) || Short.valueOf("1").equals(user.getPthldd())) {
+    				newId = 1;
+				}
+    			userInfo.setWeiId(user.getWeiID());
+    			if (Short.valueOf("1").equals(user.getPph())) {
+    				userInfo.setPubProductType(Integer.parseInt(PubProductTypeEnum.Brand.toString()));
+    			} else if (Short.valueOf("1").equals(user.getPth())) {
+    				userInfo.setPubProductType(Integer.parseInt(PubProductTypeEnum.Platform.toString()));
+    			} else if (Short.valueOf("1").equals(user.getYunS()) || Short.valueOf("1").equals(user.getBatchS())) {
+    				userInfo.setPubProductType(Integer.parseInt(PubProductTypeEnum.Supplyer.toString()));
+    			} else if(Short.valueOf("1").equals(user.getBrandsupplyer())) {
+    				userInfo.setPubProductType(Integer.parseInt(PubProductTypeEnum.BrandSupplyer.toString()));
+    			} else {
+    				userInfo.setPubProductType(Integer.parseInt(PubProductTypeEnum.Ordinary.toString()));
+    			}
+    			//子账号
+				if (Short.valueOf("1").equals(user.getPthSub())) {
+					UPlatformSupplyer platform = basicProductService.getById(UPlatformSupplyer.class, user.getWeiID());
+					if (platform != null) {
+						userInfo.setPubProductType(Integer.parseInt(PubProductTypeEnum.Platform.toString()));
+					} else {
+						UBrandSupplyer brand = basicProductService.getById(UBrandSupplyer.class, user.getWeiID());
+						if (brand != null) {
+							userInfo.setPubProductType(Integer.parseInt(PubProductTypeEnum.Brand.toString()));
+						} else {
+							return "redirect:/publishProduct/index"; 
+						}
+					}
+				}
+    		} else if (user.getIsChildren() == 1  && Short.valueOf("1").equals(user.getPthSupply())){
+    			//子帐号
+				if (Integer.valueOf("1").equals(user.getAccountType())) {
+					UPlatformSupplyer platform = basicProductService.getById(UPlatformSupplyer.class, user.getWeiID());
+					if (platform != null) {
+						userInfo.setPubProductType(Integer.parseInt(PubProductTypeEnum.Platform.toString()));
+					} else {
+						UBrandSupplyer brand = basicProductService.getById(UBrandSupplyer.class, user.getWeiID());
+						if (brand != null) {
+							userInfo.setPubProductType(Integer.parseInt(PubProductTypeEnum.Brand.toString()));
+						} else {
+							return "redirect:/publishProduct/index"; 
+						}
+					}
+				} else {
+					userInfo.setSub(true);
+					userInfo.setSubNo(user.getAccount());//子供应商账号
+					userInfo.setPubProductType(Integer.parseInt(PubProductTypeEnum.SubAccount.toString()));//定义用户编辑、发布产品时的身份
+				}
+    		}
+		} else {
+			return "redirect:/publishProduct/index"; 
+		}
+//    	newId = 1;//测试用
+//		userInfo.setPubProductType(Integer.parseInt(PubProductTypeEnum.Platform.toString()));//测试用
+		
+    	//判断商品号参数 
+    	if(operation ==2 || operation==3 || operation==4)
+    	{
+    		if(productId <1)
+    		{
+    			return "redirect:/publishProduct/index"; 
+    		}else {
+    			if (!Integer.valueOf(PubProductTypeEnum.SubAccount.toString()).equals(userInfo.getPubProductType())) {
+    				if(!productService.getIsMyProduct(productId, user.getWeiID())){
+    					//判断该商品是否为该用户的
+    					return "redirect:/publishProduct/index"; 
+    				}
+    			}
+    		} 
+    	}
+    	//如果有商品ID 加载商品全部数据
+    	EditProductVO product =new EditProductVO();
+//    	productId = 664927l;
+    	if(productId >0)
+    	{
+    		product = productService.getProductInfo(productId,userInfo.getPubProductType());
+    	}
+    	PBrand brand = null;
+		//如果不是子供应商操作
+		if (!Integer.valueOf(PubProductTypeEnum.SubAccount.toString()).equals(userInfo.getPubProductType())) {
+			//品牌名称
+	    	if (brandId > 0) {
+	    		brand = productService.getBrandById(brandId);
+	    		product.setBrandId(brandId);
+			}
+		}
+    	//如果有类目ID 加载类目信息  否则 加载该商品原有的类目信息
+    	if(classID>0 && product.getClassId() != classID)
+    	{
+    		product.setClassId(classID);
+    	}    	 	
+    	List<PostAgeModelVO> postAgeList = null;
+    	List<com.okwei.myportal.bean.vo.ShopClassVO> shopClassList = null;
+    	List<com.okwei.myportal.bean.vo.ShopClassVO> shopClassChildrenList = null;
+    	ProductParamModelVO paramModel =new ProductParamModelVO();
+    	List<USupplyDemand> demandList = null;//招商需求列表
+    	ProductClassVO pClass = productService.getClassInfo(product.getClassId());
+    	if (!Integer.valueOf(PubProductTypeEnum.SubAccount.toString()).equals(userInfo.getPubProductType())) {
+    		//1.判断是否有模板传递过来 并且是否和 商品模板相同 如果不同 只加载该模板
+    		if(tempID>0 && product.getmID() != tempID) 
+    		{
+    			paramModel = productService.getParamModel(tempID);
+    			product.setmID(tempID);
+    		}
+    		else if(product.getProductId() !=null  && product.getProductId()>0)//如果相同 或者 没有传递 则需要加载该商品 自己的模板
+    		{
+    			if(product.getmID() ==null){
+    				product.setmID(0);
+    			}
+    			paramModel = productService.getProductParamModel(product.getmID(),product.getProductId());
+    		}
+    		
+    		//加载邮费模板列表
+    		postAgeList = productService.getPostAgeList(user.getWeiID());
+    		
+    		//加载店铺分类列表
+    		shopClassList = productService.getShopClassList(user.getWeiID(),Short.valueOf("1"));
+    		//平台号、品牌号招商需求列表
+    		if (Integer.valueOf(PubProductTypeEnum.Platform.toString()).equals(userInfo.getPubProductType())
+    				|| Integer.valueOf(PubProductTypeEnum.Brand.toString()).equals(userInfo.getPubProductType())) {
+    			//招商需求列表
+    			demandList = productService.getUSupplyDemandListByWeiId(user.getWeiID(),Short.valueOf(DemandStateEnum.Showing.toString()));
+    		}
+    		if (newId == 1) {
+    			//加载二级店铺分类列表
+    			shopClassChildrenList = productService.getShopClassList(user.getWeiID(),Short.valueOf("2"));
+			}
+    		//登陆用户是代理商或者落地点
+    		if (Short.valueOf("1").equals(user.getPthdls()) || Short.valueOf("1").equals(user.getPthldd())) {
+				newId = 1;
+			}
+    	}
+    	List<String> sellParams= new ArrayList<String>();
+    	sellParams.addAll(Arrays.asList(ConfigSetting.sellParam()));
+    	if(product.getSellKeyList() !=null &&  product.getSellKeyList().size()>0){
+    		for (ProductSellKeyVO item : product.getSellKeyList()) {
+				if(!sellParams.contains(item.getAttributeName())){
+					sellParams.add(item.getAttributeName());
+				}
+			}
+    	}
+    	model.addAttribute("product", product);
+    	model.addAttribute("pClass", pClass);
+    	model.addAttribute("paramModel", paramModel);
+    	model.addAttribute("postAgeList", postAgeList);
+    	model.addAttribute("shopClassList", shopClassList);
+    	model.addAttribute("sellParams", sellParams);
+    	model.addAttribute("operation", operation);
+    	model.addAttribute("userinfo",user);
+    	model.addAttribute("user", userInfo);
+    	model.addAttribute("brand", brand);
+    	model.addAttribute("demandList", demandList);
+    	model.addAttribute("newId", newId);
+    	model.addAttribute("shopClassChildrenList", shopClassChildrenList);
+    	
+    	return "productmgt/editProductInfo";
+	}
+    
+    
+	@ResponseBody
+    @RequestMapping(value = "/saveShopClass",method ={RequestMethod.POST,RequestMethod.GET})
+	public String saveShopClass(@RequestParam(required = true,defaultValue = "") String scName,Model model) {
+		LoginUser user = super.getUserOrSub();
+		long weiID = user.getWeiID();
+		BaseResultVO result = new BaseResultVO();
+		if(scName ==null || scName ==""){
+			result.setMessage("参数异常");
+			result.setState(BaseResultStateEnum.Failure);
+		}else {
+			result = productService.saveShopClass(scName,weiID);
+		}	
+				
+		return JsonUtil.objectToJson(result);
+	}
+	
+	@ResponseBody
+    @RequestMapping(value = "/saveParamModel",method ={RequestMethod.POST,RequestMethod.GET})
+	public String saveParamModel(@RequestParam(required = true,defaultValue = "") String josn,Model model){
+		LoginUser user = super.getUserOrSub();
+		long weiID =user.getWeiID();
+		BaseResultVO result = new BaseResultVO();
+		result.setMessage("您提交的参数异常！请检查后重试！");
+		result.setState(BaseResultStateEnum.Failure);
+		String tempJosn = JsonUtil.objectToJson(result);
+		
+		ProductParamModelVO paramModel = new ProductParamModelVO();
+		try {
+			paramModel = (ProductParamModelVO) JsonUtil.jsonToBean(josn, ProductParamModelVO.class);	
+		} catch (Exception e) {
+			return tempJosn;
+		}
+		
+		paramModel.setSupplierWeiId(weiID);	
+			
+		if(paramModel.getMname()==null || paramModel.getMname() ==""){
+			return tempJosn;
+		}
+		if(paramModel.getClassId() ==null || paramModel.getClassId()  < 1){
+			return tempJosn;
+		}
+		if(paramModel.getKeyList() ==null || paramModel.getKeyList().size() <1){
+			return tempJosn;
+		}		
+
+		result = productService.saveProductParam(paramModel);
+				
+		return JsonUtil.objectToJson(result);
+	}
+	
+	@ResponseBody
+    @RequestMapping(value = "/saveProduct",method ={RequestMethod.POST,RequestMethod.GET})
+	public String saveProduct(@RequestParam(required = true,defaultValue = "") String josn,String doType,Model model) throws Exception{
+		
+		LoginUser user = super.getUserOrSub();
+    	//LoginUser user=test.getLoginUser();
+		ReturnModel rs = new ReturnModel();
+		if (user == null) {
+			rs.setStatu(ReturnStatus.LoginError);
+			rs.setStatusreson("您的身份已过期，请重新登录");
+			return JsonUtil.objectToJson(rs);
+		}
+		rs.setStatu(ReturnStatus.DataError);
+		rs.setStatusreson("您提交的数据异常！请检查后重试！");
+		String tempJosn = JsonStr(rs);
+		
+		ProductParam product  = new ProductParam();
+		try {
+			product = (ProductParam) JsonUtil.jsonToBean(josn, ProductParam.class);
+		} catch (Exception e) {
+			return tempJosn;
+		}
+		long weiID = 0;//供应商微店号
+		UserInfo userInfo = new UserInfo();
+		if (user.getIsChildren() == 0 || Short.valueOf("1").equals(user.getPthSub())) {
+			weiID =user.getWeiID();
+			userInfo.setWeiId(user.getWeiID());
+			if (user.getIdentity() != null && user.getIdentity() > 0) {
+				userInfo.setIdentityType(Integer.valueOf(user.getIdentity().toString()));
+			}
+			//子账号
+			if (Short.valueOf("1").equals(user.getPthSub())) {
+				UPlatformSupplyer platform = basicProductService.getById(UPlatformSupplyer.class, user.getWeiID());
+				if (platform != null) {
+					userInfo.setPubProductType(Integer.parseInt(PubProductTypeEnum.Platform.toString()));
+				} else {
+					UBrandSupplyer brand = basicProductService.getById(UBrandSupplyer.class, user.getWeiID());
+					if (brand != null) {
+						userInfo.setPubProductType(Integer.parseInt(PubProductTypeEnum.Brand.toString()));
+					} else {
+						return "redirect:/publishProduct/index"; 
+					}
+				}
+			} else {
+				if (Short.valueOf("1").equals(user.getPph())) {
+					userInfo.setPubProductType(Integer.parseInt(PubProductTypeEnum.Brand.toString()));
+				} else if (Short.valueOf("1").equals(user.getPth())) {
+					userInfo.setPubProductType(Integer.parseInt(PubProductTypeEnum.Platform.toString()));
+				} else if (Short.valueOf("1").equals(user.getYunS()) || Short.valueOf("1").equals(user.getBatchS())) {
+					userInfo.setPubProductType(Integer.parseInt(PubProductTypeEnum.Supplyer.toString()));
+				} else if(Short.valueOf("1").equals(user.getBrandsupplyer())) {
+    				userInfo.setPubProductType(Integer.parseInt(PubProductTypeEnum.BrandSupplyer.toString()));
+    			} else {
+					userInfo.setPubProductType(Integer.parseInt(PubProductTypeEnum.Ordinary.toString()));
+				}
+			}
+		} else if (user.getIsChildren() == 1 && Short.valueOf("1").equals(user.getPthSupply())) {
+			//子帐号
+			if (Integer.valueOf("1").equals(user.getAccountType())) {
+				UPlatformSupplyer platform = basicProductService.getById(UPlatformSupplyer.class, user.getWeiID());
+				if (platform != null) {
+					userInfo.setPubProductType(Integer.parseInt(PubProductTypeEnum.Platform.toString()));
+				} else {
+					UBrandSupplyer brand = basicProductService.getById(UBrandSupplyer.class, user.getWeiID());
+					if (brand != null) {
+						userInfo.setPubProductType(Integer.parseInt(PubProductTypeEnum.Brand.toString()));
+					} else {
+						return "redirect:/publishProduct/index"; 
+					}
+				}
+			} else {
+				weiID = user.getParentWeiId();
+				userInfo.setSub(true);
+				userInfo.setSubNo(user.getAccount());//子供应商账号
+				userInfo.setPubProductType(Integer.parseInt(PubProductTypeEnum.SubAccount.toString()));//定义用户编辑、发布产品时的身份
+			}
+		}
+		
+//		userInfo.setPubProductType(Integer.parseInt(PubProductTypeEnum.Platform.toString()));//测试用
+		//初始值设定
+		product.setSupplyerWeiid(weiID);
+		
+		//是否有操作权限
+		if(product.getProductId()>0){
+			PProducts pModel= productService.getProductModel(product.getProductId());
+			if(pModel != null && pModel.getSupplierWeiId() != product.getSupplyerWeiid()){
+				rs.setStatu(ReturnStatus.ParamError);
+				rs.setStatusreson("您没有修改该商品的权限！");
+				return JsonStr(rs);
+			}
+		}else{
+			BaseResultVO result= productService.getPower(weiID);
+			if(result.getState() == BaseResultStateEnum.Failure){
+				rs.setStatu(ReturnStatus.ParamError);
+				rs.setStatusreson(result.getMessage());
+				return JsonStr(rs);
+			}
+		}
+		
+		//都需 校验	系统分类
+		if(product.getTypeNo() ==null || product.getTypeNo() <1){
+			return tempJosn;
+		}
+		//产品标题
+		if(product.getProductTitle() ==null || product.getProductTitle().trim()==""){
+			return tempJosn;
+		}
+		if (!Integer.valueOf(PubProductTypeEnum.SubAccount.toString()).equals(userInfo.getPubProductType())) {
+			//如果是发布正式 需校验
+			if("1".equals(doType)){
+				//主图
+				if(product.getDefaultImg() ==null || product.getDefaultImg() ==""){
+					return tempJosn;
+				}
+				//如果有款式列表
+				if(product.getStyleList() !=null && product.getStyleList().size()>0){
+					//规格 名称
+					if(product.getSellKeyList() ==null || product.getSellKeyList().size() ==0){
+						rs.setStatu(ReturnStatus.DataError);
+						rs.setStatusreson("规格名称输入有误");
+						return JsonStr(rs);
+					}
+					//规格值
+					for (ProductSellKeyVO keyItem : product.getSellKeyList()) {
+						if(keyItem.getSellValueList() ==null || keyItem.getSellValueList().size() ==0){
+							rs.setStatu(ReturnStatus.DataError);
+							rs.setStatusreson("规格值输入有误");
+							return JsonStr(rs);
+						}
+					}
+					//款式 价格 数量 
+					for (ProductStylesVO styleItem : product.getStyleList()) {
+						if(!Short.valueOf("1").equals(user.getBrandsupplyer())){
+						if(styleItem.getPrice()==null || !(styleItem.getPrice()>0))
+						{					
+							rs.setStatu(ReturnStatus.DataError);
+							rs.setStatusreson("款式价格输入有误");
+							return JsonStr(rs);
+						}else {							
+							//价格不能小于 佣金
+							if(styleItem.getConmision()>=styleItem.getPrice()){
+								rs.setStatu(ReturnStatus.DataError);
+								rs.setStatusreson("零售价格不能小于佣金");
+								return JsonStr(rs);
+							}
+						}
+					}
+					}
+				}
+				else if(product.getInventory() ==null || product.getInventory() <1 || product.getPrice()==null ||
+						!(product.getPrice()>0) ||  (product.getCommission() != null && product.getCommission()>= product.getPrice()))
+				{//如果没有款式列表
+					if(product.getInventory() ==null || product.getInventory() <1)
+					{
+						rs.setStatu(ReturnStatus.DataError);
+						rs.setStatusreson("库存输入有误");
+						return JsonStr(rs);
+					}
+					
+					if(product.getPrice()==null || product.getPrice()<=0)
+					{
+						rs.setStatu(ReturnStatus.DataError);
+						rs.setStatusreson("价格输入有误");
+						return JsonStr(rs);
+					}
+					if(product.getCommission()>= product.getPrice()){
+						rs.setStatu(ReturnStatus.DataError);
+						rs.setStatusreson("佣金不能大于成本价");
+						return JsonStr(rs);
+					}
+					
+					rs.setStatu(ReturnStatus.DataError);
+					rs.setStatusreson("价格输入有误");
+					return JsonStr(rs);
+				}
+				//批发价格
+				if(product.getBatchPrice() !=null && product.getBatchPrice().size()>0){
+					for (BatchPriceVO bpItem : product.getBatchPrice() ) {
+						if(bpItem.getNum() < 1 || !(bpItem.getPrice() > 0)){
+							rs.setStatu(ReturnStatus.DataError);
+							rs.setStatusreson("批发价格输入有误");
+							return JsonStr(rs);
+						}
+					}
+				}
+				//pc 详情
+				if(product.getPcdes()==null || product.getPcdes() ==""){
+					rs.setStatu(ReturnStatus.DataError);
+					rs.setStatusreson("PC详情不能为空");
+					return JsonStr(rs);
+				}
+				//邮费模板
+				if(product.getPostFeeId() ==null || !(product.getPostFeeId()>0)){
+					rs.setStatu(ReturnStatus.DataError);
+					rs.setStatusreson("邮费模板不能为空");
+					return JsonStr(rs);
+				}
+				//店铺分类
+				if(product.getCustomTypeNo() == null || !(product.getCustomTypeNo() >0)){
+					rs.setStatu(ReturnStatus.DataError);
+					rs.setStatusreson("店铺分类为必选");
+					return JsonStr(rs);
+				}
+			}
+		}
+		product.setType(doType);	
+		userInfo.setPthdls(user.getPthdls());
+		userInfo.setPthldd(user.getPthldd());
+//		result = productService.editProductInfo(product);
+		userInfo.setYun(user.judgePower(UserPowerConstants.Product_IsYun_Power));
+		rs = basicProductService.editProduct(product, userInfo, OrderFrom.PC.toString());
+		if ("1".equals(rs.getStatu().toString())) {
+			//子供应商发布的产品如果是新增的则删除借用的PProducts表中的数据
+			if (Integer.valueOf(PubProductTypeEnum.SubAccount.toString()).equals(userInfo.getPubProductType())) {
+				Map<String, Object> map = (Map<String, Object>)rs.getBasemodle();
+				if (map != null) {
+					boolean isEdit = (boolean)map.get("isEdit");
+					if (!isEdit) {
+						Long productid = (Long)map.get("productid");
+						basicProductService.deleteById(PProducts.class, productid);
+					}
+				}
+			}
+		}
+		
+		return JsonStr(rs);
+	}
+	
+	@ResponseBody
+    @RequestMapping(value = "/getParamModel",method ={RequestMethod.POST,RequestMethod.GET})
+	public String getParamModel(@RequestParam(required = true,defaultValue = "0") Integer pModelID,Model model){
+		if(pModelID <1){
+			return "";
+		}
+		LoginUser user = super.getUserOrSub();
+		long weiID =user.getWeiID();
+		return JsonUtil.objectToJson(productService.getParamModel(pModelID));
+	}
+	
+	@ResponseBody
+    @RequestMapping(value = "/saveShopClassTwoLevle",method ={RequestMethod.POST,RequestMethod.GET})
+	public String saveShopClassTwoLevle(@RequestParam(required = true,defaultValue = "")String scName,String scJson,Model model) {
+		LoginUser user = super.getUserOrSub();
+		ReturnModel rs = new ReturnModel();
+		if (user == null) {
+			rs.setStatu(ReturnStatus.LoginError);
+			rs.setStatusreson("您的身份已过期，请重新登录");
+			return JsonUtil.objectToJson(rs);
+		}
+		rs.setStatu(ReturnStatus.SystemError);
+		rs.setStatusreson("操作失败");
+//		rs = productService.saveShopClassList(scName,scJson,weiID);
+		if(scName ==null || scName ==""){
+			rs.setStatu(ReturnStatus.ParamError);
+			rs.setStatusreson("参数异常");
+		} else {
+			List<String> list = null;
+			if (scJson != null) {
+				list = (List<String>) JsonUtil.jsonToList(scJson);
+			}
+			List<ShopClassVO> childClass = null;
+			if (list != null && list.size() > 0) {
+				childClass = new ArrayList<ShopClassVO>();
+				for (String className : list) {
+					ShopClassVO vo = new ShopClassVO();
+					vo.setClassId(0);
+					vo.setClassName(className);
+					childClass.add(vo);
+				}
+			}
+			try {
+				ShopClassVO scVo = new ShopClassVO();
+				scVo.setClassId(0);
+				scVo.setClassName(scName);
+				scVo.setChildClass(childClass);
+//				PShopClass shopclass = productService.getShopClass(user.getWeiID(), scName);
+//				if (shopclass != null) {
+//					scVo.setClassId(shopclass.getSid());
+//				}
+				rs = shopManager.editShopClass(scVo,user);
+			} catch (Exception e) {
+				logger.error("保存店铺分类失败"+e.getMessage());
+				rs.setStatu(ReturnStatus.SystemError);
+				rs.setStatusreson("操作失败");
+			}
+		}
+				
+		return JsonUtil.objectToJson(rs);
+	}
+}

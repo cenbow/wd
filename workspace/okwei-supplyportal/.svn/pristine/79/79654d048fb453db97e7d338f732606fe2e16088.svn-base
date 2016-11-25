@@ -1,0 +1,40 @@
+package com.okwei.supplyportal.bean.vo;
+
+import java.util.List;
+
+public class ProductOrderVO extends BaseProduct 
+{
+	private int count;
+	private int productState;
+	private double sumPrice;
+	private String property;
+	
+	public int getCount() {
+		return count;
+	}
+	public void setCount(int count) {
+		this.count = count;
+	}
+	public int getProductState() {
+		return productState;
+	}
+	public void setProductState(int productState) {
+		this.productState = productState;
+	}
+	public double getSumPrice() {
+		return sumPrice;
+	}
+	public void setSumPrice(double sumPrice) {
+		this.sumPrice = sumPrice;
+	}
+	/**
+	 * 产品销售属性
+	 * @return
+	 */
+	public String getProperty() {
+		return property;
+	}
+	public void setProperty(String val) {
+		this.property = val;
+	}
+}

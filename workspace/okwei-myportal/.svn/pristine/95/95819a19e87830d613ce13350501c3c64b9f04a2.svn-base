@@ -1,0 +1,121 @@
+package com.okwei.myportal.dao;
+
+import java.util.List;
+import java.util.Map;
+
+import com.okwei.bean.domain.PProductAssist;
+import com.okwei.bean.domain.SMainData;
+import com.okwei.bean.domain.SShareActive;
+import com.okwei.bean.domain.SStatics;
+import com.okwei.bean.dto.share.SMainDataDTO;
+import com.okwei.bean.dto.share.SMainDataDTOs;
+import com.okwei.common.Limit;
+import com.okwei.common.PageResult;
+import com.okwei.dao.IBaseDAO;
+
+public interface IShareDAO extends IBaseDAO {
+		
+	/**
+	 * 统计详情的 总佣金
+	 * @param weiID
+	 * @param productIds
+	 * @return
+	 */
+	public Double getOrderCommission(long weiID,List<Long> productIds);
+	/**
+	 * 统计单个分享详情 总成交量  总成交金额
+	 * @param weiID
+	 * @param shareId
+	 * @return
+	 */
+	public Map<Double, Integer> getCountOrders(long weiID,long shareId);
+	
+	/**
+	 * 获取产品扩展列表
+	 * 主要用于获取浏览数量 readCount
+	 * @param productIds 集合
+	 * @return
+	 */
+	public List<PProductAssist> find_PProductAssist(List<Long> productIds);
+	
+	/**
+	 * 获取成交笔数
+	 * @param weiID
+	 * @param productIds 集合
+	 * @return
+	 */
+	public Map<Integer, Integer> getCountOrder(long weiID,List<Long> productIds);
+	/**
+	 * 统计统计表 中的每种数据数量
+	 * @param weiID
+	 * @param dto
+	 * @return
+	 */
+	public Map<String, Object> count_Statics(long weiID,SMainDataDTOs dto);
+	
+	/**
+	 * 获取统计分享列表
+	 * @param weiID
+	 * @param dto
+	 * @param limit
+	 * @return 
+	 */
+	public PageResult<SMainData> findSMainDataLists(long weiID,SMainDataDTOs dto,Limit limit);
+	
+	
+	/**
+	 * 统计分享数据
+	 * @param shareIds 集合
+	 * @return
+	 */
+	public List<SStatics> findSStatics(List<Long> shareIds);
+	/**
+	 * 获取分享列表
+	 * @param weiID
+	 * @param dto
+	 * @param limit
+	 * @return 
+	 */
+	public PageResult<SMainData> findSMainDataList(long weiID,SMainDataDTO dto,Limit limit);
+	
+	
+	/**
+	 * 获取标题信息
+	 * @param shareId 分享Id集合
+	 * @return
+	 */
+	public List<SMainData> findSMainDataList(List<Long> shareIds);
+	/**
+	 * 获取自己的分享  和【转】的分享    没带搜索条件时
+	 * @param weiID 自己的weiId
+	 * @param limit
+	 * @return
+	 */
+	public PageResult<SShareActive> findSShareActiveList(Long weiID,Limit limit);
+	
+	/**
+	 * 根据分享的 获取自己分享的内容
+	 * @param shareIds 分享ID
+	 * @param weiId
+	 * @return
+	 */
+	public List<SShareActive> findSShareActiveList(long weiId,List<Long> shareIds);
+	
+	/**
+	 * 根据wieId获取所有的分享出去的分享信息
+	 * @param weiId
+	 * @return
+	 */
+	public List<Long> findSShareActiveList(long weiId);
+	/**
+	 * 为满足变态的查询  应该用不到别的地方
+	 * @param weiID
+	 * @param dto
+	 * @param shareIds
+	 * @param limit
+	 * @return
+	 */
+	public PageResult<SMainData> findSMainDataList(long weiID, SMainDataDTO dto,List<Long> shareIds, Limit limit);
+	
+
+}

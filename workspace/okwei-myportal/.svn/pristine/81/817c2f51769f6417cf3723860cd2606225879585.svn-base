@@ -1,0 +1,334 @@
+package com.okwei.myportal.web;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+import java.util.Map;
+
+import org.apache.struts2.interceptor.DateTextFieldInterceptor.DateWord;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+import com.okwei.bean.domain.TRegional;
+import com.okwei.bean.enums.DemandStateEnum;
+import com.okwei.bean.vo.DemandProductVO;
+import com.okwei.bean.vo.LoginUser;
+import com.okwei.bean.vo.ResultMsg;
+import com.okwei.bean.vo.ShopClassVO;
+import com.okwei.bean.vo.SupplyDemandVO;
+import com.okwei.bean.vo.product.Products;
+import com.okwei.bean.vo.user.ChannelRegionVO;
+import com.okwei.bean.vo.user.DemandRequiredVO;
+import com.okwei.common.JsonUtil;
+import com.okwei.common.Limit;
+import com.okwei.common.PageResult;
+import com.okwei.myportal.bean.enums.BaseResultStateEnum;
+import com.okwei.myportal.bean.vo.BaseResultVO;
+import com.okwei.service.user.IBaseSupplyDemandService;
+import com.okwei.util.DateUtils;
+import com.okwei.web.base.SSOController;
+
+
+@Controller
+@RequestMapping(value = "/demand")
+public class SupplyDemandController extends SSOController {
+
+	@Autowired
+	private IBaseSupplyDemandService service;
+	
+	@RequestMapping(value = "/releasedemand",method ={RequestMethod.POST,RequestMethod.GET})
+	public String releasedemand(@RequestParam(required = true,defaultValue = "0")Integer demandID ,Model model){
+
+		LoginUser user = super.getUserOrSub();
+		SupplyDemandVO demand = service.getSupplyDemandVO(demandID);
+		if(demand !=null){
+			if(demand.getdRequiredVOs() !=null && demand.getdRequiredVOs().size() >0){
+				for (DemandRequiredVO item : demand.getdRequiredVOs()) {
+					//Josn KV
+					if(item.getRequiredKVVOs() !=null && item.getRequiredKVVOs().size()>0){
+						item.setRequiredKVStr(JsonUtil.objectToJson(item.getRequiredKVVOs()));
+					}
+					if(item.getRegionVOs() !=null && item.getRegionVOs().size() >0){
+						String codeString ="|";
+						String cdoeNames="";
+						String tempString="";
+						int i =0;
+						for (ChannelRegionVO region : item.getRegionVOs() ) {
+							codeString += region.getCode()+"|";
+							if(i <8){
+								cdoeNames += region.getCodeName() + " ";
+							}
+							i ++;
+						}
+						tempString = cdoeNames;
+						if(item.getRegionVOs().size() >8){
+							cdoeNames += "等"+item.getRegionVOs().size()+"个省市";
+							tempString +="<a href='javascript:;' class='ft_lan'>"+item.getRegionVOs().size()+"个省市</a>";
+						}
+						if(item.getRequiredKVStr() !=null){
+							item.setRequiredKVStr(item.getRequiredKVStr().replace("\"", "\'").replace("rkey", "key").replace("rvalue", "value"));
+						}
+						
+						item.setCodeName(cdoeNames);
+						item.setNumRequired(tempString);
+						item.setCodeStr(codeString);
+					}
+					
+				}
+			}
+		}
+		
+		List<DemandProductVO>  products = null;
+		PageResult<DemandProductVO> productPageResult = service.getDemandProducts(demandID, Limit.buildLimit(1, 999999));
+		if(productPageResult !=null){
+			products =productPageResult.getList();
+		}
+		model.addAttribute("products",products);
+		model.addAttribute("demand",demand);	
+		model.addAttribute("userinfo",user);
+		
+		return "demand/releasedemand";		
+	}
+	
+	@ResponseBody
+	@RequestMapping(value = "/getNoDemandProducts",method ={RequestMethod.POST,RequestMethod.GET})
+	public String getNoDemandProducts(String title,Integer classType,String productIDsStr
+			,Integer pageIndex,Integer pageSize){
+		if(pageIndex ==null || pageIndex <1){
+			pageIndex =1;
+		}
+		if(pageSize==null || pageSize <1){
+			pageSize =5;
+		}
+				
+		LoginUser user = super.getUserOrSub();
+
+		PageResult<DemandProductVO> products = service.getNoDemandProducts(user.getWeiID(), title, classType, Limit.buildLimit(pageIndex, pageSize));
+		
+		return JsonUtil.objectToJson(products);
+	}
+	
+	@ResponseBody
+	@RequestMapping(value = "/getProductClass",method ={RequestMethod.POST,RequestMethod.GET})
+	public String getProductClass(Short level, Integer parentID){
+		
+		LoginUser user = super.getUserOrSub();
+		List<ShopClassVO> classVOs = service.getShopClassVOs(user.getWeiID(), level, parentID);
+				
+		return JsonUtil.objectToJson(classVOs);		
+	}
+	
+	
+	@ResponseBody
+	@RequestMapping(value = "/saveDemand",method ={RequestMethod.POST,RequestMethod.GET})
+	public String saveDemand(String json){
+		
+		BaseResultVO result = new BaseResultVO();
+		result.setMessage("参数异常");
+		result.setState(BaseResultStateEnum.Failure);
+		LoginUser user = super.getUserOrSub();
+		if(!user.judgePower("Supply_AddDemand")){
+			result.setMessage("您没有该功能权限");
+			return JsonUtil.objectToJson(result);	
+		}
+		if(json ==null || "".equals(json)){
+			return JsonUtil.objectToJson(result);	
+		}
+		
+		SupplyDemandVO demandVO = (SupplyDemandVO) JsonUtil.json2Object(json, SupplyDemandVO.class);
+		//参数校验		
+		if(demandVO.getTitle() ==null || "".equals(demandVO.getTitle())){
+			return JsonUtil.objectToJson(result);	
+		}
+		if(demandVO.getMainImage() ==null || "".equals(demandVO.getMainImage())){
+			return JsonUtil.objectToJson(result);	
+		}
+		if(demandVO.getdRequiredVOs() ==null || demandVO.getdRequiredVOs().size() <1){
+			return JsonUtil.objectToJson(result);	
+		}
+		for (DemandRequiredVO item : demandVO.getdRequiredVOs()) {
+			if(item.getAgentRequired() ==null || "".equals(item.getAgentRequired())){
+				return JsonUtil.objectToJson(result);	
+			}
+			if(item.getRegionVOs() ==null || item.getRegionVOs().size() <1){
+				return JsonUtil.objectToJson(result);	
+			}
+			if(item.getAgentReward() ==null || item.getAgentReward() <0){
+				return JsonUtil.objectToJson(result);	
+			}
+		}
+		if(demandVO.getOrderAmout() == null || demandVO.getOrderAmout() < 0){
+			return JsonUtil.objectToJson(result);	
+		}
+		if(demandVO.getShopReward() == null || demandVO.getShopReward() <0){
+			return JsonUtil.objectToJson(result);	
+		}
+		
+		demandVO.setWeiId(user.getWeiID());		
+		boolean saveResult =  service.saveSupplyDemand(demandVO);
+		if(saveResult){
+			result.setMessage("成功");
+			result.setState(BaseResultStateEnum.Success);
+		}else{
+			result.setMessage("系统异常，请稍后重试");
+		}
+		
+		return JsonUtil.objectToJson(result);	
+	}
+	
+	@RequestMapping(value = "/myDemandList",method ={RequestMethod.POST,RequestMethod.GET})
+	public String getMyDemandList(@RequestParam(required = true,defaultValue = "1")Short state,
+			Integer pageId,Integer pageSize,Model model){
+		
+		LoginUser user = super.getUserOrSub();
+		
+		if(pageId ==null || pageId <1){
+			pageId =1;
+		}
+		if(pageSize ==null || pageSize <1){
+			pageSize =5;
+		}
+		
+		DemandStateEnum demandState =null;
+		if(state !=null){
+			demandState = DemandStateEnum.values()[state];
+		}
+		PageResult<SupplyDemandVO> pageResult = service.getSupplyDemandVOs(user.getWeiID(),6, demandState, Limit.buildLimit(pageId, pageSize));
+
+		Map<DemandStateEnum, Long> stateObjs = service.getMyDemandStateCount(user.getWeiID());
+		
+		model.addAttribute("page",pageResult);	
+		model.addAttribute("userinfo",user);
+		model.addAttribute("state",state);	
+		model.addAttribute("ShowingCount",stateObjs.get(DemandStateEnum.Showing));	
+		model.addAttribute("DraftCount",stateObjs.get(DemandStateEnum.Draft));	
+		model.addAttribute("OffShelfCount",stateObjs.get(DemandStateEnum.OffShelf));	
+		model.addAttribute("WaitCount",stateObjs.get(DemandStateEnum.WaitAuditing));
+		model.addAttribute("NoPass",stateObjs.get(DemandStateEnum.NoPass));
+		return "/demand/mydemandlist";
+	}
+	
+	@ResponseBody
+	@RequestMapping(value = "/editDemandState",method ={RequestMethod.POST,RequestMethod.GET})
+	public String editDemandState(String demandIDStr,Short state){
+		BaseResultVO result = new BaseResultVO();
+		result.setMessage("参数异常");
+		result.setState(BaseResultStateEnum.Failure);
+		
+		LoginUser user = super.getUserOrSub();
+		if(!user.judgePower("Supply_AddDemand")){
+			result.setMessage("您没有该功能权限");
+			return JsonUtil.objectToJson(result);	
+		}
+		
+		if(demandIDStr ==null || "".equals(demandIDStr)){
+			return JsonUtil.objectToJson(result);
+		}
+		if(state ==null){
+			return JsonUtil.objectToJson(result);
+		}
+		
+		String[] demandIDStrs = demandIDStr.split(",");
+		//每次最多只能操作10个
+		if(demandIDStrs.length <1 || demandIDStrs.length >10){
+			return JsonUtil.objectToJson(result);
+		}
+		Integer[] demandIDs = new Integer[demandIDStr.length()];
+		for (int i = 0; i < demandIDStrs.length; i++) {
+			demandIDs[i] = Integer.parseInt((demandIDStrs[i]));
+		}
+
+		DemandStateEnum stateEnum = DemandStateEnum.values()[state];
+		if(stateEnum ==null){
+			return JsonUtil.objectToJson(result);
+		}
+			
+		ResultMsg resultMsg = service.editDemandState(demandIDs, user.getWeiID(), stateEnum);
+		if(resultMsg.getStatus() ==1){
+			result.setMessage("成功");
+			result.setState(BaseResultStateEnum.Success);
+		}else{
+			result.setMessage(resultMsg.getMsg());
+		}
+		
+		return JsonUtil.objectToJson(result);	
+	}
+	
+	@ResponseBody
+	@RequestMapping(value = "/demandTop",method ={RequestMethod.POST,RequestMethod.GET})
+	public String demandTop(Integer demandID){
+		BaseResultVO result = new BaseResultVO();
+		result.setMessage("参数异常");
+		result.setState(BaseResultStateEnum.Failure);
+		
+		LoginUser user = super.getUserOrSub();
+		if(!user.judgePower("Supply_AddDemand")){
+			result.setMessage("您没有该功能权限");
+			return JsonUtil.objectToJson(result);	
+		}
+		
+		if(demandID ==null || demandID <1){
+			return JsonUtil.objectToJson(result);
+		}
+		boolean isOk = service.editDemandTop(demandID, user.getWeiID());
+		if(isOk){
+			result.setMessage("成功");
+			result.setState(BaseResultStateEnum.Success);
+		}else{
+			result.setMessage("系统异常，请稍后重试");
+		}
+		return JsonUtil.objectToJson(result);	
+	}	
+	
+	@RequestMapping(value = "/fondDemand",method ={RequestMethod.POST,RequestMethod.GET})
+	public String fondDemand(Integer province,Integer city,String stateTimeStr,String endTimeStr ,
+			Integer pageId,Integer pageSize, Model model){
+		LoginUser user = super.getUserOrSub();
+		if(pageId ==null || pageId <1){
+			pageId =1;
+		}
+		if(pageSize ==null || pageSize <1){
+			pageSize =10;
+		}
+		Date stateTime =null;
+		Date endTime =null;
+		try {
+			if(stateTimeStr !=null && !"".equals(stateTimeStr)){
+				stateTime = DateUtils.parseDate(stateTimeStr);
+			}
+			if(endTimeStr !=null && !"".equals(endTimeStr)){
+				 endTime = DateUtils.parseDate(endTimeStr);
+			}			
+		} catch (Exception e) {
+			// TODO: handle exception
+		}
+				
+		PageResult<SupplyDemandVO> page = service.getVerifierDemandVos(province, city, stateTime, endTime,3, Limit.buildLimit(pageId, pageSize));
+				
+		model.addAttribute("stateTimeStr", stateTimeStr);
+		model.addAttribute("endTimeStr", endTimeStr);
+		model.addAttribute("province", province);
+		model.addAttribute("city", city);
+		model.addAttribute("page", page);
+		model.addAttribute("userinfo",user);
+		return "/demand/fonddemand";		
+	}
+	
+	@ResponseBody
+	@RequestMapping(value = "/getRegion",method ={RequestMethod.POST,RequestMethod.GET})
+	public String getRegion(Short lever,Integer parent){
+		
+		if(lever ==null && parent ==null){
+			return null;
+		}
+		
+		List<TRegional> result = service.getRegionals(lever, parent);
+				
+		return JsonUtil.objectToJson(result);		
+	}
+}

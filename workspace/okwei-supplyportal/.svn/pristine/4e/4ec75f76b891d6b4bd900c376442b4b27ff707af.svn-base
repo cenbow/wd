@@ -1,0 +1,47 @@
+package com.okwei.supplyportal.bean.vo;
+
+import java.util.List;
+
+import com.okwei.bean.domain.OProductOrder;
+
+public class ProductPriceEditParam {
+
+	private double postPrice;
+	private String supplyOrderId;
+	private long supplyWeiid;
+	
+	private List<OProductOrder> productParamList;
+	public double getPostPrice() {
+		return postPrice;
+	}
+	public void setPostPrice(double postPrice) {
+		this.postPrice = postPrice;
+	}
+	
+	public long getSupplyWeiid() {
+		return supplyWeiid;
+	}
+	public void setSupplyWeiid(long supplyWeiid) {
+		this.supplyWeiid = supplyWeiid;
+	}
+	/**
+	 * 供应商订单id
+	 * @return
+	 */
+	public String getSupplyOrderId() {
+		return supplyOrderId;
+	}
+	public void setSupplyOrderId(String supplyOrderId) {
+		this.supplyOrderId = supplyOrderId;
+	}
+	/**
+	 * 产品价格编辑参数
+	 * @return
+	 */
+	public List<OProductOrder> getProductParamList() {
+		return productParamList;
+	}
+	public void setProductParamList(List<OProductOrder> productParamList) {
+		this.productParamList = productParamList;
+	}
+}

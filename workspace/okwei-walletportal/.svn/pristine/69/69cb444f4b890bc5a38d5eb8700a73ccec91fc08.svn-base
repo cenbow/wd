@@ -1,0 +1,390 @@
+package com.okwei.walletportal.service.impl;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.ResourceBundle;
+
+import javassist.expr.NewArray;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.okwei.bean.domain.UAdvisor;
+import com.okwei.bean.domain.UAdvisors;
+import com.okwei.bean.domain.UBankCard;
+import com.okwei.bean.domain.UBatchPort;
+import com.okwei.bean.domain.UBatchSupplyer;
+import com.okwei.bean.domain.UPublicBanks;
+import com.okwei.bean.domain.UTuizhu;
+import com.okwei.bean.domain.UVerifier;
+import com.okwei.bean.domain.UYunSupplier;
+import com.okwei.bean.domain.UYunVerifier;
+import com.okwei.bean.enums.BondType;
+import com.okwei.bean.enums.OperationEnum;
+import com.okwei.bean.enums.SupplierStatusEnum;
+import com.okwei.bean.enums.VerfierStatusEnum;
+import com.okwei.service.impl.BaseService;
+import com.okwei.util.DateUtils;
+import com.okwei.util.ImgDomain;
+import com.okwei.walletportal.bean.enums.BaseResultState;
+import com.okwei.walletportal.bean.vo.ApplyBondInfo;
+import com.okwei.walletportal.bean.vo.BankCardVO;
+import com.okwei.walletportal.bean.vo.BaseResultVO;
+import com.okwei.walletportal.bean.vo.VerifierInfo;
+import com.okwei.walletportal.dao.IApplyBondDAO;
+import com.okwei.walletportal.service.IApplyBondService;
+
+@Service
+public class ApplyBondService extends BaseService implements IApplyBondService {
+
+    @Autowired
+    private IApplyBondDAO applyBondDAO;
+
+    @Override
+    public long getVerifierWeiid(long weiid, int type) {
+	long result = 0;
+	if (type == 1) {
+	    UYunSupplier yunSupplier = applyBondDAO.getYunSupplier(weiid);
+	    if (yunSupplier != null)
+		result = yunSupplier.getRzWeiId().longValue();
+	} else if (type == 2) {
+	    UBatchSupplyer bathSupplier = applyBondDAO.getBatchSupplyer(weiid);
+	    if (bathSupplier != null)
+		result = bathSupplier.getVerifier().longValue();
+	}
+	return result;
+    }
+
+    @Override
+    public BaseResultVO getVerificationBond(int type, long weiid) {
+	BaseResultVO resultVO = new BaseResultVO();
+	resultVO.setState(BaseResultState.Failure);
+	// 1.首先验证是否是供应商
+	UYunSupplier yunSupplier = applyBondDAO.getYunSupplier(weiid);
+	boolean isYun = false;
+	if (yunSupplier != null && Short.parseShort(SupplierStatusEnum.PayIn.toString()) == yunSupplier.getStatus().shortValue()) {
+	    isYun = true;
+	}
+	UBatchSupplyer bathSupplier = applyBondDAO.getBatchSupplyer(weiid);
+	boolean isBath = false;
+	if (bathSupplier != null && Short.parseShort(SupplierStatusEnum.PayIn.toString()) == bathSupplier.getStatus().shortValue()) {
+	    isBath = true;
+	}
+	boolean areAll = false;// 是否两个供应商都是
+	if (type == Integer.parseInt(BondType.YunSupplier.toString())) {
+	    // 工厂号
+	    if (isYun) {
+		if (yunSupplier.getBond() == null || yunSupplier.getBond().doubleValue() <= 0) {
+		    resultVO.setMessage("工厂号可提取的保证金金额为0");
+		    return resultVO;
+		}
+		// 判断进驻时间是否大于7天
+		if (DateUtils.addDate(yunSupplier.getPayTime(), 7).after(new Date())) {
+		    resultVO.setMessage("入驻未满7天，不能申请提取保证金！");
+		    return resultVO;
+		}
+		resultVO.setObj(yunSupplier.getRzWeiId());
+		if (isBath)
+		    areAll = true;
+	    } else {
+		resultVO.setMessage("不是工厂号供应商");
+		return resultVO;
+	    }
+	} else if (type == Integer.parseInt(BondType.BatchSupplier.toString())) {
+	    // 批发号
+	    if (isBath) {
+		if (bathSupplier.getBond() == null || bathSupplier.getBond().doubleValue() <= 0) {
+		    resultVO.setMessage("批发号可提取的保证金金额为0");
+		    return resultVO;
+		}
+		if (DateUtils.addDate(bathSupplier.getInTime(), 90).after(new Date())) {
+		    resultVO.setMessage("进驻未满三个月，不能申请提取保证金！");
+		    return resultVO;
+		}
+		resultVO.setObj(bathSupplier.getVerifier());
+		if (isYun)
+		    areAll = true;
+	    } else {
+		resultVO.setMessage("不是批发号供应商");
+		return resultVO;
+	    }
+	} else {
+	    return resultVO;
+	}
+	// 如果两个都是
+	if (areAll) {
+	    // 判断另外一种身份是否正在申请退驻
+	    if (type == Integer.parseInt(BondType.YunSupplier.toString())) {
+		if (applyBondDAO.getIsApply(BondType.BatchSupplier, weiid) > 0) {
+		    resultVO.setMessage("批发号保证金正在申请中");
+		    return resultVO;
+		}
+	    } else if (type == Integer.parseInt(BondType.BatchSupplier.toString())) {
+		if (applyBondDAO.getIsApply(BondType.YunSupplier, weiid) > 0) {
+		    resultVO.setMessage("工厂号保证金正在申请中");
+		    return resultVO;
+		}
+	    }
+
+	} else {
+	    /*************************** 取消下级，未完成订单限制 *****************************/
+	    // // 2.判断所有的产品是否已下架
+	    // long shelveCount = applyBondDAO.getShelveCount(weiid);
+	    // if (shelveCount > 0) {
+	    // resultVO.setMessage("你还有" + String.valueOf(shelveCount) +
+	    // "个产品未下架");
+	    // return resultVO;
+	    // }
+	    // // 3.判断是否有未完成的订单
+	    // long orderCount = applyBondDAO.getOrderCount(weiid);
+	    // if (orderCount > 0) {
+	    // resultVO.setMessage("你还有" + String.valueOf(orderCount) +
+	    // "个未完成的订单");
+	    // return resultVO;
+	    // }
+	}
+	resultVO.setState(BaseResultState.Success);
+	return resultVO;
+    }
+
+    @Override
+    public ApplyBondInfo getApplyBondInfo(int type, long weiid) {
+	ApplyBondInfo result = new ApplyBondInfo();
+	result.setType(type);
+	result.setState(-1);
+	short state = 0;
+	if (type == 1) {
+	    UYunSupplier yunSupplier = applyBondDAO.getYunSupplier(weiid);
+	    if (yunSupplier != null) {
+		result.setRzweiid(yunSupplier.getRzWeiId().longValue());
+		state = yunSupplier.getStatus().shortValue();
+	    }
+	} else if (type == 2) {
+	    UBatchSupplyer bathSupplier = applyBondDAO.getBatchSupplyer(weiid);
+	    if (bathSupplier != null) {
+		result.setRzweiid(bathSupplier.getVerifier().longValue());
+		state = bathSupplier.getStatus().shortValue();
+	    }
+	}
+
+	UTuizhu model = applyBondDAO.getTuizhu(type, weiid);
+	if (model != null && model.getState().intValue() != -1) {
+	    if (!(state == Short.parseShort(SupplierStatusEnum.PayIn.toString()) && Short.parseShort(OperationEnum.Resolved.toString()) == model.getState().shortValue())) {
+		result.setTid(model.getTid());
+		result.setState(model.getState());
+		result.setTime(DateUtils.formatDateTime(model.getCreateTime()));
+		if (model.getProcessTime() != null) {
+		    result.setCltime(DateUtils.formatDateTime(model.getProcessTime()));
+		}
+		String bankno = model.getBankNo();
+		result.setBankNo(bankno);
+		// 提款账户
+		String account = "";
+		if (model.getBankType().shortValue() == 1) {
+		    account += "对公账户 ";
+		}
+		account += model.getBankName() + " 尾号";
+		account += String.valueOf(bankno.substring(bankno.length() - 4));
+		result.setAccount(account);
+		result.setReason(model.getReason());
+		if (model.getActAmount() != null) {
+		    result.setAmount(model.getActAmount());
+		}
+		if (model.getPayTime() != null) {
+		    result.setPaytime(DateUtils.formatDateTime(model.getPayTime()));
+		}
+		result.setImageBack(ImgDomain.GetFullImgUrl(model.getImageBack()));
+		result.setImageFront(ImgDomain.GetFullImgUrl(model.getImageFront()));
+		result.setDetailpath(model.getDetailPath());
+		if (model.getState().intValue() == 3) {
+		    String url = ResourceBundle.getBundle("domain").getString("joindomain");
+		    if (type == 1) {
+			// 工厂号
+			result.setUrl(url + "/supplier/apply");
+		    } else {
+			// 批发号
+			// 判断是不是认证服务点
+			UBatchPort port = applyBondDAO.get(UBatchPort.class, weiid);
+			if (port != null && port.getStatus().shortValue() == Short.parseShort(VerfierStatusEnum.exit.toString())) {
+			    result.setUrl(url + "/batchSupplier/apply?w=&bt=2");
+			} else {
+			    result.setUrl(url + "/batchSupplier/apply?w=&bt=1");
+			}
+		    }
+		}
+	    }
+	}
+	return result;
+    }
+
+    @Override
+    public List<BankCardVO> getBankList(String bankNo, long weiid) {
+	List<BankCardVO> result = new ArrayList<BankCardVO>();
+	// 首先查找是否有对公账号
+	List<UPublicBanks> pubList = applyBondDAO.getPublicBanks(weiid);
+	if (pubList != null && pubList.size() > 0) {
+	    for (UPublicBanks pub : pubList) {
+		BankCardVO temp = new BankCardVO();
+		temp.setCardID(pub.getPid().longValue());
+		temp.setBankName(pub.getBanckName());
+		String cardno = pub.getBanckNo();
+		if (cardno.equals(bankNo))
+		    temp.setIsSelect(1);
+		temp.setIsPublic(1);
+		temp.setCardNo(cardno.substring(cardno.length() - 4));
+		result.add(temp);
+	    }
+	}
+	// 查询普通银行卡账户
+	List<UBankCard> bankList = applyBondDAO.getBankCards(weiid);
+	if (bankList != null && bankList.size() > 0) {
+	    for (UBankCard bank : bankList) {
+		BankCardVO temp = new BankCardVO();
+		temp.setCardID(bank.getId().longValue());
+		temp.setBankName(bank.getBanckName());
+		String cardno = bank.getBanckCard();
+		if (cardno.equals(bankNo))
+		    temp.setIsSelect(1);
+		temp.setCardNo(cardno.substring(cardno.length() - 4));
+		result.add(temp);
+	    }
+	}
+	return result;
+    }
+
+    @Override
+    public BaseResultVO saveApplyBond(long weiid, int type, int tid, int cardid, int ispub, String imageback, String imagefront) {
+	BaseResultVO result = new BaseResultVO();
+	result.setState(BaseResultState.Failure);
+	UTuizhu model = null;
+	if (tid > 0) {
+	    model = applyBondDAO.get(UTuizhu.class, tid);
+	} else {
+	    model = new UTuizhu();
+	}
+	model.setWeiId(weiid);
+	model.setType((short) type);
+	if (type == Integer.parseInt(BondType.YunSupplier.toString())) {
+	    UYunSupplier yunSupplier = applyBondDAO.getYunSupplier(weiid);
+	    if (yunSupplier != null)
+		model.setAmount(yunSupplier.getBond());
+	} else if (type == Integer.parseInt(BondType.BatchSupplier.toString())) {
+	    UBatchSupplyer bathSupplier = applyBondDAO.getBatchSupplyer(weiid);
+	    if (bathSupplier != null)
+		model.setAmount(bathSupplier.getBond());
+	    // 查询是不是认证服务点
+	    UBatchPort port = applyBondDAO.get(UBatchPort.class, weiid);
+	    if (port != null && port.getStatus().shortValue() == Short.parseShort(VerfierStatusEnum.PayIn.toString()))
+		model.setType(Short.parseShort(BondType.Port.toString()));
+	}
+	model.setState(Short.parseShort(OperationEnum.Submit.toString()));
+	if (ispub == 1) {
+	    // 查询对公账户
+	    UPublicBanks bank = applyBondDAO.get(UPublicBanks.class, cardid);
+	    if (bank != null) {
+		model.setBankNo(bank.getBanckNo());
+		model.setBankName(bank.getBanckName());
+		model.setBankAdress(bank.getBranchName());
+		model.setBankType((short) 1);
+		model.setName(bank.getName());
+	    } else {
+		result.setMessage("银行卡信息获取失败");
+		return result;
+	    }
+	} else {
+	    // 普通账户
+	    UBankCard bank = applyBondDAO.get(UBankCard.class, (long) cardid);
+	    if (bank != null) {
+		model.setBankNo(bank.getBanckCard());
+		model.setBankName(bank.getBanckName());
+		model.setBankAdress(bank.getBanckMark());
+		model.setBankType((short) 0);
+		model.setName(bank.getName());
+	    } else {
+		result.setMessage("银行卡信息获取失败");
+		return result;
+	    }
+	}
+	model.setCreateTime(new Date());
+	if (ispub != 1) {
+	    model.setImageBack(imageback);
+	    model.setImageFront(imagefront);
+	}
+	if (tid > 0) {
+	    applyBondDAO.update(model);
+	} else {
+	    applyBondDAO.save(model);
+	}
+	result.setState(BaseResultState.Success);
+	return result;
+    }
+
+    @Override
+	public int updateCancelApply(long weiid, int type, int tid) {
+    	Map<String, Object> params = new HashMap<String, Object>();
+    	params.put("weiid", weiid);
+    	if (type == 2) {
+    		params.put("type", new Short[] { 2, 4 });
+    	} else {
+    		params.put("type", (short) type);
+    	}
+    	params.put("tid", tid);
+		String hql = "from UTuizhu where weiId=:weiid and type in (:type) and tid=:tid";
+		List<UTuizhu> list = applyBondDAO.findByMap(hql, params);
+		if (list != null && list.size() > 0) {
+			UTuizhu tz = list.get(0);
+			if (Short.valueOf(OperationEnum.Submit.toString()).equals(tz.getState())
+					|| Short.valueOf(OperationEnum.No.toString()).equals(tz.getState())) {
+				params.put("state", Short.parseShort(OperationEnum.NoUse.toString()));
+				hql = "update UTuizhu set state=:state where weiId=:weiid and type in (:type) and tid=:tid";
+				return applyBondDAO.executeHqlByMap(hql, params);
+			} else {
+				return -2;
+			}
+		}
+		return -1;
+	}
+
+    @Override
+    public VerifierInfo getVerifierInfo(long weiid) {
+	VerifierInfo result = new VerifierInfo();
+	UVerifier verifier = applyBondDAO.get(UVerifier.class, weiid);
+	UYunVerifier yunVerifier = applyBondDAO.get(UYunVerifier.class, weiid);
+	if (verifier != null && yunVerifier != null) {
+	    long gwweiid = 0;
+	    if (yunVerifier.getType().intValue() == 1) {
+		// 见习认证员
+		result.setCwei("见习认证员");
+		// 查找见习上级的估计
+		UYunVerifier sjVerifier = applyBondDAO.get(UYunVerifier.class, yunVerifier.getSupperVerifier());
+		if (sjVerifier != null)
+		    gwweiid = sjVerifier.getSupperAdvisor();
+	    } else if (yunVerifier.getType().intValue() == 2 || yunVerifier.getType().intValue() == 3) {
+		// 正式认证员
+		result.setCwei("正式认证员");
+		if (yunVerifier.getSupperAdvisor() != null) {
+		    gwweiid = yunVerifier.getSupperAdvisor();
+		}
+	    }
+	    result.setName(verifier.getName());
+	    result.setWeiid(weiid);
+	    result.setPhone(verifier.getPhone());
+	    result.setQq(yunVerifier.getQq());
+	    result.setPhoto(ImgDomain.GetFullImgUrl(verifier.getFacePic()));
+	    // 获取顾问信息
+	    UAdvisors advisor = applyBondDAO.get(UAdvisors.class, gwweiid);
+	    if (advisor != null) {
+		result.setGwcwei("认证顾问");
+		result.setGwweiid(gwweiid);
+		result.setGwname(advisor.getRealName());
+		result.setGwqq(advisor.getQq());
+		result.setGwphone(advisor.getMobilePhone());
+		result.setGwphoto(ImgDomain.GetFullImgUrl(advisor.getPhoto()));
+	    }
+	}
+	return result;
+    }
+}

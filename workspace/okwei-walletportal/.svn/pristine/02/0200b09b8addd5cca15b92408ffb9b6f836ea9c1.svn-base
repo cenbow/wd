@@ -1,0 +1,27 @@
+package com.okwei.walletportal.service;
+
+import com.okwei.common.Limit;
+import com.okwei.common.PageResult;
+import com.okwei.service.IBaseService;
+import com.okwei.walletportal.bean.vo.BaseResultVO;
+import com.okwei.walletportal.bean.vo.coupon.CashCouponVO;
+
+public interface ICashCouponService extends IBaseService {
+	/**
+	 * 获取现金劵列表
+	 * @param weiId
+	 * @param limit
+	 * @param dt
+	 * @return
+	 */
+	public PageResult<CashCouponVO> find_CashCouponList(Long weiId,Limit limit,int dt);
+	
+	
+	/**
+	 * 删除现金劵记录
+	 * @param weiId
+	 * @param cashCouponId
+	 * @return
+	 */
+	public BaseResultVO update_CashCoupon(Long weiId,String[] cashCouponId );
+}

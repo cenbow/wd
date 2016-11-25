@@ -1,0 +1,61 @@
+<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/functions" prefix="fn"%>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c"%>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/fmt" prefix="fmt"%>
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>微信支付扫码</title>
+<link rel="stylesheet" href="/statics/css/glbdy.css" />
+<link rel="stylesheet" href="/statics/css/index.css" />
+<link rel="stylesheet" href="/statics/css/mzh_dd.css" />
+<link rel="stylesheet" href="/statics/css/mzh_ibs.css" /> 
+<script type="text/javascript" src="/statics/js/pay/wxpay.js"></script>
+</head>
+<body>
+	<div class="content mar_au">
+		<!--<div class="weiz_iam f12 fm_song">当前位置：<a href="#">供应管理</a>><span>IBS支付收银台</span></div>-->
+		<div class="fr conter_right mzh_width_100">
+			<div class="bor_si fl bg_white mzh_width_100">
+				<div class="fl mzh_width_100 mt_30">
+					<img src="/statics/images/d-ico1.png" width="28" class="fl mr_20 ml40"><span class="fl f16 fw_b lh_30">您的订单生成成功!</span>
+					<div class="fl f14 lh_30 ml_20">
+						<span class="color_red">${totalAmout }</span>元
+					</div>
+				</div>
+				<div class="fl ml40 mb_20">
+					<ul>
+						<li class=" f14 ml_48">订单号：<span id="orderNo">${orderNo }</span></li>
+					</ul>
+				</div>
+			</div>
+			<div class="blank2"></div>
+			<div class="bor_si fl bg_white mzh_width_100">
+				<div class="fl mzh_width_100">
+					<h2 class="fl ml_40 mt_30">微信支付：</h2>
+				</div>
+				<div class="fl mzh_width_100">
+					<div class="fl mzh_width_50">
+						<img src="${requestUrl }" class="fl mt_47 ml_170">
+						<div class="fl mzh_width_100 ml_170">
+							<div class="fl bor_si bg_889ffe ml_10 mt_10 tc f18 color_fff">
+								<ul>
+									<li>请打开您的手机微信</li>
+									<li>扫描二维码完成支付</li>
+								</ul>
+							</div>
+						</div>
+					</div>
+					<div class="fl mzh_width_50">
+						<img src="/statics/images/08_25_sj.png" class="fl mt_30">
+					</div>
+				</div>
+				<div class="mzh_width_100 fl">
+					<a href="/pay/cashier?orderNo=${orderNo}" class="fl ml_40 f16 mt_20 mb_30">选择其他支付方式</a>
+				</div>
+			</div>
+		</div>
+	</div>
+</body>
+</html>

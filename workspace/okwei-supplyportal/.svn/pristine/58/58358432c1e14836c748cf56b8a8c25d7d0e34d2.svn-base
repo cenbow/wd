@@ -1,0 +1,558 @@
+package com.okwei.supplyportal.dao.impl;
+
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import com.okwei.bean.domain.PParamKey;
+import com.okwei.bean.domain.PParamModel;
+import com.okwei.bean.domain.PParamValues;
+
+import org.hibernate.hql.internal.ast.HqlASTFactory;
+import org.springframework.stereotype.Repository;
+
+import com.okwei.bean.domain.PClassProducts;
+import com.okwei.bean.domain.PPostAgeModel;
+import com.okwei.bean.domain.PPreOrder;
+import com.okwei.bean.domain.PProductBatchPrice;
+import com.okwei.bean.domain.PProductClass;
+import com.okwei.bean.domain.PProductImg;
+import com.okwei.bean.domain.PProductKeyWords;
+import com.okwei.bean.domain.PProductParamKv;
+import com.okwei.bean.domain.PProductSellKey;
+import com.okwei.bean.domain.PProductSellValue;
+import com.okwei.bean.domain.PProductStyleKv;
+import com.okwei.bean.domain.PProductStyles;
+import com.okwei.bean.domain.PProducts;
+import com.okwei.bean.domain.PShelverCount;
+import com.okwei.bean.domain.PShevleBatchPrice;
+import com.okwei.bean.domain.PShopClass;
+import com.okwei.bean.domain.UBatchSupplyer;
+import com.okwei.bean.domain.USupplyer;
+import com.okwei.bean.domain.UYunSupplier;
+import com.okwei.dao.impl.BaseDAO;
+import com.okwei.supplyportal.dao.IEditProductInfoDAO;
+
+@Repository
+public class EditProductInfoDAO extends BaseDAO implements IEditProductInfoDAO {
+
+	@Override
+	public long getTodayCreateProduct(long supplyID) {
+		if(supplyID<1)
+		{
+			return 0;
+		}
+		//今天 0点0分0秒
+		Calendar calendar = Calendar.getInstance();
+		calendar.setTime(new Date());
+		calendar.set(calendar.get(Calendar.YEAR), calendar.get(Calendar.MONTH), 
+				calendar.get(Calendar.DATE), 0, 0, 0);
+		
+		String hql = "SELECT COUNT(1) from PProducts p where p.supplierWeiId = :supplierWeiId "
+				+ "and p.createTime>=:createDate";
+		Map<String, Object> params = new HashMap<String, Object>();
+		params.put("supplierWeiId", supplyID);
+		params.put("createDate", calendar.getTime());
+		
+		return super.countByMap(hql, params);
+	}
+	
+	@Override
+	public long getTotalCreateProduct(long supplyID) {
+		if(supplyID<1){
+			return 0;
+		}
+		
+		String hql = "SELECT COUNT(1) from PProducts p where p.supplierWeiId = :supplierWeiId ";
+		Map<String, Object> params = new HashMap<String, Object>();
+		params.put("supplierWeiId", supplyID);
+		
+		return super.countByMap(hql, params);
+	}
+
+	@Override
+	public UYunSupplier getYunSupplier(long supplyID) {
+		if(supplyID<1)
+		{
+			return null;
+		}
+		
+		return super.get(UYunSupplier.class, supplyID);
+	}
+
+	@Override
+	public UBatchSupplyer getBatchSupplyer(long supplyID) {
+		if(supplyID<1)
+		{
+			return null;
+		}
+
+		return super.get(UBatchSupplyer.class, supplyID);
+	}
+
+	@Override
+	public USupplyer getSupplyer(long supplyID) {
+		if(supplyID<1)
+		{
+			return null;
+		}
+
+		return super.get(USupplyer.class, supplyID);
+	}
+	
+	@Override
+	public PProducts getProduct(long productID) {
+		if(productID<1)
+		{
+			return null;
+		}
+		
+		return super.get(PProducts.class, productID);
+	}
+
+	@Override
+	public List<PProductKeyWords> getKeyWordList(long productID) {
+		if(productID<1)
+		{
+			return null;
+		}
+		String hql = "from PProductKeyWords p where p.productId =?";
+		return super.find(hql,productID);
+	}
+
+	@Override
+	public List<PProductParamKv> getParamList(long productID) {
+		if(productID<1)
+		{
+			return null;
+		}
+		
+		String hql = "from PProductParamKv p where p.productId =?";
+		
+		return super.find(hql, productID);
+	}
+
+	@Override
+	public List<PProductImg> getImgList(long productID) {
+		if(productID<1)
+		{
+			return null;
+		}
+		
+		String hql = "from PProductImg p where p.productId =?";
+		
+		return super.find(hql, productID);
+	}
+
+	@Override
+	public List<PProductSellKey> getSellKeyList(long productID) {
+		if(productID<1)
+		{
+			return null;
+		}
+		
+		String hql = "from PProductSellKey p where p.productId =?";		
+		return super.find(hql, productID);
+	}
+
+	@Override
+	public List<PProductSellValue> getSellValueList(long productID) {
+		if(productID<1)
+		{
+			return null;
+		}
+		
+		String hql = "from PProductSellValue p where p.productId =?";
+		
+		return super.find(hql, productID);
+	}
+
+	@Override
+	public List<PProductStyles> getStyleList(long productID) {
+		if(productID<1)
+		{
+			return null;
+		}
+		
+		String hql = "from PProductStyles p where p.productId =?";
+		
+		return super.find(hql, productID);
+	}
+
+	@Override
+	public List<PProductStyleKv> getStyleKvList(long productID) {
+		if(productID<1)
+		{
+			return null;
+		}
+		
+		String hql = "from PProductStyleKv p where p.productId =?";
+		
+		return super.find(hql, productID);
+	}
+
+	@Override
+	public PPreOrder getPreOrder(long productID) {
+		if(productID<1)
+		{
+			return null;
+		}
+		
+		return super.get(PPreOrder.class, productID);
+	}
+
+	@Override
+	public List<PProductBatchPrice> getBatchPriceList(long productID) {
+		if(productID<1)
+		{
+			return null;
+		}
+		
+		String hql = "from PProductBatchPrice p where p.productId =?";
+		
+		return super.find(hql, productID);
+	}
+
+	@Override
+	public List<PPostAgeModel> getPostAgeModelList(long supplyID) {
+		if(supplyID<1)
+		{
+			return null;
+		}
+		
+		//String hql = "from PPostAgeModel p where p.supplierWeiId =0 or p.supplierWeiId=?";
+		String hql = "from PPostAgeModel p where p.supplierWeiId =0 and p.status =1";
+		return super.find(hql);
+	}
+
+	@Override
+	public List<PShopClass> getShopClasseList(long supplyID) {
+		if(supplyID<1)
+		{
+			return null;
+		}
+		
+		String hql = "from PShopClass p where p.weiid =?";
+		
+		return super.find(hql, supplyID);
+	}
+	
+	@Override
+	public long getIsHaveShopName(long supplyID, String sName) {
+		if(supplyID<1 || sName==null || sName==""){
+			return 0;
+		}
+		
+		String hql="select count(*) from PShopClass p where p.weiid =:supplyID and p.sname=:sName"; 
+		Map<String, Object> params = new HashMap<String, Object>();
+		params.put("supplyID", supplyID);
+		params.put("sName", sName);
+		return super.countByMap(hql, params);
+	}
+
+	@Override
+	public PProductClass getProductClass(int classID) {
+		if(classID<1)
+		{
+			return null;
+		}
+		
+		return super.get(PProductClass.class, classID);
+	}
+
+	@Override
+	public PParamModel getParamModel(int mID) {
+		if(mID<1)
+		{
+			return null;
+		}
+	
+		return super.get(PParamModel.class, mID);
+	}
+
+	@Override
+	public List<PParamKey> getParamKeyList(int mID) {
+		if(mID<1)
+		{
+			return null;
+		}
+		String hql ="from PParamKey p where p.mid =? order by p.sort";
+		
+		return super.find(hql, mID);
+	}
+
+	@Override
+	public List<PParamValues> getParamValueList(Integer[] keys) {
+		if(keys ==null || keys.length<1)
+		{
+			return null;
+		}
+		String hql="from PParamValues p where p.attributeId in(:attributeId)";
+		Map<String, Object> Params = new HashMap<String, Object>();
+		Params.put("attributeId", keys);
+		
+		return super.findByMap(hql, Params);
+	}
+
+	@Override
+	public int saveShopClass(PShopClass psClass) {
+		if(psClass ==null || psClass.getWeiid() < 1){
+			return 0;
+		}
+		
+		return (int) super.save(psClass);
+	}
+
+	@Override
+	public int saveParamModel(PParamModel paramModel) {
+		if(paramModel ==null || paramModel.getClassId()<1){
+			return 0;
+		}
+		
+		return (int) super.save(paramModel);
+	}
+
+	@Override
+	public int saveParamKey(PParamKey keyModel) {
+		if(keyModel ==null || keyModel.getMid()<1){
+			return 0;
+		}
+		
+		return (int) super.save(keyModel);
+	}
+
+	@Override
+	public int saveParamValue(PParamValues valueModel) {
+		if(valueModel == null || valueModel.getAttributeId() <1){
+			return 0;
+		}
+		
+		return (int) super.save(valueModel);
+	}
+
+	@Override
+	public long getIsHavePMName(long supplyID, String pmName) {
+		if(supplyID<1 || pmName ==null || pmName ==""){
+			return 0;
+		}
+		
+		String hql="select count(*) from PParamModel p where p.supplierWeiId =:supplierWeiId and p.mname=:mname"; 
+		Map<String, Object> params = new HashMap<String, Object>();
+		params.put("supplierWeiId", supplyID);
+		params.put("mname", pmName);
+		return super.countByMap(hql, params);
+	}
+
+	@Override
+	public PParamKey getParamKeyModel(Integer keyID) {
+		if(keyID ==null ||  keyID < 1){
+			return null;
+		}
+		return super.get(PParamKey.class, keyID);
+	}
+
+	@Override
+	public PParamValues getParamValueModel(Integer valueID) {
+		if(valueID ==null ||  valueID < 1){
+			return null;
+		}
+		
+		return super.get(PParamValues.class, valueID);
+	}
+
+	@Override
+	public PProducts getProductModel(long productID) {
+		if(productID<1){
+			return null;
+		}
+		
+		return super.get(PProducts.class, productID);
+	}
+
+	@Override
+	public int deletePImgs(long productID) {
+		
+		String hql="delete from PProductImg p where p.productId =?";
+		
+		return super.executeHql(hql, productID);
+	}
+
+	@Override
+	public int deletePKeyWrods(long productID) {
+				
+		String hql="delete from PProductKeyWords p where p.productId =?";
+		
+		return super.executeHql(hql, productID);
+	}
+
+	@Override
+	public int deletePParams(long productID) {
+		
+		String hql="delete from PProductParamKv p where p.productId =?";
+		
+		return super.executeHql(hql, productID);
+	}
+
+	@Override
+	public int deletePStyles(long productID) {
+		
+		String hql="delete from PProductStyles p where p.productId =?";
+		
+		return super.executeHql(hql, productID);
+	}
+
+	@Override
+	public int deletePStyleKvs(long productID) {
+		
+		String hql="delete from PProductStyleKv p where p.productId =?";
+		
+		return super.executeHql(hql, productID);
+	}
+
+	@Override
+	public int deletePStyleKeys(long productID) {
+		
+		String hql="delete from PProductSellKey p where p.productId =?";
+		
+		return super.executeHql(hql, productID);
+	}
+
+	@Override
+	public int deletePStyleValues(long productID) {
+		
+		String hql="delete from PProductSellValue p where p.productId =?";
+		
+		return super.executeHql(hql, productID);
+	}
+	
+	@Override
+	public int deleteBatchPrice(long productID) {
+		if(productID <1){
+			return 0;
+		}
+		
+		String hql = "delete from PProductBatchPrice p where p.productId =?";
+		return super.executeHql(hql, productID);
+	}
+
+	@Override
+	public long saveSellKey(PProductSellKey model) {
+		if(model ==null){
+			return 0;
+		}
+		
+		return (long) super.save(model);
+	}
+
+	@Override
+	public long saveSellValue(PProductSellValue model) {
+		if(model == null){
+			return 0;
+		}
+		
+		return (long) super.save(model);
+	}
+
+	@Override
+	public long saveProductStyle(PProductStyles model) {
+		if(model ==null){
+			return 0;
+		}
+		
+		return (long) super.save(model);
+	}
+
+	@Override
+	public long saveStyleKV(PProductStyleKv model) {
+		if(model ==null){
+			return 0;
+		}
+		
+		return (long) super.save(model);
+	}
+
+	@Override
+	public long saveBatchPrice(PProductBatchPrice model) {
+		if(model ==null){
+			return 0;
+		}
+		
+		return (long) super.save(model);
+	}
+
+	@Override
+	public int deleteOwnerMessage(long supplyID, long productID) {
+		if(supplyID <1 || productID <1){
+			return 0;
+		}
+		String hql=" delete from UOwnerMessage u where u.weiId=? and u.keyValue=?";
+		
+		return super.executeHql(hql, supplyID, productID);
+	}
+
+	@Override
+	public PClassProducts getClassProduct(long weiID,long productID,long supplyID) {
+		if(weiID<1 || productID<1 || supplyID <1){
+			return null;
+		}
+		
+		String hql="from PClassProducts p where p.weiId=? and p.productId=? and p.supplierweiId=?";
+		
+		return super.getUniqueResultByHql(hql,weiID,productID,supplyID);
+	}
+
+	@Override
+	public int updateClassProduct(long productID) {
+		if(productID<1){
+			return 0;
+		}
+		
+		String hql ="update PClassProducts b set b.state=0 where b.productId=?";
+		
+		return super.executeHql(hql, productID);
+	}
+
+	@Override
+	public PShelverCount getPShelver() {
+		String hql ="from PShelverCount";	
+		
+		return super.getUniqueResultByHql(hql);
+	}
+
+	@Override
+	public int deleteShevleBatchPrice(long ID) {
+		if(ID<1){
+			return 0;
+		}
+		
+		String hql="delete from PShevleBatchPrice p where p.id=?";
+		
+		return super.executeHql(hql,ID);
+	}
+
+	@Override
+	public int deleteClassProduct(long productID, long weiID) {
+		if(productID<1 || weiID<1){
+			return 0;
+		}
+		
+		String hql ="delete PClassProducts b where b.productId=? and b.weiId =?";
+		
+		return super.executeHql(hql, productID,weiID);
+	}
+
+
+
+
+
+	
+	
+	
+	
+
+
+}

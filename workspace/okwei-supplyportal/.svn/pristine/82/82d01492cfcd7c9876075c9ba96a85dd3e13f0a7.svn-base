@@ -1,0 +1,1374 @@
+package com.okwei.supplyportal.service.impl;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import net.sf.json.JSONArray;
+import net.sf.json.JSONObject;
+import okwei.okwei.supplyportal.bean.enumExtend.SupplyBookOrderTypeEnum;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.okwei.bean.domain.OBookAssist;
+import com.okwei.bean.domain.OOrderAddr;
+import com.okwei.bean.domain.OOrderFlow;
+import com.okwei.bean.domain.OPayOrder;
+import com.okwei.bean.domain.OProductOrder;
+import com.okwei.bean.domain.OSupplyerOrder;
+import com.okwei.bean.domain.TOrderBackTotal;
+import com.okwei.bean.domain.TRefundImg;
+import com.okwei.bean.domain.UTradingDetails;
+import com.okwei.bean.domain.UWeiSeller;
+import com.okwei.bean.enums.AmountStatusEnum;
+import com.okwei.bean.enums.AmountTypeEnum;
+import com.okwei.bean.enums.BookPayTypeEnum;
+import com.okwei.bean.enums.OrderStatusEnum;
+import com.okwei.bean.enums.OrderTypeEnum;
+import com.okwei.bean.enums.PayTypeEnum;
+import com.okwei.bean.enums.TailPayTypeEnum;
+import com.okwei.common.Limit;
+import com.okwei.common.PageResult;
+import com.okwei.flow.mothed.FlowMethod;
+import com.okwei.flow.vo.FTask;
+import com.okwei.flow.vo.ReturnModel;
+import com.okwei.flow.vo.ReturnStatus;
+import com.okwei.service.ILogisticsService;
+import com.okwei.service.impl.BaseService;
+import com.okwei.supplyportal.bean.vo.LogisticsVO;
+import com.okwei.supplyportal.bean.vo.MsgResult;
+import com.okwei.supplyportal.bean.vo.ParamOrderSearch;
+import com.okwei.supplyportal.bean.vo.ProductOrderVO;
+import com.okwei.supplyportal.bean.vo.ProductPriceEditParam;
+import com.okwei.supplyportal.bean.vo.RefundVO;
+import com.okwei.supplyportal.bean.vo.SupplyBookOrderParam;
+import com.okwei.supplyportal.bean.vo.SupplyBookOrderStateCountVO;
+import com.okwei.supplyportal.bean.vo.SupplyBookOrderVO;
+import com.okwei.supplyportal.bean.vo.SupplyOrderCountSumVO;
+import com.okwei.supplyportal.bean.vo.SupplyOrderDetailsVO;
+import com.okwei.supplyportal.bean.vo.SupplyOrderStateCountVO;
+import com.okwei.supplyportal.bean.vo.SupplyOrderVO;
+import com.okwei.supplyportal.dao.IOrderManageDAO;
+import com.okwei.supplyportal.service.IOrderManageService;
+import com.okwei.util.AppSettingUtil;
+import com.okwei.util.ImgDomain;
+import com.okwei.util.ObjectUtils;
+import com.okwei.util.ParseHelper;
+
+@Service
+public class OrderManageService extends BaseService implements IOrderManageService
+{
+
+    @Autowired
+    private IOrderManageDAO orderBase;
+
+    @Autowired
+    private ILogisticsService logisticsService;
+
+    @Override
+    public PageResult<SupplyOrderVO> getOrderListPageResult(ParamOrderSearch param,Long supplyWeiid,Limit limit)
+    {
+        PageResult<OSupplyerOrder> suplist = orderBase.getSupplyOrderlistResult(param,supplyWeiid,limit);
+        if(suplist == null || suplist.getTotalCount() <= 0)
+            return null;
+        PageResult<SupplyOrderVO> result = new PageResult<SupplyOrderVO>();
+        // TODO 供应商订单列表
+        String[] supplyOrderIds = new String[suplist.getList().size()];
+        Long[] buyerWids = new Long[suplist.getList().size()];
+        for(int i = 0; i < suplist.getList().size(); i++)
+        {
+            supplyOrderIds[i] = suplist.getList().get(i).getSupplierOrderId();
+            buyerWids[i] = suplist.getList().get(i).getBuyerID();
+        }
+        // 订单商品列表
+        List<OProductOrder> productlist = orderBase.getProductOrderListBySupplyOrderIds(supplyOrderIds);
+        // 买家信息
+        List<UWeiSeller> userSellers = orderBase.getUsersByWeiids(buyerWids);
+        List<SupplyOrderVO> orderlist = new ArrayList<SupplyOrderVO>();
+        for(OSupplyerOrder oo : suplist.getList())
+        {
+            SupplyOrderVO ss = new SupplyOrderVO();
+            ss.setOrderNo(oo.getSupplierOrderId());
+            ss.setBuyerWeiid(oo.getBuyerID());
+            ss.setOrderState(oo.getState());
+            Map<Short,OrderStatusEnum> mapState = new HashMap<Short,OrderStatusEnum>();
+            for(OrderStatusEnum tt : OrderStatusEnum.values())
+            {
+                mapState.put(Short.parseShort(tt.toString()),tt);
+            }
+            ss.setOrderStateName(getOrderStateName(mapState.get(oo.getState())));
+            ss.setTotalPrice(ParseHelper.getDoubleDefValue(oo.getTotalPrice()) + ParseHelper.getDoubleDefValue(oo.getPostage()));
+            ss.setPostPrice(oo.getPostage());
+            ss.setCreateTimeStr(oo.getOrderTime().toString());
+
+            for(UWeiSeller user : userSellers)
+            {
+                if(oo.getBuyerID().equals(user.getWeiId()))
+                    ss.setBuyerName(user.getWeiName());
+            }
+            ss.setProList(getSupplyOrderProducts(oo.getSupplierOrderId(),productlist));
+            orderlist.add(ss);
+        }
+        result.setList(orderlist);
+        result.setPageIndex(limit.getPageId());
+        result.setPageSize(limit.getSize());
+        result.setPageCount(suplist.getPageCount());
+        result.setTotalCount(suplist.getTotalCount());
+        return result;
+    }
+
+    /**
+     * 获取供应商预订单列表
+     * 
+     * @param param
+     * @param supplyWeiid
+     * @param limit
+     * @return
+     */
+    public PageResult<SupplyBookOrderVO> getBookOrderListPageResult(ParamOrderSearch param,Long supplyWeiid,Limit limit)
+    {
+        PageResult<OSupplyerOrder> suplist = orderBase.getSupplyBookOrderlistResult(param,supplyWeiid,limit);// orderBase.getSupplyOrderlistResult(param,
+                                                                                                             // supplyWeiid,
+                                                                                                             // limit);
+        if(suplist == null || suplist.getTotalCount() <= 0)
+            return null;
+        PageResult<SupplyBookOrderVO> result = new PageResult<SupplyBookOrderVO>();
+        // TODO 供应商订单列表
+        String[] supplyOrderIds = new String[suplist.getList().size()];
+        Long[] buyerWids = new Long[suplist.getList().size()];
+        for(int i = 0; i < suplist.getList().size(); i++)
+        {
+            supplyOrderIds[i] = suplist.getList().get(i).getSupplierOrderId();
+            buyerWids[i] = suplist.getList().get(i).getBuyerID();
+        }
+        // 订单商品列表
+        List<OProductOrder> productlist = orderBase.getProductOrderListBySupplyOrderIds(supplyOrderIds);
+        // 买家信息
+        List<UWeiSeller> userSellers = orderBase.getUsersByWeiids(buyerWids);
+        // 预订单支付列表
+        // List<OPayOrder> opayorderlist=null;
+        // 预订单辅助信息
+        List<OBookAssist> assistlist = orderBase.getOBookAssistlistBySupplyOrderIds(supplyOrderIds);
+
+        List<SupplyBookOrderVO> orderlist = new ArrayList<SupplyBookOrderVO>();
+        for(OSupplyerOrder oo : suplist.getList())
+        {
+            SupplyBookOrderVO ss = new SupplyBookOrderVO();
+            ss.setOrderNo(oo.getSupplierOrderId());
+            ss.setBuyerWeiid(oo.getBuyerID());
+            ss.setOrderState(oo.getState());
+            Map<Short,OrderStatusEnum> mapState = new HashMap<Short,OrderStatusEnum>();
+            for(OrderStatusEnum tt : OrderStatusEnum.values())
+            {
+                mapState.put(Short.parseShort(tt.toString()),tt);
+            }
+            ss.setOrderStateName(getOrderStateName(mapState.get(oo.getState())));
+            ss.setTotalPrice(ParseHelper.getDoubleDefValue(oo.getTotalPrice()) + ParseHelper.getDoubleDefValue(oo.getPostage()));
+            ss.setPostPrice(oo.getPostage());
+            ss.setCreateTimeStr(oo.getOrderTime().toString());
+            for(UWeiSeller user : userSellers)
+            {
+                if(oo.getBuyerID() == user.getWeiId())
+                    ss.setBuyerName(user.getWeiName());
+            }
+            ss.setProList(getSupplyOrderProducts(oo.getSupplierOrderId(),productlist));
+            // 付款金额
+            List<String> contentList = new ArrayList<String>();
+            boolean ass = true;
+            for(OBookAssist opay : assistlist)
+            {
+                if(opay.getSupplierOrderId() != null && opay.getSupplierOrderId().equals(oo.getSupplierOrderId()))
+                {
+                    if(opay.getBookPayType() != null && Short.parseShort(BookPayTypeEnum.Full.toString()) == opay.getBookPayType())
+                    {
+                        contentList.add("全额支付" + ss.getTotalPrice());
+                    }
+                    else if(opay.getBookPayType() != null)
+                    {
+                        contentList.add("定金：" + opay.getAmount());
+                        // 发货后付尾款
+                        if(opay.getTailPayType() != null && Short.parseShort(TailPayTypeEnum.afterdelivery.toString()) == opay.getTailPayType())
+                        {
+                            contentList.add("发货后支付尾款：" + (ParseHelper.getDoubleDefValue(ss.getTotalPrice()) - ParseHelper.getDoubleDefValue(opay.getAmount())));
+                        }
+                        else
+                        {
+                            contentList.add("发货前支付尾款：" + (ParseHelper.getDoubleDefValue(ss.getTotalPrice()) - ParseHelper.getDoubleDefValue(opay.getAmount())));
+                        }
+                        contentList.add("预计发货时间：" + opay.getPreSendTime().toString());
+                    }
+                    ass = false;
+                    ss.setOrderState(getSupplyerBookState(ss.getOrderState(),opay.getTailPayType()));
+                    ss.setOrderStateName(getSupplyerBookStateName(ss.getOrderState(),opay.getTailPayType()));
+                }
+            }
+            if(ass)
+            {
+                // ss.setOrderState(Integer.parseInt(SupplyBookOrderTypeEnum.Waitting.toString()));
+                ss.setOrderStateName("待确认");
+            }
+            ss.setPayContent(contentList);
+            orderlist.add(ss);
+        }
+        result.setList(orderlist);
+        result.setPageIndex(limit.getPageId());
+        result.setPageSize(limit.getSize());
+        result.setPageCount(suplist.getPageCount());
+        result.setTotalCount(suplist.getTotalCount());
+        return result;
+    }
+
+    @Override
+    public SupplyOrderCountSumVO getSupplyOrderCountSumVO(Long supplyerWeiid)
+    {
+        SupplyOrderCountSumVO result = new SupplyOrderCountSumVO();
+        Integer[] types = new Integer[]
+        {Integer.parseInt(OrderTypeEnum.Pt.toString()),Integer.parseInt(OrderTypeEnum.BatchOrder.toString()),Integer.parseInt(OrderTypeEnum.BatchWholesale.toString()),
+                Integer.parseInt(OrderTypeEnum.BookOrder.toString())};
+        List<OSupplyerOrder> orderList = orderBase.getSupplyOrderlist(supplyerWeiid,types);
+        if(orderList != null && orderList.size() > 0)
+        {
+            int lsCount = 0,pfCount = 0,ydCount = 0;
+            for(OSupplyerOrder oo : orderList)
+            {
+                if(Short.parseShort(OrderTypeEnum.Pt.toString()) == oo.getOrderType() || Short.parseShort(OrderTypeEnum.BatchOrder.toString()) == oo.getOrderType())
+                    lsCount++;
+                else if(Short.parseShort(OrderTypeEnum.BatchWholesale.toString()) == oo.getOrderType())
+                {
+                    pfCount++;
+                }
+                else if(Short.parseShort(OrderTypeEnum.BookOrder.toString()) == oo.getOrderType())
+                {
+                    ydCount++;
+                }
+            }
+            result.setLingshowCount(lsCount);
+            result.setPifaCount(pfCount);
+            result.setYudingCount(ydCount);
+        }
+        return result;
+    }
+
+    @Override
+    public SupplyOrderStateCountVO getSupplyOrderStateCountVO(Long supplyerWeiid,int itype)
+    {
+        SupplyOrderStateCountVO result = new SupplyOrderStateCountVO();
+        Integer[] types = null;
+        switch(itype)
+        {
+            case 1:
+                types = new Integer[]
+                {Integer.parseInt(OrderTypeEnum.Pt.toString())};
+                break;
+            case 2:
+                types = new Integer[]
+                {Integer.parseInt(OrderTypeEnum.BatchOrder.toString())};
+                break;
+            default:
+                return result;
+        }
+        List<OSupplyerOrder> orderList = orderBase.getSupplyOrderlist(supplyerWeiid,types);
+        if(orderList != null && orderList.size() > 0)
+        {
+            int nopayCount = 0,noFahuoCount = 0,yiFahuo = 0,completedCount = 0;
+            for(OSupplyerOrder oo : orderList)
+            {
+                if(Short.parseShort(OrderStatusEnum.Nopay.toString()) == oo.getState())
+                    nopayCount++;
+                else if(Short.parseShort(OrderStatusEnum.Payed.toString()) == oo.getState())
+                {
+                    noFahuoCount++;
+                }
+                else if(Short.parseShort(OrderStatusEnum.Deliveried.toString()) == oo.getState())
+                {
+                    yiFahuo++;
+                }
+                else if(Short.parseShort(OrderStatusEnum.Completed.toString()) == oo.getState())
+                {
+                    completedCount++;
+                }
+            }
+            result.setNoFaHuoCount(noFahuoCount);
+            result.setNoPayCount(nopayCount);
+            result.setNoShouHuoCount(yiFahuo);
+            result.setCompletedCount(completedCount);
+        }
+        return result;
+    }
+
+    @Override
+    public SupplyBookOrderStateCountVO getSupplyBookOrderStateCountVO(Long supplyerWeiid)
+    {
+        SupplyBookOrderStateCountVO result = new SupplyBookOrderStateCountVO();
+        Integer[] types = new Integer[]
+        {Integer.parseInt(OrderTypeEnum.Pt.toString()),Integer.parseInt(OrderTypeEnum.BatchOrder.toString())};
+        List<OSupplyerOrder> orderList = orderBase.getSupplyOrderlist(supplyerWeiid,types);
+        if(orderList == null || orderList.size() <= 0)
+            return result;
+        String[] supplyorderids = new String[orderList.size()];
+        for(int i = 0; i < orderList.size(); i++)
+        {
+            supplyorderids[i] = orderList.get(i).getSupplierOrderId();
+        }
+        List<OBookAssist> assistslist = orderBase.getOBookAssistlistBySupplyOrderIds(supplyorderids);
+        if(orderList != null && orderList.size() > 0)
+        {
+            int waitCount = 0,noFahuoCount = 0,completedCount = 0,nopayTailCount = 0,suredCount = 0;
+            for(OSupplyerOrder oo : orderList)
+            {
+                if(Short.parseShort(OrderStatusEnum.WaitSure.toString()) == oo.getState())
+                    waitCount++;
+                else if(Short.parseShort(OrderStatusEnum.Sured.toString()) == oo.getState())
+                {
+                    suredCount++;
+                }
+                else if(Short.parseShort(OrderStatusEnum.PayedDeposit.toString()) == oo.getState())
+                {
+                    nopayTailCount++;
+                    // 如果 发货后付尾款 noFahuoCount++
+                    if(assistslist != null && assistslist.size() > 0)
+                    {
+                        for(OBookAssist bb : assistslist)
+                        {
+                            if(bb.getSupplierOrderId().equals(oo.getSupplierOrderId()))
+                            {
+                                if(Short.parseShort(TailPayTypeEnum.afterdelivery.toString()) == bb.getTailPayType())
+                                    noFahuoCount++;
+                            }
+                        }
+                    }
+
+                }
+                else if(Short.parseShort(OrderStatusEnum.Completed.toString()) == oo.getState())
+                {
+                    completedCount++;
+                }
+                else if(Short.parseShort(OrderStatusEnum.Payed.toString()) == oo.getState())
+                {
+                    noFahuoCount++;
+                }
+            }
+            result.setCompletedCount(completedCount);
+            result.setNoFaHuoCount(noFahuoCount);
+            result.setNoPayTailCount(nopayTailCount);
+            result.setSuredCount(suredCount);
+            result.setWaitCount(waitCount);
+        }
+        return result;
+    }
+
+    @Override
+    public SupplyOrderDetailsVO getOrderDetails(String supplyOrderid)
+    {
+        SupplyOrderDetailsVO result = new SupplyOrderDetailsVO();
+        try
+        {
+            OSupplyerOrder order = orderBase.getEntity(OSupplyerOrder.class,supplyOrderid);// (hqlString,
+                                                                                           // bb);
+            if(order != null)
+            {
+                String[] supplyidStrings = new String[]
+                {order.getSupplierOrderId()};
+                List<OProductOrder> prolist = orderBase.getProductOrderListBySupplyOrderIds(supplyidStrings);
+                if(prolist != null && prolist.size() > 0)
+                {
+                    result.setProList(getSupplyOrderProducts(order.getSupplierOrderId(),prolist));
+                }
+                OOrderAddr addrInfo = orderBase.getEntity(OOrderAddr.class,order.getAddrId());
+                result.setOrderNo(order.getSupplierOrderId());
+                result.setOrderTimeStr(order.getOrderTime().toString());
+                result.setClientMsg(order.getMessage());
+                result.setOrderState(order.getState());
+                result.setBuyerWeiid(order.getBuyerID());
+                result.setClientMsg(order.getMessage());
+                result.setSupplyerWeiid(order.getSupplyerId());
+                result.setTotalPrice(ParseHelper.getDoubleDefValue(order.getTotalPrice()) + ParseHelper.getDoubleDefValue(order.getPostage()));
+                result.setFullprice(ParseHelper.getDoubleDefValue(order.getTotalPrice()) + ParseHelper.getDoubleDefValue(order.getPostage()));
+                result.setPostPrice(order.getPostage());
+                OPayOrder payOrder = null;
+                if(Short.parseShort(OrderTypeEnum.BookOrder.toString()) == order.getOrderType())
+                {
+                    List<OPayOrder> payList = orderBase.getOPayOrderlistBySupplyOrderIds(new String[]
+                    {order.getSupplierOrderId()});
+                    if(payList != null && payList.size() > 0)
+                    {
+                        for(OPayOrder pay : payList)
+                        {
+                            if(Short.parseShort(OrderTypeEnum.BookHeadOrder.toString()) == pay.getTypeState())
+                            {
+                                payOrder = pay;
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    payOrder = orderBase.getEntity(OPayOrder.class,order.getPayOrderId());
+                }
+                if(payOrder != null)
+                {
+                    PayTypeEnum payTypeEnum = null;
+                    for(PayTypeEnum tt : PayTypeEnum.values())
+                    {
+                        if(Short.parseShort(tt.toString()) == payOrder.getPayType())
+                            payTypeEnum = tt;
+                    }
+                    if(payTypeEnum != null)
+                        result.setPayWay(getPayTypeName(payTypeEnum));
+                }
+                if(addrInfo != null)
+                {
+                    result.setReciverName(addrInfo.getReceiverName());
+                    result.setReciverAddress(addrInfo.getDetailAddr());
+                    result.setReciverPhoneNumber(addrInfo.getMobilePhone());
+
+                }
+                OrderTypeEnum typeEnum = null;
+                for(OrderTypeEnum tt : OrderTypeEnum.values())
+                {
+                    if(Short.parseShort(tt.toString()) == order.getOrderType())
+                        typeEnum = tt;
+                }
+                switch(typeEnum)
+                {
+                    case Pt:
+                    case BatchOrder:
+                        result.setOrderShowType(1);
+                        result.setPayPriceType(1);
+                        break;
+                    case BatchWholesale:
+                        result.setOrderShowType(2);
+                        result.setPayPriceType(1);
+                        break;
+                    case BookOrder:// 预订单
+                        result.setOrderShowType(3);
+                        OBookAssist modelAssist = orderBase.getEntity(OBookAssist.class,order.getSupplierOrderId());
+                        if(modelAssist != null)
+                        {
+                            if(Short.parseShort(BookPayTypeEnum.Full.toString()) == modelAssist.getBookPayType())
+                            {
+                                result.setPayPriceType(1);
+                                result.setFullprice(modelAssist.getAmount());
+                                result.setPayment(order.getTotalPrice());
+                            }
+                            else if(Short.parseShort(BookPayTypeEnum.percent.toString()) == modelAssist.getBookPayType())
+                            {
+                                result.setPayPriceType(3);
+                                result.setPercentage(modelAssist.getPersent());
+                                result.setDeposit(modelAssist.getAmount());
+                                result.setFinalprice(ParseHelper.getDoubleDefValue(order.getTotalPrice() + ParseHelper.getDoubleDefValue(order.getPostage())
+                                        - ParseHelper.getDoubleDefValue(modelAssist.getAmount())));
+                            }
+                            else
+                            {
+                                result.setPayPriceType(2);
+                                result.setDeposit(modelAssist.getAmount());
+                                result.setFinalprice(ParseHelper.getDoubleDefValue(order.getTotalPrice() + ParseHelper.getDoubleDefValue(order.getPostage())
+                                        - ParseHelper.getDoubleDefValue(modelAssist.getAmount())));
+                            }
+                            result.setSupplierMsg(modelAssist.getRemark());
+                            result.setTailPayType(modelAssist.getTailPayType());
+                        }
+                        break;
+                    default:
+                        result.setOrderShowType(1);
+                        break;
+                }
+                List<OOrderFlow> flows = orderBase.getOrderFlows(order.getSupplierOrderId());
+                result.setOrderFlows(flows);
+
+                // 查询物流信息
+                String wlNo = order.getDeliveryOrder();
+                String companyNo = order.getdComanpyNo();
+                String companyName = order.getDeliveryCompany();
+                List<String> wuliu = new ArrayList<String>();
+                if(wlNo != null && wlNo != "")
+                {
+                    String wlString = "";
+                    if(companyNo != null && companyNo != "")
+                    {
+                        wlString = logisticsService.getInfoByNo(wlNo,companyNo);
+                    }
+                    else if(companyName != null && companyName != "")
+                    {
+                        wlString = logisticsService.getInfoByName(wlNo,companyName);
+                    }
+                    wuliu = getLogisticsDetails(wlString);
+                }
+                LogisticsVO logistics = new LogisticsVO();
+                logistics.setLogisticsNo(wlNo);
+                logistics.setLongisticsName(companyName);
+                logistics.setTailList(wuliu);
+                result.setLogistics(logistics);
+            }
+        }
+        catch(Exception e)
+        {
+            // TODO: handle exception
+        }
+        return result;
+    }
+
+    /**
+     * 产品列表清单 根据 供应商订单id 产品列表
+     * 
+     * @param supplyOrderId
+     * @param prolist
+     * @return
+     */
+    private List<ProductOrderVO> getSupplyOrderProducts(String supplyOrderId,List<OProductOrder> prolist)
+    {
+        if(ObjectUtils.isNotEmpty(prolist) && !ObjectUtils.isEmpty(supplyOrderId))
+        {
+            List<Long> backorderids = new ArrayList<Long>();
+            for(OProductOrder oo : prolist)
+            {
+                if(oo.getBackOrder() != null && oo.getBackOrder().longValue() > 0)
+                    backorderids.add(oo.getBackOrder());
+            }
+            List<TOrderBackTotal> reOrders = null;
+            if(backorderids != null && backorderids.size() > 0)
+            {
+                reOrders = orderBase.getRefundOrders(backorderids.toArray());
+            }
+            List<ProductOrderVO> supProductList = new ArrayList<ProductOrderVO>();
+            for(OProductOrder pp : prolist)
+            {
+                if(supplyOrderId.equals(pp.getSupplierOrderId()))
+                {
+                    ProductOrderVO pro = new ProductOrderVO();
+                    pro.setProductId(pp.getProductId());
+                    pro.setProductTitle(pp.getProdcutTitle());
+                    pro.setProductState(pp.getState());
+                    pro.setCount(pp.getCount());
+                    pro.setPrice(pp.getPrice());
+                    pro.setCommission(pp.getCommision());
+                    pro.setSumPrice(pp.getCount() * pp.getPrice());
+                    pro.setProductOrderid(pp.getProductOrderId());
+                    pro.setProductImg(ImgDomain.GetFullImgUrl(pp.getProductImg(),24));
+                    if(pp.getStyleDes() != null)
+                    {
+                        pro.setProperty(pp.getStyleDes().replace("|"," "));
+                    }
+
+                    pro.setRefundState(-1);
+                    if(pp.getBackOrder() != null && pp.getBackOrder().longValue() > 0)
+                    {
+                        if(reOrders != null)
+                        {
+                            for(TOrderBackTotal tt : reOrders)
+                            {
+                                if(tt.getBackOrder().longValue() == pp.getBackOrder().longValue())
+                                {
+                                    pro.setRefundState(tt.getBackStatus());
+                                    pro.setRefundId(pp.getBackOrder());
+                                }
+                            }
+                        }
+                    }
+                    supProductList.add(pro);
+                }
+            }
+            return supProductList;
+        }
+        return null;
+    }
+
+    @Override
+    public MsgResult insertBookOrder(SupplyBookOrderParam param)
+    {
+        MsgResult result = new MsgResult();
+        if(param == null || param.getWeiid() <= 0 || ObjectUtils.isEmpty(param.getSupplyOrderid()))
+        {
+            result.setState(-1);
+            result.setMsg("参数有误");
+            return result;
+        }
+        // TODO 预定单未完成
+        if(param.isSured())// 确认 预订单
+        {
+            OSupplyerOrder supplyerOrder = orderBase.getEntity(OSupplyerOrder.class,param.getSupplyOrderid());
+            if(supplyerOrder == null || supplyerOrder.getSupplyerId().longValue() != param.getWeiid())
+            {
+                result.setState(-1);
+                result.setMsg("非法操作");
+                return result;
+            }
+            // 需要支付的总价
+            double paytotalprice = 0;
+            // 1 .修改订单价格方式
+            switch(param.getEditPriceType())
+            {
+                case 1:// 修改产品单价
+                    if(param.getProducts() != null && param.getProducts().size() > 0)
+                    {
+                        double totalprice = 0;
+                        String[] supplyOrderIds = new String[]
+                        {param.getSupplyOrderid()};
+                        // 供应商订单包含的产品列表
+                        List<OProductOrder> proList = orderBase.getProductOrderListBySupplyOrderIds(supplyOrderIds);
+                        if(proList != null && proList.size() > 0)
+                        {
+                            for(OProductOrder pp : param.getProducts())
+                            {
+                                if(!ObjectUtils.isEmpty(pp.getProductOrderId()) && pp.getPrice() != null)
+                                {
+                                    for(OProductOrder pl : proList)
+                                    {
+                                        if(pl.getProductOrderId().equals(pp.getProductOrderId()))
+                                        {
+                                            pl.setPrice(pp.getPrice());
+                                            super.update(pl);
+                                        }
+                                        paytotalprice += (pl.getPrice().doubleValue() + pl.getCommision().doubleValue()) * pl.getCount().intValue();
+                                        totalprice += pl.getPrice().doubleValue() * pl.getClassId().intValue();
+                                    }
+                                }
+                            }
+                            supplyerOrder.setPostage(param.getEditPostPrice());
+                            supplyerOrder.setTotalPrice(totalprice);
+                            super.update(supplyerOrder);
+                            totalprice += param.getEditPostPrice();
+                        }
+                    }
+                    break;
+                case 2:// 修改订单总价
+                    if(param.getEditTotalPrice() > 0)
+                    {
+                        supplyerOrder.setTotalPrice(param.getEditTotalPrice());
+                        supplyerOrder.setPostage(0d);
+                        paytotalprice = param.getEditTotalPrice();
+                        super.update(supplyerOrder);
+                    }
+                    else
+                    {
+                        result.setState(-1);
+                        result.setMsg("总价不能为0");
+                    }
+                    break;
+                default:// 不修改价格，不操作
+                    break;
+            }
+            OBookAssist ass = new OBookAssist();
+            ass.setSupplierOrderId(param.getSupplyOrderid());
+            ass.setPreSendTime(param.getPreDeliverTime()); // 预计发货时间
+            // 2. 首款 付款方式
+            switch(param.getPayType())
+            {
+                case 1:// 百分比
+                    ass.setBookPayType(Short.parseShort(BookPayTypeEnum.percent.toString()));
+                    ass.setPersent(Short.parseShort(String.valueOf(param.getFirstPercent())));
+                    ass.setAmount(paytotalprice * param.getFirstPercent() * 0.01);
+                    break;
+                case 2:// 指定金额
+                    ass.setBookPayType(Short.parseShort(BookPayTypeEnum.specifyamount.toString()));
+                    ass.setAmount(param.getFirstPrice());
+                    break;
+                default:// 全款
+                    ass.setBookPayType(Short.parseShort(BookPayTypeEnum.Full.toString()));
+                    ass.setAmount(paytotalprice);
+                    break;
+            }
+            if(param.getPayType() > 0)
+            {
+                // 3.尾款付款方式
+                TailPayTypeEnum tailPayTypeEnum = param.getTailPayType();
+                ass.setTailPayType(Short.parseShort(tailPayTypeEnum.toString()));
+                // 4、生成 预订单 首款、尾款
+                orderBase.insertPayOrder(supplyerOrder.getSupplierOrderId(),supplyerOrder.getBuyerID().longValue(),ass.getAmount(),supplyerOrder.getOrderFrom(),
+                        Short.parseShort(OrderTypeEnum.BookHeadOrder.toString()));
+                orderBase.insertPayOrder(supplyerOrder.getSupplierOrderId(),supplyerOrder.getBuyerID().longValue(),paytotalprice - ass.getAmount(),supplyerOrder.getOrderFrom(),
+                        Short.parseShort(OrderTypeEnum.BookTailOrder.toString()));
+            }
+            else
+            {
+                // 生成全款支付记录
+                orderBase.insertPayOrder(param.getSupplyOrderid(),supplyerOrder.getBuyerID().longValue(),paytotalprice,supplyerOrder.getOrderFrom(),
+                        Short.parseShort(String.valueOf(supplyerOrder.getOrderType())));
+            }
+            ass.setState((short) 1);
+            ass.setRemark(param.getMessage());
+            super.add(ass);
+            orderBase.insertOrderFlow(supplyerOrder.getSupplierOrderId(),supplyerOrder.getSupplyerId(),"供应商确认订单");
+            result.setState(1);
+            result.setMsg("确定成功！");
+
+        }
+        else
+        // 拒绝
+        {
+            if(orderBase.UP_supplyOrder(param.getWeiid(),param.getSupplyOrderid(),OrderStatusEnum.Rejected))
+            {
+                result.setState(1);
+                result.setMsg("成功拒绝此预订单！");
+            }
+            else
+            {
+                result.setState(-1);
+                result.setMsg("拒绝失败！");
+            }
+        }
+        return result;
+    }
+
+    /**
+     * 获取物流公司列表
+     */
+    public List<Map<String,String>> getLogistics()
+    {
+        List<Map<String,String>> list = AppSettingUtil.getMaplist("transports");
+        return list;
+    }
+
+    public MsgResult sendGoods(String supplyOrderid,long supplyWeiid,String dcomanpyNo,String deliveryCompany,String deliveryOrderNo)
+    {
+        MsgResult result = new MsgResult();
+        if(ObjectUtils.isEmpty(supplyOrderid) || ObjectUtils.isEmpty(deliveryCompany) || ObjectUtils.isEmpty(deliveryOrderNo))
+        {
+            result.setState(-1);
+            result.setMsg("参数不全");
+            return result;
+        }
+        OSupplyerOrder order = orderBase.getEntity(OSupplyerOrder.class,supplyOrderid);
+        if(order == null)
+        {
+            result.setState(-1);
+            result.setMsg("订单不存在");
+            return result;
+        }
+        else if(supplyWeiid != order.getSupplyerId())
+        {
+            result.setState(-1);
+            result.setMsg("您没有操作权限");
+            return result;
+        }
+        boolean isOkLogistics = false;
+        List<Map<String,String>> logistics = AppSettingUtil.getMaplist("transports");
+        if(logistics != null && logistics.size() > 0)
+        {
+            for(Map<String,String> map : logistics)
+            {
+                if(map.get("typeName").equals(deliveryCompany))
+                {
+                    dcomanpyNo = map.get("typeNo");
+                    isOkLogistics = true;
+                }
+            }
+        }
+        if(!isOkLogistics)
+        {
+            result.setState(-1);
+            result.setMsg("不支持的物流公司");
+            return result;
+        }
+        OrderTypeEnum typeEnum = null;
+        for(OrderTypeEnum tt : OrderTypeEnum.values())
+        {
+            if(Short.parseShort(tt.toString()) == order.getOrderType())
+                typeEnum = tt;
+        }
+        if(typeEnum == null)
+        {
+            result.setState(-1);
+            result.setMsg("系统错误303");
+            return result;
+        }
+        switch(typeEnum)
+        {
+            case Pt:
+            case BatchOrder:
+            case BatchWholesale:
+                if(Short.parseShort(OrderStatusEnum.Payed.toString()) == order.getState())
+                {
+                    order.setdComanpyNo(dcomanpyNo);
+                    order.setDeliveryCompany(deliveryCompany);
+                    order.setDeliveryOrder(deliveryOrderNo);
+                    order.setState(Short.parseShort(OrderStatusEnum.Deliveried.toString()));
+                    order.setSendTime(new Date());
+                    super.update(order);
+                }
+                else if(Short.parseShort(OrderStatusEnum.Refunding.toString()) == order.getState())
+                {// 退款中
+                    List<TOrderBackTotal> list = orderBase.getTOrderBackTotals(order.getSupplierOrderId());
+                    if(list != null && list.size() > 0)
+                    {
+                        for(TOrderBackTotal too : list)
+                        {
+                            ReturnModel reModel = FlowMethod.QueryTask(too.getFlowId().toString(),order.getSupplyerId());
+                            if(reModel != null && reModel.getStatu().equals(ReturnStatus.Success))
+                            {
+                                FTask task = (FTask) reModel.getBasemodle();
+                                FlowMethod.ActionFlow(task.getTaskId(),order.getSupplyerId(),"disagree","卖家已经发货");
+                            }
+                        }
+                    }
+                }
+                else
+                {
+                    result.setState(-1);
+                    result.setMsg("当前状态不是已支付状态，不能发货！");
+                    return result;
+                }
+                break;
+            case BookOrder:
+                OBookAssist assist = orderBase.getEntity(OBookAssist.class,supplyOrderid);
+                if(assist == null)
+                {
+                    result.setState(-1);
+                    result.setMsg("订单类型错误!");
+                    return result;
+                }
+                if((Short.parseShort(BookPayTypeEnum.Full.toString()) == assist.getBookPayType() && Short.parseShort(OrderStatusEnum.Payed.toString()) == order.getState())
+                        || (Short.parseShort(TailPayTypeEnum.afterdelivery.toString()) == assist.getTailPayType() && Short.parseShort(OrderStatusEnum.PayedDeposit.toString()) == order
+                                .getState())
+                        || (Short.parseShort(TailPayTypeEnum.predelivery.toString()) == assist.getTailPayType() && Short.parseShort(OrderStatusEnum.Payed.toString()) == order
+                                .getState()))
+                {
+                    order.setdComanpyNo(dcomanpyNo);
+                    order.setDeliveryCompany(deliveryCompany);
+                    order.setDeliveryOrder(deliveryOrderNo);
+                    order.setState(Short.parseShort(OrderStatusEnum.Deliveried.toString()));
+                    order.setSendTime(new Date());
+                    super.update(order);
+                }
+                break;
+            default:
+                result.setState(-1);
+                result.setMsg("系统错误304");
+                return result;
+        }
+        OOrderFlow OrderFlow = new OOrderFlow();
+        OrderFlow.setSupplierOrderId(order.getSupplierOrderId());
+        OrderFlow.setOperateContent("供应商发货成功");
+        Date operateTime = new Date();
+        OrderFlow.setOperateTime(operateTime);
+        OrderFlow.setWeiId(order.getSupplyerId());
+        super.add(OrderFlow); // 保存实体
+
+        result.setState(1);
+        result.setMsg("发货成功");
+        return result;
+    }
+
+    public MsgResult editProductPrice(ProductPriceEditParam param)
+    {
+        MsgResult result = new MsgResult();
+        if(param == null || ObjectUtils.isEmpty(param.getSupplyOrderId()) || param.getSupplyWeiid() <= 0)
+        {
+            result.setState(-1);
+            result.setMsg("参数有误");
+            return result;
+        }
+        OSupplyerOrder order = orderBase.getEntity(OSupplyerOrder.class,param.getSupplyOrderId());
+        if(order == null || order.getSupplyerId() != param.getSupplyWeiid())
+        {
+            result.setState(-1);
+            result.setMsg("您不能操作其他卖家的订单");
+            return result;
+        }
+        // if(param.getProductParamList() == null || param.getProductParamList().size() <= 0)
+        // {
+        // result.setState(-1);
+        // result.setMsg("未指定要修改的商品");
+        // return result;
+        // }
+        if(param.getTotalPrice() <= 0)
+        {
+            result.setState(-1);
+            result.setMsg("订单总价至少大于0");
+            return result;
+        }
+        order.setPostage(param.getPostPrice());
+        order.setTotalPrice(param.getTotalPrice());
+        super.update(order);
+        result.setState(1);
+        result.setMsg("修改价格成功");
+        // List<OProductOrder> prolist= orderBase.getProductOrderListBySupplyOrderIds(new
+        // String[]{param.getSupplyOrderId()});
+        // if(prolist!=null&&prolist.size()>0)
+        // {
+        // for (OProductOrder pp : prolist) {
+        // for (OProductOrder pa : param.getProductParamList()) {
+        // if(pa.getProductOrderId().equals(pp.getPayOrderId()))
+        // {
+        // pp.setPrice(pa.getPrice());
+        // super.update(pp);
+        // }
+        // }
+        // }
+        // order.setPostage(param.getPostPrice());
+        // order.setTotalPrice(param.getTotalPrice());
+        // super.update(order);
+        // result.setState(1);
+        // result.setMsg("修改价格成功");
+        // }else {
+        // result.setState(-1);
+        // result.setMsg("系统错误303");
+        // }
+        return result;
+    }
+
+    public RefundVO getRefundVO(long refundId,long weiid)
+    {
+        RefundVO result = new RefundVO();
+        TOrderBackTotal refuBackTotal = orderBase.getEntity(TOrderBackTotal.class,refundId);
+        if(refuBackTotal != null)
+        {
+            result.setBackOrder(refundId);
+            result.setSupOrderID(refuBackTotal.getSupplierOrderId());
+            result.setRefundTime(refuBackTotal.getCreateTime().toString());
+            result.setRefundType(Integer.valueOf(refuBackTotal.getBackStatus()));
+            if(refuBackTotal.getFlowId() != null)
+                result.setProcessId(refuBackTotal.getFlowId());
+            result.setRefundPrice(refuBackTotal.getRefundAmout());
+            result.setReason(refuBackTotal.getBReason());
+            result.setReasonNo(refuBackTotal.getSReason());
+            result.setReasonOkwei(refuBackTotal.getAReason());
+            result.setRefundWay(refuBackTotal.getType());
+            List<TRefundImg> imgs = orderBase.getRefundImgs(refundId);
+            if(imgs != null && imgs.size() > 0)
+            {
+                List<String> imgStrings = new ArrayList<String>();
+                for(TRefundImg ss : imgs)
+                {
+                    imgStrings.add(ImgDomain.GetFullImgUrl(ss.getRefundImg()));
+                }
+                result.setProImages(imgStrings);
+            }
+            List<OProductOrder> proList = orderBase.getProductsByRefundId(refundId);
+            result.setProList(getSupplyOrderProducts(refuBackTotal.getSupplierOrderId(),proList));
+            result.setOrderType(refuBackTotal.getOistatus());
+            List<OOrderFlow> flows = orderBase.getOrderFlows(refuBackTotal.getSupplierOrderId());
+            if(flows != null && flows.size() > 0)
+            {
+                List<String> flowStrings = new ArrayList<String>();
+                for(OOrderFlow oo : flows)
+                {
+                    flowStrings.add(oo.getOperateContent());
+                }
+                result.setOrderrecord(flowStrings);
+            }
+            // if(refuBackTotal.getSaid()!=null&&refuBackTotal.getSaid().longValue()>0)
+            // {
+            // UCustomerAddr addr=orderBase.getEntity(UCustomerAddr.class, refuBackTotal.getSaid());
+            // }
+        }
+        return result;
+    }
+
+    public boolean editRefundState(long supplyweiid,long refundid,boolean isAgree,String content)
+    {
+        TOrderBackTotal refund = orderBase.getEntity(TOrderBackTotal.class,refundid);
+        if(refund != null)
+        {
+
+            ReturnModel reModel = FlowMethod.QueryTask(refund.getFlowId().toString(),supplyweiid);
+            if(reModel != null && reModel.getStatu().equals(ReturnStatus.Success))
+            {
+                FTask task = (FTask) reModel.getBasemodle();
+                if(isAgree)
+                {
+                    if(FlowMethod.ActionFlow(task.getTaskId(),supplyweiid,"agree",content))
+                        return true;
+                }
+                else
+                {
+                    if(FlowMethod.ActionFlow(task.getTaskId(),supplyweiid,"disagree",content))
+                        return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    public MsgResult deleteSupplyOrder(long supplyweiid,String supplyOrderid)
+    {
+        MsgResult result = new MsgResult();
+        try
+        {
+            OSupplyerOrder order = orderBase.getEntity(OSupplyerOrder.class,supplyOrderid);
+            if(order != null)
+            {
+                if(order.getSupplyerId() != null && supplyweiid == order.getSupplyerId().longValue())
+                {
+                    order.setSellerDel((short) 1);
+                    super.update(order);
+                    result.setState(1);
+                    result.setMsg("删除成功");
+                    return result;
+                }
+                else
+                {
+                    result.setMsg("没有此操作权限");
+                    result.setState(-1);
+                    return result;
+                }
+            }
+        }
+        catch(Exception e)
+        {
+            // TODO: handle exception
+            result.setMsg(e.getMessage());
+            result.setState(-2);
+        }
+        return result;
+    }
+
+    public MsgResult saveRefundOrderAddr(long refundid,long weiid,long addrid)
+    {
+        MsgResult result = new MsgResult();
+        if(refundid <= 0 || weiid <= 0 || addrid <= 0)
+        {
+            result.setState(-1);
+            result.setMsg("参数有误");
+            return result;
+        }
+        try
+        {
+            TOrderBackTotal refundBackTotal = orderBase.getEntity(TOrderBackTotal.class,refundid);
+            if(refundBackTotal != null)
+            {
+                if(refundBackTotal.getSellerId() != null && weiid == refundBackTotal.getSellerId())
+                {
+                    refundBackTotal.setSaid(addrid);
+                    super.update(refundBackTotal);
+                    result.setState(1);
+                    result.setMsg("成功");
+                }
+                else
+                {
+                    result.setState(-1);
+                    result.setMsg("非法操作");
+                }
+            }
+            else
+            {
+                result.setState(-1);
+                result.setMsg("退款订单不存在");
+            }
+        }
+        catch(Exception e)
+        {
+            // TODO: handle exception
+            result.setMsg(e.getMessage());
+            result.setState(-2);
+        }
+        return result;
+    }
+
+    public MsgResult saveRefundRecieved(long refundid,long weiid)
+    {
+        MsgResult result = new MsgResult();
+        if(refundid <= 0 || weiid <= 0)
+        {
+            result.setState(-1);
+            result.setMsg("参数有误");
+            return result;
+        }
+        try
+        {
+            TOrderBackTotal refundBackTotal = orderBase.getEntity(TOrderBackTotal.class,refundid);
+            if(refundBackTotal != null)
+            {
+                if(refundBackTotal.getSellerId() != null && weiid == refundBackTotal.getSellerId())
+                {
+                    refundBackTotal.setBackStatus((short) 6);
+                    super.update(refundBackTotal);
+                    result.setState(1);
+                    result.setMsg("成功");
+                }
+                else
+                {
+                    result.setState(-1);
+                    result.setMsg("非法操作");
+                }
+            }
+            else
+            {
+                result.setState(-1);
+                result.setMsg("退款订单不存在");
+            }
+        }
+        catch(Exception e)
+        {
+            // TODO: handle exception
+            result.setMsg(e.getMessage());
+            result.setState(-2);
+        }
+        return result;
+    }
+
+    public MsgResult bookOrderComplete(long weiid,String supplyOrderid)
+    {
+        MsgResult result = new MsgResult();
+        if(ObjectUtils.isEmpty(supplyOrderid) || weiid <= 0)
+        {
+            result.setState(-1);
+            result.setMsg("参数有误");
+            return result;
+        }
+        try
+        {
+            List<OPayOrder> order_list = orderBase.getOPayOrderlistBySupplyOrderIds(new String[]
+            {supplyOrderid});
+            OSupplyerOrder supplyerOrder = orderBase.getEntity(OSupplyerOrder.class,supplyOrderid);
+            if(order_list != null && order_list.size() > 0 && supplyerOrder != null)
+            {
+                if(weiid != supplyerOrder.getSupplyerId())
+                {
+                    result.setState(-1);
+                    result.setMsg("订单不匹配");
+                    return result;
+                }
+                OPayOrder headOrder = null,tailOrder = null;
+                for(OPayOrder oo : order_list)
+                {
+                    if(Short.parseShort(OrderTypeEnum.BookHeadOrder.toString()) == oo.getTypeState())
+                    {
+                        headOrder = oo;
+                    }
+                    else if(Short.parseShort(OrderTypeEnum.BookTailOrder.toString()) == oo.getTypeState())
+                    {
+                        tailOrder = oo;
+                    }
+                    else
+                    {
+                        result.setState(-1);
+                        result.setMsg("不符合要求的订单类型");
+                        return result;
+                    }
+                }
+                double totalprice = supplyerOrder.getTotalPrice() + ParseHelper.getDoubleDefValue(supplyerOrder.getPostage());
+                if(headOrder != null && tailOrder != null && Short.parseShort(OrderStatusEnum.Payed.toString()) == headOrder.getState())
+                {
+                    double amount = totalprice * 0.97;
+                    UTradingDetails suppDetails = new UTradingDetails();
+                    suppDetails.setAmount(amount);
+                    suppDetails.setCreateTime(new Date());
+                    suppDetails.setLtwoType((short) 0);
+                    suppDetails.setOrderNo(tailOrder.getPayOrderId());
+                    suppDetails.setSupplyOrder(supplyOrderid);
+                    suppDetails.setState(Short.parseShort(AmountStatusEnum.weiFangKuan.toString()));
+                    suppDetails.setType(Short.parseShort(AmountTypeEnum.supplyPrice.toString()));
+                    suppDetails.setWeiId(weiid);
+                    suppDetails.setSurplusAmout(amount);
+                    super.add(suppDetails);
+                    // 跟新钱包
+                    orderBase.updateWallet(weiid);
+                    if(Short.parseShort(OrderStatusEnum.Accepted.toString()) == supplyerOrder.getState())
+                    {// 已收货
+                        supplyerOrder.setState(Short.parseShort(OrderStatusEnum.Completed.toString()));
+                        super.update(supplyerOrder);
+                    }
+                    else
+                    {
+                        supplyerOrder.setState(Short.parseShort(OrderStatusEnum.Payed.toString()));
+                        super.update(supplyerOrder);
+                    }
+                    result.setState(1);
+                    result.setMsg("操作成功");
+
+                }
+                else
+                {
+                    result.setState(-1);
+                    result.setMsg("不符合要求的订单类型303");
+                    return result;
+                }
+            }
+        }
+        catch(Exception e)
+        {
+            // handle exception
+            result.setMsg(e.getMessage());
+            result.setState(-2);
+        }
+        return result;
+    }
+
+    /**
+     * 获取订单状态名称
+     * 
+     * @param state
+     * @return
+     */
+    public String getOrderStateName(OrderStatusEnum state)
+    {
+        String name = "";
+        switch(state)
+        {
+            case Nopay:
+                name = "未支付";
+                break;
+            case Payed:
+                name = "已付款";
+                break;
+            case Deliveried:
+                name = "已发货";
+                break;
+            case Accepted:
+                name = "已收货";
+                break;
+            case Completed:
+                name = "交易完成";
+                break;
+            case Canceled:
+                name = "已取消";
+                break;
+            case Tovoided:
+                name = "已过期";
+                break;
+            case Refunding:
+                name = "退款中";
+                break;
+            case Refunded:
+                name = "已退款";
+                break;
+            case WaitSure:
+                name = "等待确认";
+                break;
+            case ApplyCancel:
+                name = "申请取消";
+                break;
+            case Sured:
+                name = "已确认";
+                break;
+            case Rejected:
+                name = "已拒绝";
+                break;
+            case PayedDeposit:
+                name = "已支付定金";
+                break;
+            default:
+                break;
+        }
+        return name;
+    }
+
+    public String getPayTypeName(PayTypeEnum paytype)
+    {
+        if(paytype == null)
+            return "";
+        switch(paytype)
+        {
+            case DinPay:
+                return "智付支付";
+            case TenPay:
+                return "财付通";
+            case ChinaPay:
+                return "银联";
+            case WxPay:
+                return "微信支付";
+            case SinaPay:
+                return "新浪支付";
+            case LLPay:
+                return "连连支付";
+            case WeiWallet:
+                return "钱包支付";
+            default:
+                return "其他支付";
+        }
+    }
+
+    /**
+     * 处理物流信息
+     * 
+     * @param wuliu
+     * @return
+     */
+    private List<String> getLogisticsDetails(String wuliu)
+    {
+        List<String> strList = new ArrayList<String>();
+        if(wuliu != null && wuliu != "")
+        {
+            JSONObject json = JSONObject.fromObject(wuliu);
+            if(json != null)
+            {
+                JSONArray array = json.getJSONArray("data");
+                if(array != null && array.size() > 0)
+                {
+                    for(int i = 0; i < array.size(); i++)
+                    {
+                        JSONObject obj = array.getJSONObject(i);
+                        strList.add(obj.getString("time") + "  " + obj.getString("context"));
+                    }
+                }
+            }
+        }
+        return strList;
+    }
+
+    /**
+     * 预定单状态
+     * 
+     * @param orderState
+     * @param tailPayType
+     * @return
+     */
+    public int getSupplyerBookState(int orderState,Short tailPayType)
+    {
+        OrderStatusEnum state = null;
+        for(OrderStatusEnum ee : OrderStatusEnum.values())
+        {
+            if(orderState == Integer.parseInt(ee.toString()))
+                state = ee;
+        }
+        switch(state)
+        {
+            case WaitSure:
+                return Short.parseShort(SupplyBookOrderTypeEnum.Waitting.toString());
+            case Sured:
+                return Short.parseShort(SupplyBookOrderTypeEnum.Sured.toString());
+            case Completed:
+                return Short.parseShort(SupplyBookOrderTypeEnum.Complete.toString());
+            case PayedDeposit:
+                if(tailPayType == 1)
+                    return Short.parseShort(SupplyBookOrderTypeEnum.DaiFahuo.toString());
+                return Short.parseShort(SupplyBookOrderTypeEnum.NopayTail.toString());
+            case Payed:
+                return Short.parseShort(SupplyBookOrderTypeEnum.DaiFahuo.toString());
+            default:
+                return orderState;
+        }
+    }
+
+    /**
+     * 预定单状态
+     * 
+     * @param orderState
+     * @param tailPayType
+     * @return
+     */
+    public String getSupplyerBookStateName(int orderState,Short tailPayType)
+    {
+        OrderStatusEnum state = null;
+        for(OrderStatusEnum ee : OrderStatusEnum.values())
+        {
+            if(orderState == Integer.parseInt(ee.toString()))
+                state = ee;
+        }
+        switch(state)
+        {
+            case WaitSure:
+                return "待确认";// Short.parseShort(SupplyBookOrderTypeEnum.Waitting.toString());
+            case Sured:
+                return "已确认";// Short.parseShort(SupplyBookOrderTypeEnum.Sured.toString());
+            case Completed:
+                return "已完成";// Short.parseShort(SupplyBookOrderTypeEnum.Complete.toString());
+            case PayedDeposit:
+                if(tailPayType == 1)
+                    return "待发货";// Short.parseShort(SupplyBookOrderTypeEnum.DaiFahuo.toString());
+                return "待付尾款";// Short.parseShort(SupplyBookOrderTypeEnum.NopayTail.toString());
+            case Payed:
+                return "待发货";// Short.parseShort(SupplyBookOrderTypeEnum.DaiFahuo.toString());
+            case Tovoided:
+                return "已过期";
+            default:
+                return "";// orderState;
+        }
+    }
+
+}

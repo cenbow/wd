@@ -1,0 +1,50 @@
+package com.okwei.supplyportal.dao;
+
+import com.okwei.bean.domain.UBatchSupplyer;
+import com.okwei.bean.domain.USupplyer;
+import com.okwei.bean.domain.UVerifier;
+import com.okwei.bean.domain.UYunSupplier;
+
+
+public interface IProductManageDao {
+	/**
+	 * 根据微店号获取供应商信息
+	 * @param weiid
+	 * @return
+	 */
+	UBatchSupplyer getSupplyerMsg(Long weiid);
+	/**
+	 * 获取云商通供应商信息
+	 * @param weiid
+	 * @return
+	 */
+	UYunSupplier getYunSupplyerMsg(Long weiid);
+	/**
+	 * 获取供应商基本信息
+	 * @param weiid
+	 * @return
+	 */
+	USupplyer getBaseSupplyerMsg(Long weiid);
+	/**
+	 * 获取认证员基本资料
+	 * @param weiid
+	 * @return
+	 */
+	UVerifier getBaseVerifierMsg(Long weiid);
+	/**
+	 * 获取不同状态的订单个数
+	 * @param weiid
+	 * @param state
+	 * @return
+	 */
+	int getOrderCountByState(Long weiid,Short state);
+	/**
+	 * 获取不同状态的产品个数
+	 * @param weiid
+	 * @param state
+	 * @return
+	 */
+	int getProductCountyByState(Long weiid,Short state);
+	
+	
+}

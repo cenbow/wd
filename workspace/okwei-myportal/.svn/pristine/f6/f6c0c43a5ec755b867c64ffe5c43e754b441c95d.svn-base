@@ -1,0 +1,366 @@
+/**
+ * 我的分类
+ */
+var isPostting = false;
+var newId = $("newId").val();
+/**
+ * 公用弹窗
+ */
+function wins(title, win_id, width, height, fun, param) { // title 标题 win_id 弹窗ID width 弹窗宽度 height 弹窗高度
+	var pagei = $.layer({
+		type : 1, // 0-4的选择,0：信息框（默认），1：页面层，2：iframe层，3：加载层，4：tips层。
+		btns : 2,
+		btn : [
+				'确定', '取消'
+		],
+		title : title,
+		border : [
+			0
+		],
+		closeBtn : [
+			0
+		],
+		closeBtn : [
+				0, true
+		],
+		shadeClose : true,
+		area : [
+				width, height
+		],
+		yes : function() {
+			if (param == null) {
+				fun();
+			}
+			else {
+				fun(param);
+			}
+		},
+		page : {
+			dom : '#' + win_id
+		},
+		end : function() {
+			$("#AddCount").hide()
+		}
+	});
+}
+/**
+ * 添加方法
+ */
+var add = function() {
+	var name = $("#className").val();
+	if (name == null || name == "") {
+		alert("请输入需要添加的分类名称");
+		return false;
+	}
+	else {
+		var loadindex = layer.load("努力提交中...");
+		$.ajax({
+			url : "addClass",
+			type : "post",
+			data : {
+				"className" : name
+			},
+			dataType : "json",
+			success : function(data) {
+				layer.close(loadindex);
+				if (data.state != "1") {
+					alert(data.msg);
+				}
+				else {
+					alert("添加成功", true);
+				}
+				setTimeout(function() {
+					location.reload();
+				}, 1000);
+			},
+			error : function(XMLHttpRequest, textStatus, errorThrown) {
+				layer.close(loadindex);
+				alert("系统异常");
+				setTimeout(function() {
+					location.reload()
+				}, 1000);
+			}
+		});
+	}
+}
+/**
+ * 删除方法
+ */
+var del = function(cid) {
+	if (cid == null || parseInt(cid) <= 0) {
+		alert("删除的分类不存在");
+		location.reload();
+		return false;
+	}
+	var loadindex = layer.load("努力提交中...");
+	$.ajax({
+		url : "delClass",
+		type : "post",
+		data : {
+			"cid" : cid
+		},
+		dataType : "json",
+		success : function(data) {
+			layer.close(loadindex);
+			if (data.state != "1") {
+				alert(data.msg);
+			}
+			else {
+				alert("删除成功", true);
+			}
+			setTimeout(function() {
+				location.reload();
+			}, 1000);
+		},
+		error : function(XMLHttpRequest, textStatus, errorThrown) {
+			layer.close(loadindex);
+			alert("系统异常");
+			setTimeout(function() {
+				location.reload();
+			}, 1000);
+		}
+	});
+}
+/**
+ * 修改
+ */
+var update = function(cid) {
+	var name = $("#className").val();
+	if (name == null || name == "" || cid == null || parseInt(cid) <= 0) {
+		alert("请输入需要修改的分类名称");
+		return false;
+	}
+	else {
+		var loadindex = layer.load("努力提交中...");
+		$.ajax({
+			url : "updClass",
+			type : "post",
+			data : {
+				"className" : name,
+				"cid" : cid
+			},
+			dataType : "json",
+			success : function(data) {
+				layer.close(loadindex);
+				if (data.state != "1") {
+					alert(data.msg);
+				}
+				else {
+					alert("修改成功", true);
+				}
+				setTimeout(function() {
+					location.reload();
+				}, 1000);
+			},
+			error : function(XMLHttpRequest, textStatus, errorThrown) {
+				layer.close(loadindex);
+				alert("系统异常");
+				setTimeout(function() {
+					location.reload();
+				}, 1000);
+			}
+		});
+	}
+}
+/**
+ * 置顶
+ */
+function setTop(cid) {
+	if (cid == null || parseInt(cid) <= 0) {
+		alert("置顶的分类不存在");
+		location.reload();
+		return false;
+	}
+	var loadindex = layer.load("努力提交中...");
+	$.ajax({
+		url : "setTop",
+		type : "post",
+		data : {
+			"cid" : cid
+		},
+		dataType : "json",
+		success : function(data) {
+			layer.close(loadindex);
+			if (data.state != "1") {
+				alert(data.msg);
+			}
+			location.reload();
+		},
+		error : function(XMLHttpRequest, textStatus, errorThrown) {
+			layer.close(loadindex);
+			alert("系统异常");
+			location.reload();
+		}
+	});
+}
+
+$(function() {
+	/**
+	 * 分页
+	 */
+	var page = new Pagination({
+		formId : "classForm",
+		isAjax : false,
+		targetId : "navTab",
+		submitId : "searchBtn",
+		validateFn : false
+	});
+	page.init();
+	/**
+	 * 绑定事件
+	 */
+	$("#addclass").click(function() {
+		$("#className").val("");
+		wins('新建分类', 'win_div_3', '514px', '240px', add);// 显示弹窗
+	});
+	$(".setTop").on("click", function() {
+		var cid = $(this).attr("data");
+		setTop(cid);
+	});
+	$(".update").on("click", function() {
+		var cid = $(this).attr("data");
+		var name = $(this).parent().prev().prev().prev().text();
+		$("#className").val(name);
+		wins('编辑分类', 'win_div_3', '514px', '240px', update, cid);// 显示弹窗
+	});
+	$(".delete").on("click", function() {
+		var cid = $(this).attr("data");
+		var count = $(this).parent().prev().text();
+		if (parseInt(count) > 0) {
+			var name = $(this).parent().prev().prev().text();
+			$("#win_div_2>div").text("该“" + name + "”分类下已有" + count + "件产品，删除分类后，该分类内所有的产品都将删除！你是否要删除该分类？");
+		}
+		else {
+			$("#win_div_2>div").text("确定删除该分类");
+		}
+		wins('删除分类', 'win_div_2', '514px', '240px', del, cid);// 显示弹窗
+	});
+	
+	
+	
+	//保存店铺分类 二级分类
+	$("#btnSaveShopClass").click(function(){
+		$("#add_tjelfj").html("");
+		$("#add_tjelfj").html("" +
+	            "<div class='fl mzh_width_100 mb_10'>" +
+	            "<span class='fl mr_10'>二级分类名称：</span>" +
+	            "<input type='text' class='xzgys_input' style='width: 150px;' name='childrenShopClassName'>" +
+	            "<font class='fl ft_red fw_b shou ml_10 f22' onclick='javascript:delChildrenShopClass(this)'>×</font>" +
+	            "</div>");
+		showShopClassAdd("保存分类",'520px','400px',"win_div_4",$(this),function(_this,index){
+			var scName = $.trim($("#oneShopClass").val());
+			if(scName ==""){
+				alert("请输入一级分类名称！");
+				return;
+			}
+			var twoClass = [];
+			$("input[name='childrenShopClassName']").each(function(){
+				if ($.trim($(this).val()) == '') {
+					alert("二级分类名称不能为空");
+					return;
+				}
+				twoClass.push($.trim($(this).val()));
+			});
+			if(isPostting){
+				return;
+			}
+			var loadIndex = layer.load('正在努力的提交...');
+			isPostting = true;
+	        $.ajax({
+	            url: "/Product/saveShopClassTwoLevle",
+	            type: "post",
+	            data: { scName:scName,scJson:obj2Str(twoClass) },
+	            success: function (data) {
+	                data = eval(data);
+	                if(data.Statu == "Success"){
+	                	alert("保存成功！",true);
+	                	layer.close(index);
+	                	setTimeout(function() {
+	                		location.reload();
+	                	}, 1000);
+	                }else{
+	                	alert(data.StatusReson);
+	                }
+	    	        isPostting = false;
+	    	        layer.close(loadIndex);
+	            },
+	            error: function () {
+	                alert("数据提交失败！请稍后重试！");
+	    	        isPostting = false;
+	    	        layer.close(loadIndex);
+	            }
+	        });
+		});
+	});
+});
+
+/* 发布产品 -- 添加二类分级 */
+function addChildrenShopClass(){
+	$("#add_tjelfj").append("" +
+            "<div class='fl mzh_width_100 mb_10'>" +
+            "<span class='fl mr_10'>二级分类名称：</span>" +
+            "<input type='text' class='xzgys_input' style='width: 150px;' name='childrenShopClassName'>" +
+            "<font class='fl ft_red fw_b shou ml_10 f22' onclick='javascript:delChildrenShopClass(this)'>×</font>" +
+            "</div>");
+}
+/* 发布产品 -- 添加二类分级 -- 删除分类 */
+function delChildrenShopClass(ts){
+	$(ts).parent("div").remove();
+}
+
+function showShopClassAdd(title,width, height,win_id,_this,callBack){
+	$("#win_div_4 input").val("");
+	var pagei = $.layer({
+	   type: 1,   //0-4的选择,0：信息框（默认），1：页面层，2：iframe层，3：加载层，4：tips层。 
+	   btns: 2,
+	   btn: ['确定','取消'],
+	   yes: function(index){
+	        //按钮【按钮一】的回调
+		   if(callBack !=null){			   
+			   callBack(_this,index);			   
+		   }else{
+			   layer.close(index);
+		   }
+	    },
+	   title: title,
+	   border: [0],
+	   closeBtn: [0],
+	   closeBtn: [0, true],
+	   shadeClose: true,
+	   area: [ width, height ],
+	   page: {dom : '#'+ win_id}
+   });
+}
+
+//js对象 转换json 串
+function obj2Str(obj) {
+    switch (typeof (obj)) {
+        case 'object':
+            var ret = [];
+            if (obj instanceof Array) {
+                for (var i = 0, len = obj.length; i < len; i++) {
+                    ret.push(obj2Str(obj[i]));
+                }
+                return '[' + ret.join(',') + ']';
+            }
+            else if (obj instanceof RegExp) {
+                return obj.toString();
+            }
+            else {
+                for (var a in obj) {
+                    ret.push(a + ':' + obj2Str(obj[a]));
+                }
+                return '{' + ret.join(',') + '}';
+            }
+        case 'function':
+            return 'function() {}';
+        case 'number':
+            return obj.toString();
+        case 'string':
+            return "\"" + obj.replace(/(\\|\")/g, "\\$1").replace(/\n|\r|\t/g, function (a) { return ("\n" == a) ? "\\n" : ("\r" == a) ? "\\r" : ("\t" == a) ? "\\t" : ""; }) + "\"";
+        case 'boolean':
+            return obj.toString();
+        default:
+            return obj.toString();
+    }
+}

@@ -1,0 +1,200 @@
+package com.okwei.myportal.web;
+
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+import com.okwei.bean.domain.PBrand;
+import com.okwei.bean.domain.PClassForBrand;
+import com.okwei.bean.vo.LoginUser;
+import com.okwei.common.JsonUtil;
+import com.okwei.common.Limit;
+import com.okwei.common.PageResult;
+import com.okwei.myportal.bean.dto.BrandProveDTO;
+import com.okwei.myportal.bean.enums.BaseResultStateEnum;
+import com.okwei.myportal.bean.vo.BaseResultVO; 
+import com.okwei.myportal.bean.vo.BrandClassChildVO;
+import com.okwei.myportal.bean.vo.BrandClassParentVO;
+import com.okwei.myportal.bean.vo.BrandInfoVO;
+import com.okwei.myportal.bean.vo.BrandListVO; 
+import com.okwei.myportal.service.IBrandProveService;
+import com.okwei.web.base.SSOController;
+
+@Controller
+@RequestMapping(value = "/brand")
+public class BrandProveController extends SSOController {
+
+	@Autowired
+	private IBrandProveService service;
+	
+    @RequestMapping(value="/brandlist")
+	public String getBrandList(@ModelAttribute("queryParam") BrandProveDTO dto, 
+			@RequestParam(required = false, defaultValue = "1") int pageId, Model model){
+		LoginUser user = super.getUserOrSub();
+		long weiID =user.getWeiID();
+ 		//如果不是供应商 去微店中心吧
+ 		if(user ==null || (user.getYunS()==null && user.getBatchS() ==null && user.getPph()==null && user.getPth()==null)){
+ 			return "redirect:/maininfo/maininfo"; 
+ 		}
+ 		if(!((user.getYunS() !=null && user.getYunS() ==1) || (user.getBatchS() != null && user.getBatchS() ==1)
+ 				|| (user.getPph() != null && user.getPph() ==1)|| (user.getPth() != null && user.getPth() ==1))){
+ 			return "redirect:/maininfo/maininfo"; 
+ 		}
+		
+		List<BrandClassParentVO> classList = service.getBrandClassList();  
+		//分割分类ID
+		if(dto.getClasString() !=null && dto.getClasString() !=""){
+			String[] tempclassIDs = dto.getClasString().split("\\|");
+			Integer[] classIDs=new Integer[tempclassIDs.length];
+			if(tempclassIDs !=null && tempclassIDs.length>0){
+				for (int i=0;i<tempclassIDs.length;i++) {
+					classIDs[i] = Integer.parseInt(tempclassIDs[i]);
+				}
+			}
+			dto.setClassIDs(classIDs);
+		}
+		
+		//设置选中
+		if(classList!=null && dto.getClassIDs() !=null && dto.getClassIDs().length >0){
+		    	for (BrandClassParentVO bcp : classList) {
+					for (BrandClassChildVO bcc : bcp.getClassChildVOs()) {
+						for (int classID : dto.getClassIDs()) {
+							if(bcc.getClassID() == classID){
+								bcc.setChecked(true);
+								break;
+							}
+						}
+					}			
+	    	}
+		}
+   	
+		PageResult<BrandListVO> page = service.getBrandList(weiID, dto, Limit.buildLimit(pageId, 10));
+		model.addAttribute("classList",classList);
+		model.addAttribute("userinfo",user);
+		model.addAttribute("page",page);
+		model.addAttribute("dto",dto);
+		
+    	return "brand/brandlist";
+    }
+    
+    @RequestMapping(value="/submitbrand")
+ 	public String submitBrand(@RequestParam(required = false, defaultValue = "0") int brandID,Model model){
+    	LoginUser user = super.getUserOrSub();
+ 		long weiID =user.getWeiID();
+ 		//如果不是供应商 去微店中心吧
+ 		if(user ==null || (user.getYunS()==null && user.getBatchS() ==null)){
+ 			return "redirect:/maininfo/maininfo"; 
+ 		}
+ 		if(!((user.getYunS() !=null && user.getYunS() ==1) || (user.getBatchS() != null && user.getBatchS() ==1)
+ 				|| (user.getPph() != null && user.getPph() ==1)|| (user.getPth() != null && user.getPth() ==1))){
+ 			return "redirect:/maininfo/maininfo"; 
+ 		}
+ 		
+    	List<BrandClassParentVO> classList = service.getBrandClassList();   	
+    	BrandInfoVO brandInfo = service.getBrand(brandID,weiID);
+    	List<PClassForBrand> cfbList= service.getClassForBrands(brandID);
+    	if(brandID>0 && (brandInfo ==null || brandInfo.getStatus() !=2)){
+    		return "redirect:/brand/brandlist"; 
+    	}
+    	//设置选中
+    	if(brandID>0 && cfbList !=null && cfbList.size()>0){
+	    	for (BrandClassParentVO bcp : classList) {
+				for (BrandClassChildVO bcc : bcp.getClassChildVOs()) {
+					for (PClassForBrand cfb : cfbList) {
+						if(bcc.getClassID() == (int)cfb.getTypeId()){
+							bcc.setChecked(true);
+							break;
+						}
+					}
+				}
+			}
+    	}
+    	   	
+    	model.addAttribute("classList",classList);
+    	model.addAttribute("brandInfo",brandInfo);
+    	model.addAttribute("cfbList",cfbList);
+    	model.addAttribute("userinfo",user);
+    	
+     	return "brand/submitbrand";
+     }
+    
+    
+    @RequestMapping(value="/brandinfo")
+ 	public String getBrandInfo(@RequestParam(required = false, defaultValue = "0") int brandID, Model model){
+ 		LoginUser user = super.getUserOrSub();
+ 		long weiID =user.getWeiID();
+ 		//如果不是供应商 去微店中心吧
+ 		if(user ==null || (user.getYunS()==null && user.getBatchS() ==null)){
+ 			return "redirect:/maininfo/maininfo"; 
+ 		}
+ 		if(!((user.getYunS() !=null && user.getYunS() ==1) || (user.getBatchS() != null && user.getBatchS() ==1)
+ 				|| (user.getPph() != null && user.getPph() ==1)|| (user.getPth() != null && user.getPth() ==1))){
+ 			return "redirect:/maininfo/maininfo"; 
+ 		}
+ 		
+ 		BrandInfoVO brandInfo = service.getBrand(brandID,weiID);
+ 				
+ 		model.addAttribute("userinfo",user);
+ 		model.addAttribute("brandInfo",brandInfo);
+ 		
+     	return "/brand/brandinfo";
+     }
+    
+	@ResponseBody
+    @RequestMapping(value = "/savebrand",method ={RequestMethod.POST,RequestMethod.GET})
+ 	public String saveBrand(@ModelAttribute("queryParam") PBrand dto, Model model){
+ 		LoginUser user = super.getUserOrSub();
+ 		long weiID =user.getWeiID();
+ 		dto.setCompanyNo(weiID);
+ 		
+ 		//参数校验
+ 		BaseResultVO result = new BaseResultVO();
+ 		result.setState(BaseResultStateEnum.Failure);
+
+ 		if(weiID <1){
+ 			result.setMessage("登录信息丢失，请重新登录");
+ 			return JsonUtil.objectToJson(result);
+ 		}
+ 		
+ 		//=是否是供应商 不是供应商不能提交品牌认证
+ 		//如果不是供应商 去微店中心吧
+ 		if(user ==null || (user.getYunS()==null && user.getBatchS() ==null)){
+ 			result.setMessage("您还不是供应商");
+ 			return JsonUtil.objectToJson(result);
+ 		}
+ 		if(!((user.getYunS() !=null && user.getYunS() ==1) || (user.getBatchS() != null && user.getBatchS() ==1)
+ 				|| (user.getPph() != null && user.getPph() ==1)|| (user.getPth() != null && user.getPth() ==1))){
+ 			result.setMessage("您还不是供应商");
+ 			return JsonUtil.objectToJson(result);  
+ 		}
+ 		
+ 		result.setMessage("参数错误");
+ 		if(dto.getBrandName() ==null || "".equals(dto.getBrandCertificate())){
+ 			return JsonUtil.objectToJson(result);
+ 		}
+ 		if(dto.getBrandLogo() ==null || "".equals(dto.getBrandLogo())){
+ 			return JsonUtil.objectToJson(result);
+ 		}
+ 		if(dto.getAuthorization() ==null ||"".equals(dto.getAuthorization())){
+ 			return JsonUtil.objectToJson(result);
+ 		}
+ 		if(dto.getParentType() ==null ||"".equals(dto.getParentType())){
+ 			return  JsonUtil.objectToJson(result);
+ 		}
+ 		if(dto.getPhone() ==null || "".equals(dto.getPhone())){
+ 			return  JsonUtil.objectToJson(result);
+ 		}
+ 			
+ 		result = service.saveBrand(dto,dto.getParentType());
+     	return JsonUtil.objectToJson(result);
+     }
+    
+    
+}

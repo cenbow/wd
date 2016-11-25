@@ -1,0 +1,22 @@
+package com.okwei.supplyportal.dao;
+
+import java.util.List;
+
+import com.okwei.bean.domain.PParamModel;
+import com.okwei.bean.domain.PProductClass;
+import com.okwei.bean.enums.CatagoryStepEnum;
+import com.okwei.dao.IBaseDAO;
+
+public interface IProductPublishDAO extends IBaseDAO {
+
+	List<PProductClass> getCatagoryByStep(CatagoryStepEnum step);
+
+	List<PProductClass> getCatagoryByParentId(Integer parentId);
+
+	List<PProductClass> getCatagoryByKeyword(String keyword);
+
+	List<PProductClass> getSiblingsById(Integer id);
+
+	List<PParamModel> getTemplateByClassId(Integer id);
+
+}

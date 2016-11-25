@@ -1,0 +1,370 @@
+package com.okwei.myportal.service.impl;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
+import ognl.InappropriateExpressionException;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.okwei.bean.domain.PBrand;
+import com.okwei.bean.domain.PClassForBrand;
+import com.okwei.bean.domain.PProductClass;
+import com.okwei.common.Limit;
+import com.okwei.common.PageResult;
+import com.okwei.myportal.bean.dto.BrandProveDTO;
+import com.okwei.myportal.bean.enums.BaseResultStateEnum;
+import com.okwei.myportal.bean.vo.BaseResultVO;
+import com.okwei.myportal.bean.vo.BrandClassChildVO;
+import com.okwei.myportal.bean.vo.BrandClassParentVO;
+import com.okwei.myportal.bean.vo.BrandInfoVO;
+import com.okwei.myportal.bean.vo.BrandListVO;
+import com.okwei.myportal.dao.IBrandProveDAO;
+import com.okwei.myportal.service.IBrandProveService;
+import com.okwei.service.impl.BaseService;
+import com.okwei.util.ImgDomain;
+
+@Service
+public class BrandProveService extends BaseService implements IBrandProveService {
+
+	@Autowired
+	private IBrandProveDAO dao;
+	
+	@Override
+	public PageResult<BrandListVO> getBrandList(long weiID ,BrandProveDTO dto,Limit limit) {
+		
+		PageResult<BrandListVO> result = dao.getBrands(weiID, dto, limit);
+		if(result !=null && result.getList() !=null && result.getList().size() >0){
+			List<Integer> brandIDs = new ArrayList<Integer>();
+			for (BrandListVO item : result.getList()) {
+				//品牌图片路径
+				item.setBrandLOGO(ImgDomain.GetFullImgUrl(item.getBrandLOGO()));
+				//品牌状态名称
+				switch (item.getState()) {
+				case 0:
+					item.setStateName("待审核");
+					break;
+				case 1:
+					item.setStateName("通过");
+					break;
+				case 2:
+					item.setStateName("不通过");
+					break;
+				default:
+					break;
+				}
+				//所有的品牌ID
+				brandIDs.add(item.getBrandID());
+			}
+			//获取品牌关联的分类
+			List<PClassForBrand> cfbList = dao.getcfbList((Integer[])brandIDs.toArray(new Integer[brandIDs.size()]));
+			if(cfbList !=null && cfbList.size()>0){
+				//所有分类的ID集合
+				List<Integer> classIDs = new ArrayList<Integer>();
+				//品牌关联的所有二级分类
+				List<BrandClassChildVO> bccList = new ArrayList<BrandClassChildVO>();
+				for (PClassForBrand item : cfbList) {
+					if(!classIDs.contains(item.getTypeId())){
+						classIDs.add(item.getTypeId());
+					}
+					BrandClassChildVO bcc = new BrandClassChildVO();
+					bcc.setBrandID(item.getBrandId());
+					bcc.setClassID(item.getTypeId());
+					bccList.add(bcc);
+				}
+				//查询所有分类
+				List<PProductClass> childPCList = dao.getClassList((Integer[])classIDs.toArray(new Integer[classIDs.size()]));
+				if(childPCList !=null && childPCList.size() >1){
+					List<Integer> parentIDs = new ArrayList<Integer>();
+					for (PProductClass item : childPCList) {
+						for (BrandClassChildVO childVO : bccList) {
+							//所有的顶级分类ID
+							if(!parentIDs.contains(item.getParentId())){
+								parentIDs.add(item.getParentId());
+							}
+							//获取二级分类的名称 及上级ID
+							if(item.getClassId().equals(childVO.getClassID())){
+								childVO.setClassName(item.getClassName());
+								childVO.setParentID(item.getParentId());
+							}
+						}
+					}
+					//获取所有父级分类的名称
+					List<PProductClass> parentPCList = dao.getClassList((Integer[])parentIDs.toArray(new Integer[parentIDs.size()]));
+					if(parentPCList !=null && parentPCList.size() >0){
+						for (BrandClassChildVO childVO : bccList) {
+							for (PProductClass parentVO : parentPCList) {
+								//赋值所有的顶级分类名称
+								if(childVO.getParentID() == (int)parentVO.getClassId()){
+									childVO.setParentName(parentVO.getClassName());
+									continue;
+								}
+							}
+						}
+
+					}					
+				}
+				//把关联的分类 组装到 品牌上面
+				for (BrandListVO item : result.getList()) {
+					//获取该品牌的分类
+					List<BrandClassChildVO> itembcVos = new ArrayList<BrandClassChildVO>();
+					for (BrandClassChildVO childVO : bccList) {
+						if(item.getBrandID() == childVO.getBrandID()){
+							itembcVos.add(childVO);
+						}
+					}
+					if(itembcVos.size()>0){
+						//提取每个品牌涉及顶级分类
+						List<Integer> parentIDs = new ArrayList<Integer>();
+						List<BrandClassParentVO> parentVOs = new ArrayList<BrandClassParentVO>();						
+						for (BrandClassChildVO bcVo : itembcVos) {
+							if(!parentIDs.contains(bcVo.getParentID())){
+								BrandClassParentVO parentVO = new BrandClassParentVO();
+								parentVO.setParentCID(bcVo.getParentID());
+								parentVO.setParentCName(bcVo.getParentName());
+								parentVOs.add(parentVO);
+								
+								parentIDs.add(bcVo.getParentID());
+							}
+						}
+						//提取每个顶级分类包含的下级分类						
+						for (BrandClassParentVO pranetVo : parentVOs) {
+							List<BrandClassChildVO> childVos = new ArrayList<BrandClassChildVO>();
+							for (BrandClassChildVO bcVo : itembcVos) {
+								if(bcVo.getParentID() ==pranetVo.getParentCID()){
+									childVos.add(bcVo);
+								}
+							}
+							pranetVo.setClassChildVOs(childVos);
+						}
+						//将双层分类组装到品牌上
+						item.setCfbVO(parentVOs);
+					}
+				}
+				
+			}		
+		}
+		
+		return result;
+	}
+
+	@Override
+	public BrandInfoVO getBrand(int brandID,long weiID) {
+		if(brandID <1){
+			return null;
+		}
+		
+		PBrand brand= super.getById(PBrand.class, brandID);
+		if(brand==null || (long)brand.getCompanyNo() != weiID){
+			return null;
+		}
+
+		BrandInfoVO result= new BrandInfoVO();
+		result.setAuthorization(ImgDomain.GetFullImgUrl(brand.getAuthorization()));
+		result.setBrandID(brandID);
+		result.setBrandLogo(ImgDomain.GetFullImgUrl(brand.getBrandLogo()));
+		result.setBrandName(brand.getBrandName());
+		result.setBrandStory(brand.getBrandStory());
+		result.setCompanyNo(brand.getCompanyNo());
+		result.setJob(brand.getJob());
+		result.setLinkMan(brand.getLinkMan());
+		result.setPhone(brand.getPhone());
+		result.setStatus(brand.getStatus());
+		result.setReason(brand.getReason());
+		result.setCfbVO(getBrandClassParentVOs(brandID));
+		return result;
+	}
+	
+	/**
+	 * 获取品牌分类信息
+	 * @param brandID
+	 * @return
+	 */
+	private List<BrandClassParentVO> getBrandClassParentVOs(int brandID){
+		if(brandID <1){
+			return null;
+		}
+		List<BrandClassParentVO> result = new ArrayList<BrandClassParentVO>();
+		
+		List<PClassForBrand> pcbList = dao.getcfbList(brandID);
+		if(pcbList !=null){
+			//该品牌所有相关的分类ID
+			List<Integer> childCIDs = new ArrayList<Integer>();
+			List<BrandClassChildVO> childVOs = new ArrayList<BrandClassChildVO>();
+			for (PClassForBrand pcb : pcbList) {
+				if(!childCIDs.contains(pcb.getTypeId())){
+					childCIDs.add(pcb.getTypeId());
+				}
+				
+				BrandClassChildVO chlidVO = new BrandClassChildVO();
+				chlidVO.setBrandID(pcb.getBrandId());
+				chlidVO.setClassID(pcb.getTypeId());
+				childVOs.add(chlidVO);
+			}
+			//获取所有相关分类
+			Integer[] temp = (Integer[])childCIDs.toArray(new Integer[childCIDs.size()]);
+			List<PProductClass> childClasses = dao.getClassList(temp);
+			if(childClasses !=null && childClasses.size()>0){
+				//所有的上级分类ID
+				List<Integer> parentCIDs = new ArrayList<Integer>();
+				for (PProductClass  childClass: childClasses) {
+					for (BrandClassChildVO childVO : childVOs) {
+						if(!parentCIDs.contains(childClass.getParentId())){
+							parentCIDs.add(childClass.getParentId());
+						}
+						
+						//获取分类名称 及 上级分类的ID
+						if(childVO.getClassID() == (int)childClass.getClassId()){
+							childVO.setClassName(childClass.getClassName());
+							childVO.setParentID(childClass.getParentId());
+						}
+					}
+				}
+				//获取所有的上级分类
+				List<PProductClass> parentClasses = dao.getClassList((Integer[])parentCIDs.toArray(new Integer[childCIDs.size()]));
+				if(parentClasses !=null && parentClasses.size() >0){
+					for (PProductClass parentClass : parentClasses) {
+						BrandClassParentVO parentVO = new BrandClassParentVO();
+						parentVO.setParentCID(parentClass.getClassId());
+						parentVO.setParentCName(parentClass.getClassName());
+						
+						
+						//下级分类列表
+						List<BrandClassChildVO> pbcChildVOs = new ArrayList<BrandClassChildVO>();
+						for (BrandClassChildVO childVO : childVOs) {
+							if(childVO.getParentID() == (int)parentClass.getClassId()){
+								pbcChildVOs.add(childVO);
+							}
+						}
+						//把下级分类 组装到其父级
+						parentVO.setClassChildVOs(pbcChildVOs);
+						
+						//添加到返回
+						result.add(parentVO);						
+					}
+				}
+			}
+		}
+		
+		
+		return result;
+	}
+
+	@Override
+	public BaseResultVO saveBrand(PBrand param,String parentType) {
+		BaseResultVO result = new BaseResultVO();
+		result.setState(BaseResultStateEnum.Failure);
+		if(param ==null){
+			return result;
+		}
+		int brandID =0;
+		param.setParentType("");
+		ImgDomain.ReplitImgDoMain(param.getBrandLogo());
+		ImgDomain.ReplitImgDoMain(param.getAuthorization());
+		if(param.getBrandId() !=null && param.getBrandId() >1){
+			brandID =param.getBrandId();
+			//更新
+			PBrand brand = super.getById(PBrand.class, param.getBrandId());
+			if(brand ==null){
+				result.setMessage("参数错误！");
+				return result;
+			}		
+			if(!brand.getCompanyNo().equals(param.getCompanyNo())){
+				result.setMessage("参数错误！");
+				return result;
+			}
+			if(brand.getStatus() !=2){
+				result.setMessage("该品牌不是可编辑状态！");
+				return result;
+			}
+			
+			//删除所有该品牌下的管理分类
+			dao.deleteProductForClass(param.getBrandId());
+			brand.setApplyTime(new Date());
+			brand.setAuthorization(param.getAuthorization());
+			brand.setBrandLogo(param.getBrandLogo());
+			brand.setBrandName(param.getBrandName());
+			brand.setBrandStory(param.getBrandStory());
+			brand.setLinkMan(param.getLinkMan());
+			brand.setPhone(param.getPhone());
+			brand.setJob(param.getJob());
+			brand.setStatus(0);
+			brand.setSort(0);
+			super.update(brand);			
+		}else{
+			//添加
+			param.setApplyTime(new Date());
+			param.setStatus(0);
+			param.setSort(0);
+			if(super.add(param))
+			{
+				brandID = param.getBrandId();
+			}
+		}
+		
+		saveClassForBrand(brandID,param.getCompanyNo(),parentType);
+		result.setState(BaseResultStateEnum.Success);
+		result.setMessage(String.valueOf(brandID));
+		return result;
+	}
+
+	@Override
+	public List<BrandClassParentVO> getBrandClassList() {
+		List<BrandClassParentVO> result = new ArrayList<BrandClassParentVO>();
+		List<PProductClass> parentList = dao.getPClassList((short)1);
+		List<PProductClass> childList =  dao.getPClassList((short)2);
+		if(parentList !=null && parentList.size() >0){
+			for (PProductClass parentItem : parentList) {
+				BrandClassParentVO parentVO = new BrandClassParentVO();
+				parentVO.setParentCID(parentItem.getClassId());
+				parentVO.setParentCName(parentItem.getClassName());
+				
+				List<BrandClassChildVO> classChildVOs = new ArrayList<BrandClassChildVO>();
+				for (PProductClass childItem : childList) {
+					if(childItem.getParentId().equals(parentItem.getClassId())){
+						BrandClassChildVO childVO = new BrandClassChildVO();
+						childVO.setClassID(childItem.getClassId());
+						childVO.setClassName(childItem.getClassName());
+						childVO.setParentID(childItem.getParentId());
+						classChildVOs.add(childVO);
+					}										
+				}
+				parentVO.setClassChildVOs(classChildVOs);
+				
+				result.add(parentVO);
+			}
+		}
+		return result;
+	}
+
+	@Override
+	public List<PClassForBrand> getClassForBrands(int brandID) {
+		if(brandID <1){
+			return null;
+		}
+		
+		return dao.getcfbList(brandID);
+	}
+
+
+	private void saveClassForBrand(int brandID,long weiID, String parentType) {
+		if(brandID <1 || parentType ==null || parentType ==""){
+			return;
+		}
+		String[] classIDs = parentType.split("\\|");
+		if(classIDs !=null && classIDs.length>0){
+			for (String item : classIDs) {
+				if(item !=null && item !=""){
+					PClassForBrand pcb = new PClassForBrand();
+					pcb.setBrandId(brandID);
+					pcb.setWeiId(weiID);
+					pcb.setCreateTime(new Date());
+					pcb.setTypeId(Integer.parseInt(item));
+					super.add(pcb);
+				}
+			}
+		}
+	}
+}

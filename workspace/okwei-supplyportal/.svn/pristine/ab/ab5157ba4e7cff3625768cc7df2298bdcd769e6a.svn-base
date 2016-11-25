@@ -1,0 +1,513 @@
+<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c"%>
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>退款详情</title>
+<jsp:include page="/jsp/common/scriptstyle.jsp" />
+<link rel="stylesheet" type="text/css" href="/statics/css/mzh_dd_ddxq.css" />
+<script type="text/javascript" src="<%=request.getContextPath()%>/statics/js/layer/layer.min.js"></script>
+<script type="text/javascript" src="<%=request.getContextPath()%>/statics/js/order/orderdetails.js"></script>
+<script type="text/javascript" src="<%=request.getContextPath()%>/statics/js/order/orderpublic.js"></script>
+<script type="text/javascript">
+function agreed(processId){
+	$.ajax({
+		url : "orderajax",
+		type : "post",
+		dataType : "json",
+		data : {
+			"key" : "agreed",
+			"processId" : processId
+		},
+		error : function() {
+			alert("异常！");
+		},
+		success : function(data) {
+			if (data.msg == "1") {
+				alert("拒绝成功");
+			}
+			else {
+				alert("拒绝失败");
+			}
+			location.replace(document.referrer);
+		}
+	});
+}
+//不同意退款
+function agreed(processId){
+	var msg = $("#reason").val();
+	$.ajax({
+		url : "orderajax",
+		type : "post",
+		dataType : "json",
+		data : {
+			"key" : "agreed",
+			"processId" : processId,
+			"msg":msg
+		},
+		error : function() {
+			alert("异常！");
+		},
+		success : function(data) {
+			if (data.msg == "1") {
+				alert("拒绝成功");
+			}
+			else {
+				alert("拒绝失败");
+			}
+			location.replace(document.referrer);
+		}
+	});
+}
+</script>
+</head>
+<body>
+	<jsp:include page="/jsp/common/header.jsp" />
+	<!-- 正文内容 -->
+
+	<div class="content mar_au">
+		<div class="weiz_iam f12 fm_song">
+			当前位置：<a href="#">我的微店</a>&gt; <a href="#">已购买的产品 </a>&gt; <a href="#"> <c:choose>
+					<c:when test="${details.orderShowType==1}">
+						零售订单
+					</c:when>
+					<c:when test="${details.orderShowType==2}">
+						批发订单
+					</c:when>
+					<c:when test="${details.orderShowType==3}">
+						预售订单
+					</c:when>
+				</c:choose> <span class="fw_100">${details.backOrder }</span></a>&gt; <span>售后详请</span>
+		</div>
+		<div class="ddxq_gg">
+			<!-- 流程 -->
+			<div class="ddxq_gg_flow">
+				<c:choose>
+					<c:when test="${details.refundWay ==1 }">
+						<!-- 退款 -->
+						<c:choose>
+							<c:when test="${details.refundType ==0 }">
+								<!-- 申请中 -->
+								<div class="ddxq_gg_flow_red_3_2_yes">
+				                    <div class="ddxq_gg_flow_red_3_1">
+				                        <b>1</b>
+				                        <span>申请退款</span>
+				                    </div>
+				                    <div class="ddxq_gg_flow_red_3_2">
+				                        <b>2</b>
+				                        <span>等待供应商确认</span>
+				                    </div>
+				                    <div class="ddxq_gg_flow_red_3_3">
+				                        <b>3</b>
+				                        <span>退款完成</span>
+				                    </div>
+				                </div> 
+							</c:when>
+							<c:when test="${details.refundType ==1 }">
+								<!-- 供应商同意退款 -->
+								<div class="ddxq_gg_flow_red_3_3_yes">
+				                    <div class="ddxq_gg_flow_red_3_1">
+				                        <b>1</b>
+				                        <span>申请退款</span>
+				                    </div>
+				                    <div class="ddxq_gg_flow_red_3_2">
+				                        <b>2</b>
+				                        <span>等待供应商确认</span>
+				                    </div>
+				                    <div class="ddxq_gg_flow_red_3_3">
+				                        <b>3</b>
+				                        <span>退款完成</span>
+				                    </div>
+				                </div> 
+							</c:when>
+							<c:when test="${details.refundType ==6 }">
+								<!-- 退款完成 -->
+								<div class="ddxq_gg_flow_red_3_3_yes">
+				                    <div class="ddxq_gg_flow_red_3_1">
+				                        <b>1</b>
+				                        <span>申请退款</span>
+				                    </div>
+				                    <div class="ddxq_gg_flow_red_3_2">
+				                        <b>2</b>
+				                        <span>等待供应商确认</span>
+				                    </div>
+				                    <div class="ddxq_gg_flow_red_3_3">
+				                        <b>3</b>
+				                        <span>退款完成</span>
+				                    </div>
+				                </div> 
+							</c:when>
+							<c:when test="${details.refundType ==2 }">
+								<!-- 供应商不同意退款 -->
+								<div class="ddxq_gg_flow_red_3_2_yes">
+				                    <div class="ddxq_gg_flow_red_3_1">
+				                        <b>1</b>
+				                        <span>申请退款</span>
+				                    </div>
+				                    <div class="ddxq_gg_flow_red_3_2">
+				                        <b>2</b>
+				                        <span>等待供应商确认</span>
+				                    </div>
+				                    <div class="ddxq_gg_flow_red_3_3">
+				                        <b>3</b>
+				                        <span>退款完成</span>
+				                    </div>
+				                </div> 
+							</c:when>
+							<c:when test="${details.refundType ==3 }">
+								<!-- 微店网介入 -->
+								<div class="ddxq_gg_flow_red_3_2_yes">
+				                    <div class="ddxq_gg_flow_red_3_1">
+				                        <b>1</b>
+				                        <span>申请退款</span>
+				                    </div>
+				                    <div class="ddxq_gg_flow_red_3_2">
+				                        <b>2</b>
+				                        <span>等待供应商确认</span>
+				                    </div>
+				                    <div class="ddxq_gg_flow_red_3_3">
+				                        <b>3</b>
+				                        <span>退款完成</span>
+				                    </div>
+				                </div> 
+							</c:when>
+							<c:when test="${details.refundType ==7 }">
+								<!-- 交易关闭 -->
+								<div class="ddxq_gg_flow_red_3_1_no">
+				                    <div class="ddxq_gg_flow_red_3_1">
+				                        <b>1</b>
+				                        <span>申请退款</span>
+				                    </div>
+				                    <div class="ddxq_gg_flow_red_3_2">
+				                        <b>2</b>
+				                        <span>等待供应商确认</span>
+				                    </div>
+				                    <div class="ddxq_gg_flow_red_3_3">
+				                        <b>3</b>
+				                        <span>退款完成</span>
+				                    </div>
+				                </div> 
+							</c:when>
+						</c:choose>
+					</c:when>
+					<c:when test="${details.refundWay ==2 }">
+						<!-- 退货 -->
+						<c:choose>
+							<c:when test="${details.refundType == 0}">
+								<!-- 申请中 -->
+								<div class="ddxq_gg_flow_red_5_2_yes">
+									<div class="ddxq_gg_flow_red_5_1">
+										<b>1</b> <span>申请退货</span>
+									</div>
+									<div class="ddxq_gg_flow_red_5_2">
+										<b>2</b> <span>等待供应商回应</span>
+									</div>
+									<div class="ddxq_gg_flow_red_5_3">
+										<b>3</b> <span>供应商同意退货退款</span>
+									</div>
+									<div class="ddxq_gg_flow_red_5_4">
+										<b>4</b> <span>供应商确认收货</span>
+									</div>
+									<div class="ddxq_gg_flow_red_5_5">
+										<b>5</b> <span>微店网打款给消费者</span>
+									</div>
+								</div>
+							</c:when>
+							<c:when test="${details.refundType == 1}">
+								<!-- 供应商同意退货 -->
+								<div class="ddxq_gg_flow_red_5_3_yes">
+									<div class="ddxq_gg_flow_red_5_1">
+										<b>1</b> <span>申请退货</span>
+									</div>
+									<div class="ddxq_gg_flow_red_5_2">
+										<b>2</b> <span>等待供应商回应</span>
+									</div>
+									<div class="ddxq_gg_flow_red_5_3">
+										<b>3</b> <span>供应商同意退货退款</span>
+									</div>
+									<div class="ddxq_gg_flow_red_5_4">
+										<b>4</b> <span>供应商确认收货</span>
+									</div>
+									<div class="ddxq_gg_flow_red_5_5">
+										<b>5</b> <span>微店网打款给消费者</span>
+									</div>
+								</div>
+							</c:when>
+							<c:when test="${details.refundType == 5}">
+								<!-- 买家发货 -->
+								<div class="ddxq_gg_flow_red_5_4_yes">
+									<div class="ddxq_gg_flow_red_5_1">
+										<b>1</b> <span>申请退货</span>
+									</div>
+									<div class="ddxq_gg_flow_red_5_2">
+										<b>2</b> <span>等待供应商回应</span>
+									</div>
+									<div class="ddxq_gg_flow_red_5_3">
+										<b>3</b> <span>供应商同意退货退款</span>
+									</div>
+									<div class="ddxq_gg_flow_red_5_4">
+										<b>4</b> <span>供应商确认收货</span>
+									</div>
+									<div class="ddxq_gg_flow_red_5_5">
+										<b>5</b> <span>微店网打款给消费者</span>
+									</div>
+								</div>
+							</c:when>
+							<c:when test="${details.refundType == 6}">
+								<!-- 供应商确认收货*********************** -->
+								<div class="ddxq_gg_flow_red_5_5_yes">
+									<div class="ddxq_gg_flow_red_5_1">
+										<b>1</b> <span>申请退货</span>
+									</div>
+									<div class="ddxq_gg_flow_red_5_2">
+										<b>2</b> <span>等待供应商回应</span>
+									</div>
+									<div class="ddxq_gg_flow_red_5_3">
+										<b>3</b> <span>供应商同意退货退款</span>
+									</div>
+									<div class="ddxq_gg_flow_red_5_4">
+										<b>4</b> <span>供应商确认收货</span>
+									</div>
+									<div class="ddxq_gg_flow_red_5_5">
+										<b>5</b> <span>微店网打款给消费者</span>
+									</div>
+								</div>
+							</c:when>
+							<c:when test="${details.refundType == 2}">
+								<!-- 供应商不同意退货  -->
+								<div class="ddxq_gg_flow_red_5_2_yes">
+									<div class="ddxq_gg_flow_red_5_1">
+										<b>1</b> <span>申请退货</span>
+									</div>
+									<div class="ddxq_gg_flow_red_5_2">
+										<b>2</b> <span>等待供应商回应</span>
+									</div>
+									<div class="ddxq_gg_flow_red_5_3">
+										<b>3</b> <span>供应商同意退货退款</span>
+									</div>
+									<div class="ddxq_gg_flow_red_5_4">
+										<b>4</b> <span>供应商确认收货</span>
+									</div>
+									<div class="ddxq_gg_flow_red_5_5">
+										<b>5</b> <span>微店网打款给消费者</span>
+									</div>
+								</div>
+							</c:when>
+							<c:when test="${details.refundType == 3}">
+								<!-- 微店网介入 -->
+								<div class="ddxq_gg_flow_red_5_2_yes">
+									<div class="ddxq_gg_flow_red_5_1">
+										<b>1</b> <span>申请退货</span>
+									</div>
+									<div class="ddxq_gg_flow_red_5_2">
+										<b>2</b> <span>等待供应商回应</span>
+									</div>
+									<div class="ddxq_gg_flow_red_5_3">
+										<b>3</b> <span>供应商同意退货退款</span>
+									</div>
+									<div class="ddxq_gg_flow_red_5_4">
+										<b>4</b> <span>供应商确认收货</span>
+									</div>
+									<div class="ddxq_gg_flow_red_5_5">
+										<b>5</b> <span>微店网打款给消费者</span>
+									</div>
+								</div>
+							</c:when>
+						</c:choose>
+					</c:when>
+				</c:choose>
+			</div>
+
+			<!-- 下单成功 -->
+			<div class="ddxq_gg_ddzt">
+				<c:choose>
+					<c:when test="${details.refundType == 0 }">
+						<!-- 申请中（等待供应商确认） -->
+						<div class="ddxq_gg_ddzt_xx">
+							当前订单状态： <b>申请退货中</b>； <span class="color_999">若超过48小时未处理，系统会默认同意。请及时处理</span>
+						</div>
+						<div class="ddxq_gg_ddzt_xx_1 mt_10 ml_30">退款理由：${details.reason }</div>
+						<div class="ddxq_gg_ddzt_xx_1 f14 ml_30 mt_10">
+							<c:forEach var="imgStr" items="${details.proImages }">
+								<img src="${imgStr }" class="ddxq_gg_tkly_dt_img">
+							</c:forEach>
+						</div>
+						<c:choose>
+							<c:when test="${details.orderType == 1 }">
+							<!-- 已经付款的状态 -->
+								<div class="ddxq_gg_ddzt_xx_1 f14 ml_30 mt_20">
+									<a href="javascript:;" onclick="agreed('${details.processId }')" class="wdqb_cz_tx" style="float: none; display: inline-block; color: #333;">同意</a> 或
+									<a href="javascript:;">填写物流信息发货</a> <br />
+									  <span class="ft_sihui">*消费者提交申请后48个小时内，若您在这段时间没有对该申请进行任何操作，则系统会默认同意消费者的退款申请。</span>
+								</div>
+							</c:when>
+							<c:otherwise>
+								<div class="ddxq_gg_ddzt_xx_1 f14 ml_30 mt_20">
+									<a href="javascript:;" onclick="agreed('${details.processId }')" class="wdqb_cz_tx" style="float: none; display: inline-block; color: #333;">同意</a> 
+									<a href="javascript:;" onclick="notagreed('${details.processId }')" class="wdqb_cz_tx" style="float: none; display: inline-block; margin-left: 20px; color: #333;">不同意</a> 
+									<input type="text" placeholder="不同意理由" value="" id="msg" class="ddxq_gg_text ml_20" style="height: 30px; float: none; display: inline-block;" />
+								</div>
+							</c:otherwise>
+						</c:choose>
+						
+						
+					</c:when>
+
+					<c:when test="${details.refundType == 1 }">
+						<!-- 供应商同意退款 *****************************************************************************************-->
+					</c:when>
+					<c:when test="${details.refundType == 2 }">
+						<!-- 供应商不同意退款 -->
+						<div class="ddxq_gg_ddzt_xx">
+							当前订单状态：<b>不同意退货</b>；请等待消费者响应你的回复。
+						</div>
+						<div class="ddxq_gg_ddzt_xx_1  ml_30">采购商退货理由：${details.reason }</div>
+						<div class="ddxq_gg_ddzt_xx_1 f14 ml_30 ">
+							<c:forEach var="imgStr" items="${details.proImages }">
+								<img src="${details.imgStr }" class="ddxq_gg_tkly_dt_img" />
+							</c:forEach> 
+						</div>
+						<div class="ddxq_gg_ddzt_xx_1 mt_20 ml_30">供应商不同意退货</div>
+						<div class="ddxq_gg_ddzt_xx_1 ml_30">理由：${details.reasonNo }</div>
+
+					</c:when>
+					
+					 
+					<c:when test="${details.refundType == 3 }">
+						<!-- 微店网介入 -->  
+		                <div class="ddxq_gg_ddzt_xx">当前订单状态：<b>微店网介入</b>；</div>
+		                <div class="ddxq_gg_ddzt_xx_1 mt_10 ml_30">采购商退货理由：${details.reason }</div>
+		                <div class="ddxq_gg_ddzt_xx_1 f14 ml_30 ">
+		                    <div class="blank2"></div>
+							<c:forEach var="imgStr" items="${details.proImages }">
+								<img src="${details.imgStr }" class="ddxq_gg_tkly_dt_img" />
+							</c:forEach>  
+		                </div>
+		                <div class="ddxq_gg_ddzt_xx_1 ml_30 mt_10">不同意退货理由：${details.reasonNo }</div>
+					</c:when>
+					
+					
+					<c:when test="${details.refundType == 4 }">
+						<!-- 微店网介入，支持退款-->
+						<div class="ddxq_gg_ddzt_xx_1 ml_30 mt_10">微店网处理：${details.reasonOkwei }</div>
+					</c:when>
+					<c:when test="${details.refundType == 5 }">
+						<!-- 买家已发货 -->
+                		<div class="ddxq_gg_ddzt_xx">当前订单状态：<b>采购商已发货</b>；
+                		<a href="javascript:;" onclick="confirmcargowin('${details.processId}')">确认收货</a></div> 
+						<div class="ddxq_gg_ddzt_xx_1 ml_30 mt_10">
+							<b>物流信息</b>
+						</div>
+						<dl class="ddxq_gg_wuliu_dl ml_30 mt_7">
+							<dd>快递公司：</dd>
+							<dt>${details.logistics.longisticsName }</dt>
+						</dl>
+						<dl class="ddxq_gg_wuliu_dl ml_30">
+							<dd>运单号码：</dd>
+							<dt>${details.logistics.logisticsNo }</dt>
+						</dl>
+						<dl class="ddxq_gg_wuliu_dl ml_30">
+							<dd>物流跟踪：</dd>
+							<dt>
+								<c:forEach var="logStr" items="${details.logistics.tailList }">
+									<span>${logStr }</span>
+								</c:forEach>
+							</dt>
+						</dl> 
+					</c:when>
+					<c:when test="${details.refundType == 6 }">
+						<!-- 退款完成 -->
+		                <div class="ddxq_gg_ddzt_xx">当前订单状态：<b>已确认收货</b>；</div>
+		                <div class="ddxq_gg_ddzt_xx_1 ml_30 mt_5">您已确认收货</div>
+		                <div class="ddxq_gg_ddzt_xx_1 ml_30">微店网预计将在1-2个工作日内打款给消费者</div>
+					</c:when>
+					<c:when test="${details.refundType == 7 }">
+						<!-- 申请关闭 -->
+					</c:when>
+				</c:choose>
+			</div>
+
+
+
+			<!-- 收货地址-留言-订单信息-产品清单 -->
+			<div class="ddxq_gg_sldc">
+				<div class="ddxq_gg_sldc_1 margin_20">
+					<!-- 收货地址 -->
+					<div class="ddxq_gg_sldc_1_sh">
+						<h6 class="lh_40 bor_to mt_10">需退货的产品</h6>
+						<div class="conter_right_xx_cz mt bor_cls">
+							<div class="conter_right_xx_cz_t" style="background: #e7e7e7;">
+								<ul>
+									<li class="l_8 fw_b" style="width: 260px;">商品信息</li>
+									<li class="l_7 fw_b">单价</li>
+									<li class="l_6 fw_b">佣金</li>
+									<li class="l_13 fw_b">数量</li>
+									<li class="l_6 fw_b">总金额</li>
+									<li class="l_13 fw_b" style="margin-left: 150px;">退货金额</li>
+								</ul>
+							</div>
+							<div class="blank2"></div>
+							<table class="conter_right_xx_cz_table" style="border: 1px solid #e7e7e7;">
+								<tbody>
+									<tr class="mzh_4_17_gai">
+										<td rowspan="7" style="padding: 0px; border: 0px;">
+											<div class="h40_title f12 fl ft_c9" style="margin-left: 10px; width: auto;">
+												店铺： <span class="ft_c3">${details.supplyerName }</span>
+											</div>  
+											<img src="../statics/images/qqjiaotan.png" class="mzh_images" />
+										</td>
+									</tr>
+									<tr class="fl">
+										<td class="conter_right_xx_cz_table_55" style="border-bottom: 0px; width: auto;"><c:forEach var="pro" items="${details.proImages }" varStatus="status">
+												<div class="conter_right_xx_cz_table_55_div" style="${status.index==0'border: 0px;padding-top:0px;':''}">
+													<div class="crxczt5d_0">
+														<a href="#"><img src="${pro.proImages }"></a>
+													</div>
+													<div class="crxczt5d_10" style="width: 220px;">
+														<span style="width: 220px;">${pro.proTitle }</span> <span style="width: 220px; color: #3c3c3c;">${pro.property }</span>
+													</div>
+													<div class="crxczt5d_4" style="margin-left: 0px;"></div>
+													<div class="crxczt5d_10" style="margin: 0px; width: 120px;">
+														<font style="width: 120px;">${pro.sumPrice }</font>
+													</div>
+													<div class="crxczt5d_10" style="width: 255px;">
+														<font style="width: 160px;">${pro.commission }</font>
+													</div>
+													<div class="crxczt5d_10" style="width: 125px;">${pro.count }</div>
+													<div class="crxczt5d_10" style="width: 80px;">${pro.sumPrice }</div>
+												</div>
+											</c:forEach></td>
+										<td class="conter_right_xx_cz_table_15" rowspan="2" style="border-bottom: 0px; vertical-align: inherit; width: 7%;">
+											<div class="crxczt5d_cz_1">${details.proStateStr }</div>
+										</td>
+									</tr>
+								</tbody>
+							</table>
+						</div>
+					</div>
+				</div>
+			</div>
+
+			<div class="ddxq_gg_ddjl margin_20">
+				<div class="ddxq_gg_sldc_1_sh">
+					<h6 class="mb_10">售后记录</h6>
+					<ul>
+						<c:forEach var="record" items="${details.orderrecord }">
+							<li>${record }</li>
+						</c:forEach>
+					</ul>
+				</div>
+			</div>
+		</div>
+	</div>
+
+		<!-- 确认收货提示 -->
+		<div id="quren_ts" class="mzh_tcc">
+			<div class="mzh_tcc_1">您将进行确认收货操作，请确定收到货物才进行此操作</div>
+		</div>
+	<div class="blank"></div>
+	<!-- 底部 -->
+	<jsp:include page="/jsp/common/footer.jsp" />
+</body>
+</html>

@@ -1,0 +1,185 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<appSettings>
+  <IShareMsg><!-- 分享随机消息 -->
+    <Msg type="1" url="http://weino.m.okwei.com/SalePage.aspx"  src="" content="「限时特价」开抢啦！挑便宜，上百种产品任选！看看又不用给钱，晚了可别哭哦！小伙伴们快来吧！【微店网】" />
+    <Msg type="1" url="http://weino.m.okwei.com/SalePage.aspx"  src="" content="「限时特价」开抢啦！让你想不到实惠！手快有，手慢无！速来，不看你就真亏了！【微店网】" />
+    <Msg type="1" url="http://weino.m.okwei.com/SalePage.aspx"  src="" content="「限时特价」：抢得不满意—剁手；太慢没抢到—虐心；不要怕！微店网「限时特价」，收到货物7天不满意无理由退换！不剁不虐，实惠购物！【微店网】" />
+    <Msg type="1" url="http://weino.m.okwei.com/SalePage.aspx"  src="" content="「限时特价」：你见过这样卖的么？老板疯了，我都快吓哭了……这么恐怖的特价，简直丧（chao）心（ji）病（shi）狂（hui）！怎么你也得看看吧？【微店网】" />
+    <Msg type="1" url="http://weino.m.okwei.com/SalePage.aspx"  src="" content="「限时特价」：俗话说得好—先下手为强，后下手遭殃！虽然不至于遭殃，但指不定你就后悔没看了！只有你想不到的实惠，慢了就没了！快快快！【微店网】" />
+    <Msg type="2" url="http://weino.m.okwei.com"  src="" content="曾经，producttitle（产品名称），只要productprice（价格）元，我没有去抢，等到他下架，我才追悔莫及……没想到今天还敢上「限时特价」，看我呼朋唤友把你抢！光！光！【微店网】" />
+  </IShareMsg>
+  <transports>
+	<trans typeName="韵达快递" typeNo ="yunda" /> 	      
+	<trans typeName="顺丰快递" typeNo="shunfeng"/>
+	<trans typeName ="申通快递" typeNo ="shentong" />
+	<trans typeName ="圆通快递" typeNo ="yuantong" />
+	<trans typeName="中通快递" typeNo ="zhongtong"/>
+	<trans typeName="汇通快递" typeNo="huitong"/>
+	<trans typeName="国通快递" typeNo = "guotong"/>
+	<trans typeName="中铁快运" typeNo="zhongtie"/>
+	<trans typeName="天天快递" typeNo ="tiantian"/> 
+	<trans typeName="宅急送快递" typeNo ="zhaijisong"/>
+	<trans typeName="CCES快递" typeNo ="cces"/> 
+	<trans typeName="中国邮政平邮" typeNo ="pingyou"/> 
+	<trans typeName="星晨急便" typeNo ="xingchen"/> 
+	<trans typeName="速尔快递" typeNo ="sure"/>
+	<trans typeName="快捷快递" typeNo ="kuaijie"/>
+	<trans typeName="AAE快递" typeNo ="aae"/> 
+	<trans typeName="安捷快递" typeNo ="anjie"/> 
+	<trans typeName="安信达快递" typeNo ="anxinda"/>
+	<trans typeName="成都奔腾国际快递" typeNo="benteng"/>
+	<trans typeName="长通物流" typeNo="changtong"/>
+	<trans typeName="程光快递" typeNo="chengguang"/>
+	<trans typeName="城际快递" typeNo="chengji"/>
+	<trans typeName="大田物流" typeNo ="datian"/>
+	<trans typeName="邮政国内小包" typeNo ="gnxb"/>
+	<trans typeName="德邦物流" typeNo ="debang"/>
+	<trans typeName="京东快递" typeNo ="jingdong"/>
+	<trans typeName="DHL快递" typeNo ="dhl"/> 
+	<trans typeName="DPEX快递" typeNo ="dpex"/> 
+	<trans typeName="D速快递" typeNo ="dsu"/>
+	<trans typeName="百福东方物流" typeNo ="ees"/>
+	<trans typeName="国际Fedex" typeNo="fedex"/> 
+	<trans typeName="Fedex国内" typeNo ="fedexcn"/> 
+	<trans typeName="原飞航物流" typeNo ="feihang"/> 
+	<trans typeName="丰达快递" typeNo ="fengda"/> 
+	<trans typeName="飞康达快递" typeNo ="fkd"/> 
+	<trans typeName="飞快达快递" typeNo ="fkdex"/>
+	<trans typeName="天地华宇物流" typeNo="huayu"/> 
+	<trans typeName="佳吉快运" typeNo ="jiaji"/> 
+	<trans typeName="佳怡物流" typeNo ="jiayi"/> 
+	<trans typeName="加运美快递" typeNo ="jiayunmei"/> 
+	<trans typeName="晋越快递" typeNo ="jinyue"/> 
+	<trans typeName="联昊通物流" typeNo ="lianhaotong"/>
+	<trans typeName="龙邦物流" typeNo="longbang"/> 
+	<trans typeName="民航快递" typeNo ="minhang"/> 
+	<trans typeName="港中能达" typeNo ="nengda"/> 
+	<trans typeName="OCS快递" typeNo ="ocs"/> 
+	<trans typeName="全晨快递" typeNo ="quanchen"/> 
+	<trans typeName="全峰快递" typeNo ="quanfeng"/>
+	<trans typeName="全日通快递" typeNo="quanritong"/> 
+	<trans typeName="全一快递" typeNo ="quanyi"/> 
+	<trans typeName="如风达快递" typeNo ="rufeng"/> 
+	<trans typeName="盛丰物流" typeNo ="shengfeng"/> 
+	<trans typeName="盛辉物流" typeNo ="shenghui"/>            
+	<trans typeName="TNT快递" typeNo="tnt"/> 
+	<trans typeName="UPS" typeNo ="ups"/> 
+	<trans typeName="万家物流" typeNo ="wanjia"/>  
+	<trans typeName="新邦物流" typeNo="xinbang"/>    
+	<trans typeName="信丰快递" typeNo ="xinfeng"/>
+	<trans typeName="星程宅配快递" typeNo ="xingchengzhaipei"/>
+	<trans typeName="希优特快递" typeNo ="xiyoute"/>
+	<trans typeName="源安达快递" typeNo ="yad"/>
+	<trans typeName="亚风快递" typeNo ="yafeng"/>
+	<trans typeName="一邦快递" typeNo="yibang"/>
+	<trans typeName="银捷快递" typeNo="yinjie"/>
+	<trans typeName="音素快运" typeNo="yinsu"/>
+	<trans typeName="亿顺航快递" typeNo="yishunhang"/>
+	<trans typeName="优速快递" typeNo ="yousu"/>
+	<trans typeName="远成物流" typeNo ="yuancheng"/> 
+	<trans typeName="元智捷诚" typeNo ="yuanzhi"/> 
+	<trans typeName="越丰物流" typeNo ="yuefeng"/>
+	<trans typeName="誉美捷快递" typeNo ="yumeijie"/>
+	<trans typeName="运通中港快递" typeNo ="yuntong"/>
+	<trans typeName="宇鑫物流" typeNo ="yuxin"/>
+	<trans typeName="源伟丰" typeNo ="ywfex"/>
+	<trans typeName="增益快递" typeNo ="zengyi"/>
+	<trans typeName="芝麻开门快递" typeNo ="zhima"/>
+	<trans typeName="济南中天万运" typeNo ="zhongtian"/>
+	<trans typeName="忠信达快递" typeNo ="zhongxinda"/> 
+	<trans typeName="中邮物流" typeNo="zhongyou"/> 
+  </transports>
+  <WalletMenus>
+    <menu key="1" name="推广佣金" status="1" />
+    <menu key="2" name="辅导佣金" status="2" />
+    <menu key="3" name="商家货款" status="3" />
+    <menu key="1" name="充值记录" status="6" />
+    <menu key="1" name="其他" status="4" />
+    <menu key="4" name="提现" status="7" />
+    <menu key="4" name="购物" status="8" />
+  </WalletMenus>
+  <WalletStatus><!--1推广佣金、商家货款、买家退款，2充值，3 购物、充值-->
+    <statu key="1" name="未到账" status="0" />
+    <statu key="1" name="已到账" status="1" />
+    <statu key="1" name="退款中" status="2" /> 
+    <statu key="1" name="已退款" status="3" />
+    <statu key="1" name="收货冻结" status="4" />
+    <statu key="2" name="未到账" status="0" />
+    <statu key="2" name="已到账" status="1" />
+    <statu key="3" name="已支付" status="1" />
+    <statu key="3" name="未支付" status="-2" />
+  </WalletStatus>
+  <wapurl>
+    <item name="OKWWAPURL_SHAREPROMOTE" value="http://m.okwei.net/wap/app/fxtg?tiket={0}" />
+    <item name="OKWWAPURL_MYTEAM" value="http://m.okwei.net/wap/app/myteam?tiket={0}" />
+    <item name="OKWWAPURL_MARKET" value="http://m.okwei.net/wap/marapp/marbyareapg?tiket={0}" />
+    <item name="OKWWAPURL_SUPPLIERFORFACTORY" value="http://m.okwei.com/supply/SupplierIn.aspx?weiid={0}&amp;ticket={1}&amp;notitle=1" />
+    <item name="OKWWAPURL_SHELVESGUIDE" value="http://m.okwei.net/wap/app/sjzy.html" />
+    <item name="OKWWAPURL_SUPPLIERPERMISSION" value="http://m.okwei.net/wap/app/pfhqy.html" />
+    <item name="OKWWAPURL_ORDERLOGISTICS" value="http://m.okwei.net/wap/ordermag/lookwl?orderno={0}&amp;tiket={1}" />
+    <item name="OKW_CERTIFICATIONCOST_SUPPLIER" value="1000" />
+    <item name="OKW_CERTIFICATIONCOST_CERTIFICATIONPORT" value="3000" />
+    <item name="OKW_CERTIFICATIONCOST_DIRECTLYCERTIFICATIONPORT" value="4000" />
+    <item name="OKW_MAINVC_WEB_URL" value="http://m.okwei.net/wap/marapp/marindex?tiket={tiket}" />
+    <item name="OKW_DISCOVER_WEB_URL" value="http://m.okwei.net/wap/app/faxian?tiket={tiket}" />
+    <item name="OKW_USER_HELP_URL" value="http://m.okwei.net/wap/app/miji?tiket={tiket}" />
+  </wapurl>
+  <version>
+    <veritem name="regional" ver="1"></veritem>
+    <veritem name="wallet" ver="1"></veritem>
+  </version>
+  <imgDomains><!-- 图片域名 -->
+  	<!-- <imgDomain value="http://10.10.10.194:8080" /> -->
+  	
+  	<!-- <imgDomain value="http://appnew.okwei.net" /> -->
+  	<imgDomain value="http://img1.okimgs.com" />
+  	<imgDomain value="http://img2.okimgs.com" />
+  	<imgDomain value="http://img3.okimgs.com" />
+  	<imgDomain value="http://img1.okdocuments.com" />
+  	<imgDomain value="http://img2.okdocuments.com" />
+  	<imgDomain value="http://img3.okdocuments.com" />
+  </imgDomains>
+  <Devices>
+    <Device value="Am7xD2fVMAjjN_qfpMRYf8IhGAYrE1L-fjstnGZiurnt"/>
+    <Device value="Ap01GDYj8_CaZecqM8mHtlfgjsA_fufxoCA4KRPxxpC2"/>
+    <Device value="ArtmytgDTpYZacoJpKQpHbXhnNZPmUS94GqWDLuSCE6I"/>
+    <Device value="AubBxdT_46WurQm4G-pSk1-HMUtOoZz5-VqQr_nj6LvW"/>
+    <Device value="ApRdGaxNeUvT1CUhqyLfVPeg2oRk-HCcrrmRC_lP5HeP"/>
+  </Devices>
+  <wapDomain value="m.okwei.com" /><!-- wap域名 -->
+  <currentDomain value="10.10.2.10:8080/appServer"/><!-- 当前服务器域名 -->
+  <imgUploadBase value="F://imgs/"/><!--C://tomcat/webapps/-->
+  <fdfsserviceUrl  value="http://fdfsservice.okwei.net/handle/UploadImg.ashx"/><!-- 文件系统地址 -->
+  <!-- 金额 配置 -->
+  <WholesaleHuoKuan value="0.97" />
+  <WholesaleSeller value="0.01" />
+  <WholesaleUpSeller value="0.003" />
+  <BatchVerifierAgent value="0.002" />
+  <BatchGys value="1000" />
+  <BatchSupplyerBond value="1000" />
+  <BatchPortServerFee value="3000" />
+  <BatchSupplyerServiceFee value="0" />
+  <GysAndVerifierServerFee value="4000" />
+  <YunSeller value="0.7" />
+  <YunUpSeller value="0.3" />
+  <YunSystem value="0.75" />
+  <!-- 微信支付地址 -->
+  <wxBackUrl value="http://pay.okwei.net/payBackNew/WxAppPayNotify_url.aspx" />
+  <llpayBackUrl value="http://pay.okwei.com/payBackNew/LLPayNotify_url.aspx" />
+  <BaiduBackUrl value="http://pay.okwei.net/payBackNew/BFBPayNotify_url.aspx" />
+  <path>
+     <sinacertpath name="physicalpath" value=""></sinacertpath>
+  </path>
+  <luceneIndex value="D:\lucene-4.10.4\index" /><!-- lucene索引位置 -->
+  <productshareurl value="m.okwei.com/" />
+  <shopshareurl value="okwei.com" />
+  <pifahaoshareurl value="m.okwei.com/pfhmj.html?w=" />
+  <renzhenpointshareurl value="m.okwei.com/rzd.html?w=" />
+  <wujuhuashareurl value="m.okwei.com/about.html?w=" />
+  <appshareurl value="app.okwei.com/" />
+  <pingpaishareurl value="http://m.okwei.com/app/supabout?w=" />
+  <zhugonglueshareurl value="m.okwei.com/wdzmj.html?w=" />
+  <productInfoUrl value="http://10.10.10.194:8080/wap/prodetails/app?productid=" />
+  <HotCity value="广州市,深圳市,东莞市,上海市,北京市,长沙市,宁波市,南昌市,武汉市,杭州市,南京市,青岛市" />
+  <SellParam value="尺码,颜色,型号,品牌,版本,类型,套餐,重量,体积,规格,款式,其他" />
+</appSettings>

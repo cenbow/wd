@@ -1,0 +1,164 @@
+package com.okwei.supplyportal.web;
+
+import java.util.Arrays;
+import java.util.Date;
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+import com.google.code.kaptcha.util.Config;
+import com.okwei.bean.domain.PClassProducts;
+import com.okwei.bean.domain.PProductClass;
+import com.okwei.bean.domain.PShopClass;
+import com.okwei.common.JsonUtil;
+import com.okwei.supplyportal.bean.enums.BaseResultStateEnum;
+import com.okwei.supplyportal.bean.vo.BaseResultVO;
+import com.okwei.supplyportal.bean.vo.EditProductVO;
+import com.okwei.supplyportal.bean.vo.PostAgeModelVO;
+import com.okwei.supplyportal.bean.vo.ProductClassVO;
+import com.okwei.supplyportal.bean.vo.ProductParamModelVO;
+import com.okwei.supplyportal.bean.vo.ProductSellKeyVO;
+import com.okwei.supplyportal.bean.vo.ShopClassVO;
+import com.okwei.supplyportal.service.IEditProductInfoService;
+import com.okwei.supplyportal.utility.ConfigSetting;
+import com.okwei.web.base.BaseController;
+
+@Controller
+@RequestMapping(value = "/Product")
+public class EditProductMgtController extends BaseController {
+
+	@Autowired
+	private IEditProductInfoService productService;
+	
+	/**
+	 * 
+	 * @param productID 商品ID
+	 * @param operation 操作类型
+	 * @param model 返回实体
+	 * @return
+	 */
+    @RequestMapping(value = "/editProductInfo",method =
+    {RequestMethod.POST,RequestMethod.GET})
+	public String editProductInfo(@RequestParam(required = true,defaultValue = "0") Long productID,
+			@RequestParam(required = false,defaultValue = "0") Short operation ,
+			@RequestParam(required = false,defaultValue = "0") Integer classID,
+			@RequestParam(required = false,defaultValue = "0") Integer tempID,Model model)
+	{
+    	long weiID =1036799;
+    	operation =4;
+    	productID = (long) 65344;
+    	tempID=3;
+    	
+    	//判断如果没有类目信息 参数异常
+    	if(operation ==1 || operation==3 || operation ==4)
+    	{
+    		if(classID<1)
+    		{
+    			//TODO:返回上一页
+    		}
+    	}	
+    	//判断商品号参数 
+    	if(operation ==2 || operation==3 || operation==4)
+    	{
+    		if(productID<1)
+    		{
+    			//TODO:返回上一页
+    		}
+    	}
+    	
+    	//如果是正常发布 和  商品导入 判断是否有发布权限
+    	if(operation ==1 || operation==2)
+    	{
+    		if(!productService.getPower(weiID))
+    		{
+    			//TODO: 无权限处理
+    		}
+    	}
+    	//如果有商品ID 加载商品全部数据
+    	EditProductVO product =new EditProductVO();
+    	if(productID>0)
+    	{
+    		product = productService.getProductInfo(productID);
+    	}
+    	//如果有类目ID 加载类目信息  否则 加载该商品原有的类目信息
+    	if(classID>0 && product.getClassId() != classID)
+    	{
+    		product.setClassId(classID);
+    	}    	
+    	
+    	ProductClassVO pClass =productService.getClassInfo(product.getClassId());
+    	pClass = new ProductClassVO();
+		pClass.setClssName("吊炸天");
+		pClass.setOneClassName("炸天");
+		pClass.setTwoClassName("天");
+    	
+    	ProductParamModelVO paramModel =new ProductParamModelVO();
+    	//1.判断是否有模板传递过来 并且是否和 商品模板相同 如果不同 只加载该模板
+    	if(tempID>0 && product.getmID() != tempID) 
+    	{
+    		paramModel = productService.getParamModel(tempID);
+    	}
+    	else//如果相同 或者 没有传递 则需要加载该商品 自己的模板
+    	{
+    		paramModel = productService.getProductParamModel(product.getmID(),product.getProductId());
+    	}
+    	
+    	//加载邮费模板列表
+    	List<PostAgeModelVO> postAgeList = productService.getPostAgeList(weiID);
+    	
+    	//加载店铺分类列表
+    	List<ShopClassVO> shopClassList = productService.getShopClassList(weiID);
+    	
+    	List<String> sellParams =Arrays.asList(ConfigSetting.sellParam());
+    	if(product.getSellKeyList() !=null &&  product.getSellKeyList().size()>0){
+    		for (ProductSellKeyVO item : product.getSellKeyList()) {
+				if(!sellParams.contains(item.getAttributeName())){
+					sellParams.add(item.getAttributeName());
+				}
+			}
+    	}
+    	
+    	model.addAttribute("product", product);
+    	model.addAttribute("pClass", pClass);
+    	model.addAttribute("paramModel", paramModel);
+    	model.addAttribute("postAgeList", postAgeList);
+    	model.addAttribute("shopClassList", shopClassList);
+    	model.addAttribute("sellParams", sellParams);
+    	
+    	return "productmgt/editProductInfo";
+	}
+    
+    
+	@ResponseBody
+    @RequestMapping(value = "/saveShopClass",method ={RequestMethod.POST,RequestMethod.GET})
+	public String saveShopClass(@RequestParam(required = true,defaultValue = "") String scName,Model model) {
+		long weiID =1036799;
+		BaseResultVO result = new BaseResultVO();
+		if(scName ==null || scName ==""){
+			result.setMessage("参数异常");
+			result.setState(BaseResultStateEnum.Failure);
+		}
+		//判断名称是否已存在
+		
+		result = productService.saveShopClass(scName,weiID);
+		
+		return JsonUtil.objectToJson(result);
+	}
+	
+	@ResponseBody
+    @RequestMapping(value = "/saveParamModel",method ={RequestMethod.POST,RequestMethod.GET})
+	public String saveParamModel(@RequestParam(required = true,defaultValue = "") String josn,Model model){
+		BaseResultVO result = new BaseResultVO();
+		ProductParamModelVO paramModel = (ProductParamModelVO) JsonUtil.jsonToBean(josn, ProductParamModelVO.class);	
+		//TODO:参数校验
+		result = productService.saveProductParam(paramModel);
+		return JsonUtil.objectToJson(result);
+	}
+}

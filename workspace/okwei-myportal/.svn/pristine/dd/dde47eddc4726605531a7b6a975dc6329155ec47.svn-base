@@ -1,0 +1,91 @@
+package com.okwei.myportal.bean.vo;
+
+/**
+ * 统计分享列表中对象的 信息
+ * @author fh
+ */
+public class CountMainDataVO implements java.io.Serializable {
+	/**
+	 * 分享ID
+	 */
+	private long shareId;
+	/**
+	 * 标题
+	 */
+	private String title; 
+	/**
+	 * 商品数量
+	 */
+	private Integer pcount;
+	/**
+	 * 浏览数量
+	 */
+	private Integer pv;
+	/**
+	 * 分享数量
+	 */
+	private Integer sv;
+	/**
+	 * 成交数量
+	 */
+	private Integer vol;
+	/**
+	 * 成交金额
+	 */
+	private Double turnover;
+	/**
+	 * 佣金
+	 */
+	private Double commission;
+	
+	public Double getCommission() {
+		return commission;
+	}
+	public void setCommission(Double commission) {
+		this.commission = commission;
+	}
+	public long getShareId() {
+		return shareId;
+	}
+	public void setShareId(long shareId) {
+		this.shareId = shareId;
+	}
+	public String getTitle() {
+		return title;
+	}
+	public void setTitle(String title) {
+		this.title = title;
+	}
+	public Integer getPcount() {
+		return pcount;
+	}
+	public void setPcount(Integer pcount) {
+		this.pcount = pcount;
+	}
+	public Integer getPv() {
+		return pv;
+	}
+	public void setPv(Integer pv) {
+		this.pv = pv;
+	}
+	public Integer getSv() {
+		return sv;
+	}
+	public void setSv(Integer sv) {
+		this.sv = sv;
+	}
+	public Integer getVol() {
+		return vol;
+	}
+	public void setVol(Integer vol) {
+		this.vol = vol;
+	}
+	public Double getTurnover() {
+		return turnover;
+	}
+	public void setTurnover(Double turnover) {
+		this.turnover = turnover;
+	}
+	 
+	
+}

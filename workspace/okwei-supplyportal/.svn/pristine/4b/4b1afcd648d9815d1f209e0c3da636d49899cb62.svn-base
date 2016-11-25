@@ -1,0 +1,83 @@
+defSettings = {
+    formId: "searcherForm",
+    isAjax: false, // 如果选为true那么targetId 必须选
+    targetId: undefined,
+    submitId: "submitBtn",
+    ajaxCallback: undefined,
+    validateFn: undefined // 表单验证回调方法
+};
+Pagination = function(settings) {
+    settings = $.extend({}, defSettings, settings);
+    this.settings = settings;
+    var form = $("#" + settings.formId);
+    var pager = form.find("div.pagination");
+    var url = form.attr("action");
+    var maxPageId = parseInt(pager.find("[item='maxPageId']").text());
+    var _pageId = pager.find("[name='pageId']");
+    var submitBtn = undefined;
+    if (settings.submitId) {
+        submitBtn = $("#" + settings.submitId);
+    }
+    validate();
+    this.init = function() {
+        part.undelegate(form.selector + " .pagination a:not(.disabled)","click").delegate(form.selector + " .pagination a:not(.disabled)", "click", function() { // 上一页，下一页
+            var t = $(this);
+            var pageId = isNaN(t.text()) ? t.attr("pageid") : t.text();
+            goPage(pageId);
+
+        });
+        submitBtn && submitBtn.on("click", function() { // click the button to
+            // submit
+            goPage(1);
+        });
+        pager.find("[act='gotoPage']").on("click", function() { // 跳转到页面
+            var pageId = _pageId.val();
+            if (!pageId || !pageId.length) {
+                return;
+            }
+            if (pageId > maxPageId || pageId < 0) {
+                return;
+            }
+            goPage(pageId);
+        });
+    };
+
+    this.refreshPage = function(pageId) {
+        goPage(pageId);
+    };
+
+    function goPage(pageId) {
+        if (!settings.validateFn || (settings.validateFn && settings.validateFn())) {
+            _pageId.val(pageId);
+            if (settings.isAjax && settings.targetId) { 
+                var data = form.serializeJson();
+                data.pageId = pageId;
+                var loader = new Loading().start();
+                $("#" + settings.targetId).load(url+".ajax",data, function() {
+                    settings.ajaxCallback && settings.ajaxCallback();
+                    loader && loader.stop();
+                    initDomEvent();
+                });
+                if(!form.parents(".modal").length){
+                    histy.addUrl(url, form.serializeArrayNotN());
+                    plog("addURL:"+url);
+                }
+                return;
+            }
+            form.submit();
+        }
+    }
+    $("input[placeholder]").each(function() {
+        var t = $(this);
+        // t.setDefaultText(t.attr("placeholder"));
+    });
+
+    function validate() {
+        if (!form || !form.length) {
+            plog("找不到form，请检查！");
+        }
+        if (!url || !url.length) {
+            plog("找不到form的action属性，请检查！");
+        }
+    }
+};

@@ -1,0 +1,27 @@
+package com.okwei.supplyportal.utility;
+
+import java.io.UnsupportedEncodingException;
+import java.util.ResourceBundle;
+
+import javassist.expr.NewArray;
+
+public class ConfigSetting {
+	
+	/**
+	 * 获取系统初始销售规格
+	 * @return
+	 */
+	public static String[] sellParam()
+	{
+		byte[] bytes;
+		String strs="";
+		try {
+			bytes = ResourceBundle.getBundle("ConfigSetting").getString("SellParam").getBytes("ISO-8859-1");
+			strs = new String(bytes,"UTF-8");
+		} catch (UnsupportedEncodingException e) {
+			e.printStackTrace();
+		}
+		return strs.split(",");
+	}
+
+}

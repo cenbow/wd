@@ -1,0 +1,47 @@
+package com.okwei.supplyportal.bean.vo;
+
+public class SupplyerProductMsg {
+ private String productimage;
+ private String producttitle;
+ private Double price;
+ private String realsetime;
+ private int shevlecount;
+ private int sharedcount;
+public String getProductimage() {
+	return productimage;
+}
+public void setProductimage(String productimage) {
+	this.productimage = productimage;
+}
+public String getProducttitle() {
+	return producttitle;
+}
+public void setProducttitle(String producttitle) {
+	this.producttitle = producttitle;
+}
+public Double getPrice() {
+	return price;
+}
+public void setPrice(Double price) {
+	this.price = price;
+}
+public String getRealsetime() {
+	return realsetime;
+}
+public void setRealsetime(String realsetime) {
+	this.realsetime = realsetime;
+}
+public int getShevlecount() {
+	return shevlecount;
+}
+public void setShevlecount(int shevlecount) {
+	this.shevlecount = shevlecount;
+}
+public int getSharedcount() {
+	return sharedcount;
+}
+public void setSharedcount(int sharedcount) {
+	this.sharedcount = sharedcount;
+}
+ 
+}

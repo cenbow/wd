@@ -1,0 +1,66 @@
+package com.okwei.supplyportal.web;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+
+import com.okwei.common.Limit;
+import com.okwei.common.PageResult;
+import com.okwei.supplyportal.bean.dto.QueryParam;
+import com.okwei.supplyportal.bean.vo.ParamOrderSearch;
+import com.okwei.supplyportal.bean.vo.SupplyOrderCountSumVO;
+import com.okwei.supplyportal.bean.vo.SupplyOrderVO;
+import com.okwei.supplyportal.service.IOrderManageService;
+import com.okwei.web.base.BaseController;
+
+
+@Controller
+@RequestMapping(value="/order")
+public class OrderController extends BaseController {
+	private final static Log logger = LogFactory.getLog(ProductMgtController.class);
+	@Autowired 
+	private IOrderManageService orderService;
+	
+	@RequestMapping(value="/test")
+	public String list(@ModelAttribute("queryParam") QueryParam queryParam, @RequestParam(required = false, defaultValue = "1") int pageId, Model model) {
+		logger.info("ProductMgtController list method starting............");
+		PageResult<SupplyOrderVO> result=initlist();
+		SupplyOrderCountSumVO sumVO=getCountSumVO((long)1);
+		model.addAttribute("pageResult",result);
+		model.addAttribute("lingshowCount",sumVO.getLingshowCount());
+		return "order/test";
+	}
+	
+	
+	private PageResult<SupplyOrderVO>  initlist()
+	{
+		
+		ParamOrderSearch param =new ParamOrderSearch();
+		param.setOrderType(1);
+		long supplyWeiid=1;
+		try {
+			 PageResult<SupplyOrderVO> pageResult= orderService.getOrderListPageResult(param, supplyWeiid, Limit.buildLimit(1,10));
+			 return pageResult;
+		} catch (Exception e) {
+			// TODO: handle exception
+		}
+		return null;
+	}
+	
+	private SupplyOrderCountSumVO getCountSumVO(Long weiid)
+	{
+		String msg="";
+		try {
+			return orderService.getSupplyOrderCountSumVO(weiid);
+		} catch (Exception e) {
+			// TODO: handle exception
+			msg=e.getMessage();
+		}
+		return null;
+	}
+}

@@ -1,0 +1,14 @@
+package com.okwei.supplyportal.service;
+
+import com.okwei.service.IBaseService;
+import com.okwei.supplyportal.bean.vo.ProductManageVO;
+
+public interface IProductListService extends IBaseService{
+
+	/**
+	 * 获取产品管理页信息
+	 * @return
+	 */
+	ProductManageVO getManageMsg();
+	
+}

@@ -1,0 +1,46 @@
+package com.okwei.supplyportal.dao.impl;
+
+import java.util.List;
+
+import org.springframework.stereotype.Repository;
+
+import com.okwei.bean.domain.PParamModel;
+import com.okwei.bean.domain.PProductClass;
+import com.okwei.bean.enums.CatagoryStepEnum;
+import com.okwei.dao.impl.BaseDAO;
+import com.okwei.supplyportal.dao.IProductPublishDAO;
+
+@Repository
+public class ProductPublishDAO extends BaseDAO implements IProductPublishDAO {
+
+	@Override
+	public List<PProductClass> getCatagoryByStep(CatagoryStepEnum step) {
+		String hql = "from PProductClass where step = ? order by sort";
+		return super.find(hql, (short) step.getStep());
+	}
+
+	@Override
+	public List<PProductClass> getCatagoryByParentId(Integer parentId) {
+		String hql = "from PProductClass where parentId = ? order by sort";
+		return super.find(hql, parentId);
+	}
+
+	@Override
+	public List<PProductClass> getCatagoryByKeyword(String keyword) {
+		String hql = "from PProductClass where step = ? and className like ? order by sort";
+		return super.find(hql, Short.parseShort(String.valueOf(CatagoryStepEnum.LEVEL3.getStep())), "%" + keyword + "%");
+	}
+
+	@Override
+	public List<PProductClass> getSiblingsById(Integer id) {
+		String hql = "from PProductClass where parentId = (select parentId from PProductClass where classId = ? ) order by sort";
+		return super.find(hql, id);
+	}
+
+	@Override
+	public List<PParamModel> getTemplateByClassId(Integer id) {
+		String hql = "from PParamModel where state = 1 and classId = ? ";
+		return super.find(hql, id);
+	}
+
+}

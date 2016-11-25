@@ -1,0 +1,125 @@
+/**
+ * 订单处理
+ */
+$(function() {
+	// 验证输入
+	$("input[name=firstPercent],input[name=firstPrice]").keyup(function() {
+		isdecimal($(this));
+	})
+	// 绑定按钮点击事件
+	$(".mzh_radio_xxk input[name=editPriceType]").change(function() {
+		var data = $(this).val();
+		// $("#editPriceType").val(data);
+		if (data == 0) {
+			$(".yuanprice").hide();
+			$(".upprice").show().next().hide();
+			$("#editPostPrice").show().next().hide();
+			$("#editTotalPrice").show().next().hide();
+			$(".upprice").each(function() {
+				var yprice = $(this).attr("data-original");
+				$(this).text(yprice);
+				$(this).next().val(yprice);
+			});
+			var ypost = $("#editPostPrice").attr("data-original");
+			$("#editPostPrice").text(ypost);
+			$("#editPostPrice").next().val(ypost);
+			var ytotal = $("#editTotalPrice").attr("data-original");
+			$("#editTotalPrice").text(ytotal);
+			$("#editTotalPrice").next().val(ytotal);
+		}
+		else if (data == 1) {
+			$(".yuanprice").show();
+			$(".upprice").hide().next().show();
+			$("#editPostPrice").hide().next().show();
+			$("#editTotalPrice").show().next().hide();
+		}
+		else if (data == 2) {
+			$(".yuanprice").hide();
+			$(".upprice").show().next().hide();
+			$("#editPostPrice").show().next().hide();
+			$("#editTotalPrice").hide().next().show();
+		}
+	});
+	// 单价修改
+	$(".upprice_input").keyup(function() {
+		isdecimal($(this));
+		var price = parseFloat($(this).val());
+		if (price >= 0) {
+			$(this).siblings(".upprice").text(price);
+			calculate();
+		}
+	});
+	// 运费修改
+	$("#editPostPrice").next().keyup(function() {
+		isdecimal($(this));
+		var price = parseFloat($(this).val());
+		if (price >= 0) {
+			$("#editPostPrice").text(price);
+			calculate();
+		}
+	});
+	// 总价修改
+	$("#editTotalPrice").next().keyup(function() {
+		isdecimal($(this));
+		var price = parseFloat($(this).val());
+		if (price >= 0) {
+			$("#editTotalPrice").text(price);
+		}
+	});
+	// 时间
+	$("#preDeliverTime").blur(function() {
+		if ($(this).val() == null || $(this).val() == "") {
+			return "";
+		}
+		var selectdate = new Date($(this).val());
+		var nowdate = new Date();
+		if (selectdate < nowdate) {
+			$(this).val("");
+			$(this).next().text("");
+		}
+		else {
+			var day = parseInt(Math.ceil(Math.abs(selectdate - nowdate) / 1000 / 60 / 60 / 24));
+			$(this).next().text("预计" + day + "天后发货");
+		}
+	});
+});
+// 计算总价
+function calculate() {
+	var totalprice = 0;
+	$(".conter_right_xx_cz_table_55_div").each(function() {
+		var count = $(this).find(".procount").text();
+		var price = $(this).find(".upprice").text();
+		var all = parseInt(count) * parseFloat(price);
+		$(this).find(".allprice").text(all);
+		totalprice += all;
+	});
+	var youfei = $("#editPostPrice").next().val();
+	if (youfei == null || youfei == "") {
+		youfei = 0;
+	}
+	var yun = parseFloat(youfei);
+	yun = (yun == null ? 0 : yun);
+	totalprice += yun;
+	$("#editTotalPrice").text(totalprice);
+	$("#editTotalPrice").next().val(totalprice);
+}
+// 小数验证
+function isdecimal($this) {
+	var tmptxt = $this.val();
+	tmptxt = tmptxt.replace(/[^\d.]/g, ""); // 清除“数字”和“.”以外的字符
+	tmptxt = tmptxt.replace(/^\./g, ""); // 验证第一个字符是数字而不是.
+	tmptxt = tmptxt.replace(/\.{2,}/g, "."); // 只保留第一个. 清除多余的.
+	if (tmptxt.indexOf(".") > 0 && tmptxt.length - tmptxt.indexOf(".") > 3) {
+		tmptxt = tmptxt.substr(0, tmptxt.indexOf(".") + 3);
+	}
+	tmptxt = tmptxt.replace(".", "$#$").replace(/\./g, "").replace("$#$", ".");
+	$this.val(tmptxt);
+}
+// 确认订单
+function submit() {
+
+}
+// 拒绝订单
+function refused() {
+
+}

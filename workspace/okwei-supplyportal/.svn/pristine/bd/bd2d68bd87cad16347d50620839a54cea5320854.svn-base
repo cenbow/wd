@@ -1,0 +1,11 @@
+/********************* 4-6（预订单详情）已拒绝 *******************/
+/* 6个步骤条 */
+.left_ones1{left: -50px;}
+.left_ones2{left: 124px;}
+.left_ones3{left: 307px;}
+.left_ones4{left: 476px;}
+.left_ones5{left: 653px;}
+.left_ones6{left: 837px;}
+.onefont_nes{ line-height: 20px; height: 20px; margin-bottom: 10px;}
+.huibtons{ padding-left: 20px; padding-right: 20px; border: 1px solid #a7a7a7; line-height: 26px;background: #fff;text-align: center;color: #666;border-radius: 5px;display: inline-block;cursor: pointer;margin-left: 5px;}
+ 

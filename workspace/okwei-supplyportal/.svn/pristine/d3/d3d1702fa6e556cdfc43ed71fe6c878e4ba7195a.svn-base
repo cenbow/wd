@@ -1,0 +1,309 @@
+package com.okwei.supplyportal.service.impl;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import okwei.okwei.supplyportal.bean.enumExtend.SupplyBookOrderTypeEnum;
+
+import org.springframework.beans.factory.annotation.Autowired;
+
+import com.okwei.bean.domain.OBookAssist;
+import com.okwei.bean.domain.OProductOrder;
+import com.okwei.bean.domain.OSupplyerOrder;
+import com.okwei.bean.domain.UWeiSeller;
+import com.okwei.bean.enums.BookPayTypeEnum;
+import com.okwei.bean.enums.OrderStatusEnum;
+import com.okwei.bean.enums.TailPayTypeEnum;
+import com.okwei.common.Limit;
+import com.okwei.common.PageResult;
+import com.okwei.service.impl.BaseService;
+import com.okwei.supplyportal.bean.vo.ParamOrderSearch;
+import com.okwei.supplyportal.bean.vo.ProductOrderVO;
+import com.okwei.supplyportal.bean.vo.SupplyBookOrderVO;
+import com.okwei.supplyportal.bean.vo.SupplyOrderVO;
+import com.okwei.supplyportal.dao.IOrderManageDAO;
+import com.okwei.supplyportal.service.IOrderManageService;
+import com.okwei.util.ObjectUtils;
+
+public class OrderManageService extends  BaseService implements IOrderManageService {
+
+	@Autowired
+	private IOrderManageDAO orderBase;
+	
+	@Override
+	public PageResult<SupplyOrderVO> getOrderListPageResult(ParamOrderSearch param,Long supplyWeiid, Limit limit)
+	{
+		PageResult<OSupplyerOrder> suplist=orderBase.getSupplyOrderlistResult(param, supplyWeiid, limit);
+		if(suplist==null||suplist.getTotalCount()<=0)
+			return null;
+		PageResult<SupplyOrderVO> result=new  PageResult<SupplyOrderVO>();
+		//TODO 供应商订单列表
+		String[] supplyOrderIds=new String[suplist.getList().size()];
+		Long[] buyerWids=new Long[suplist.getList().size()];
+		for(int i=0;i<suplist.getList().size();i++)
+		{
+			supplyOrderIds[i]=suplist.getList().get(i).getSupplierOrderId();
+			buyerWids[i]=suplist.getList().get(i).getBuyerID();
+		}
+		//订单商品列表
+		List<OProductOrder> productlist=orderBase.getProductOrderListBySupplyOrderIds(supplyOrderIds);
+		//买家信息
+		List<UWeiSeller> userSellers=orderBase.getUsersByWeiids(buyerWids);
+		List<SupplyOrderVO> orderlist=new ArrayList<SupplyOrderVO>();
+		for (OSupplyerOrder oo : suplist.getList()) {
+			SupplyOrderVO ss=new SupplyOrderVO();
+			ss.setOrderNo(oo.getSupplierOrderId());
+			ss.setBuyerWeiid(oo.getBuyerID());
+			ss.setOrderState(oo.getState());
+			Map<Short, OrderStatusEnum> mapState = new HashMap<Short, OrderStatusEnum>();
+			for (OrderStatusEnum tt : OrderStatusEnum.values()) {
+				mapState.put(Short.parseShort(tt.toString()), tt);
+			}
+			ss.setOrderStateName( getOrderStateName(mapState.get(oo.getState())));
+			ss.setTotalPrice(oo.getTotalPrice());
+			ss.setPostPrice(oo.getPostage()); 
+			ss.setCreateTimeStr(oo.getOrderTime().toString());
+			
+			for (UWeiSeller user : userSellers) {
+				if(oo.getBuyerID()== user.getWeiId())
+					ss.setBuyerName(user.getWeiName()); 
+			}
+			ss.setProList(getSupplyOrderProducts(oo.getSupplierOrderId(), productlist)); 
+			orderlist.add(ss);
+		}
+		result.setList(orderlist); 
+		result.setPageIndex(limit.getPageId());
+		result.setPageSize(limit.getSize());
+		result.setPageCount(suplist.getPageCount());
+		result.setTotalCount(suplist.getTotalCount()); 
+		return result;
+	}
+	
+	/**
+	 * 获取供应商预订单列表
+	 * @param param
+	 * @param supplyWeiid
+	 * @param limit
+	 * @return
+	 */
+	public PageResult<SupplyBookOrderVO> getBookOrderListPageResult(ParamOrderSearch param,Long supplyWeiid, Limit limit)
+	{
+		PageResult<OSupplyerOrder> suplist= orderBase.getSupplyBookOrderlistResult(param, supplyWeiid, limit);//orderBase.getSupplyOrderlistResult(param, supplyWeiid, limit);
+		if(suplist==null||suplist.getTotalCount()<=0)
+			return null;
+		PageResult<SupplyBookOrderVO> result=new  PageResult<SupplyBookOrderVO>();
+		//TODO 供应商订单列表
+		String[] supplyOrderIds = new String[suplist.getList().size()];
+		Long[] buyerWids = new Long[suplist.getList().size()];
+		for (int i = 0; i < suplist.getList().size(); i++) {
+			supplyOrderIds[i] = suplist.getList().get(i).getSupplierOrderId();
+			buyerWids[i] = suplist.getList().get(i).getBuyerID();
+		}
+		// 订单商品列表
+		List<OProductOrder> productlist = orderBase.getProductOrderListBySupplyOrderIds(supplyOrderIds);
+		// 买家信息
+		List<UWeiSeller> userSellers = orderBase.getUsersByWeiids(buyerWids);
+		//预订单支付列表
+//		List<OPayOrder> opayorderlist=null;
+		//预订单辅助信息
+		List<OBookAssist> assistlist=orderBase.getOBookAssistlistBySupplyOrderIds(supplyOrderIds);
+		
+		List<SupplyBookOrderVO> orderlist = new ArrayList<SupplyBookOrderVO>();
+		for (OSupplyerOrder oo : suplist.getList()) {
+			SupplyBookOrderVO ss = new SupplyBookOrderVO();
+			ss.setOrderNo(oo.getSupplierOrderId());
+			ss.setBuyerWeiid(oo.getBuyerID());
+			ss.setOrderState(oo.getState());
+			Map<Short, OrderStatusEnum> mapState = new HashMap<Short, OrderStatusEnum>();
+			for (OrderStatusEnum tt : OrderStatusEnum.values()) {
+				mapState.put(Short.parseShort(tt.toString()), tt);
+			}
+			ss.setOrderStateName(getOrderStateName(mapState.get(oo.getState())));
+			ss.setTotalPrice(oo.getTotalPrice());
+			ss.setPostPrice(oo.getPostage());
+			ss.setCreateTimeStr(oo.getOrderTime().toString());
+			for (UWeiSeller user : userSellers) {
+				if (oo.getBuyerID() == user.getWeiId())
+					ss.setBuyerName(user.getWeiName());
+			}
+			ss.setProList(getSupplyOrderProducts(oo.getSupplierOrderId(),productlist));
+			//付款金额
+			List<String> contentList=new ArrayList<String>();
+			boolean ass=true;
+			for (OBookAssist opay : assistlist) {
+				if(opay.getSupplierOrderId()!=null&&opay.getSupplierOrderId().equals(oo.getSupplierOrderId()))
+				{
+					if(opay.getBookPayType()!=null&&Short.parseShort(BookPayTypeEnum.Full.toString())==opay.getBookPayType())
+					{
+						contentList.add("全额支付"+ss.getTotalPrice());
+					}
+					else if(opay.getBookPayType()!=null){
+						contentList.add("定金："+opay.getAmount());
+						//发货后付尾款
+						if(opay.getTailPayType()!=null&&Short.parseShort(TailPayTypeEnum.afterdelivery.toString())==opay.getTailPayType() )
+						{
+							contentList.add("发货后支付尾款："+(ss.getTotalPrice()-opay.getAmount()));
+						}else {
+							contentList.add("发货前支付尾款："+(ss.getTotalPrice()-opay.getAmount()));
+						}
+						contentList.add("预计发货时间："+opay.getPreSendTime().toString());
+					}
+					ass=false;
+					ss.setOrderState(getSupplyerBookState(ss.getOrderState(), opay.getTailPayType())); 
+					ss.setOrderStateName(getSupplyerBookStateName(ss.getOrderState(), opay.getTailPayType()));
+				}
+			}
+			if(ass)
+			{
+				ss.setOrderState(Integer.parseInt(SupplyBookOrderTypeEnum.Waitting.toString()) ); 
+				ss.setOrderStateName("待确认");
+			}
+			ss.setPayContent(contentList); 
+			orderlist.add(ss);
+		}
+		result.setList(orderlist);
+		result.setPageIndex(limit.getPageId());
+		result.setPageSize(limit.getSize());
+		result.setPageCount(suplist.getPageCount());
+		result.setTotalCount(suplist.getTotalCount());
+		return result;
+	}
+	
+	public List<ProductOrderVO> getOrderProductListBySupplyOrderId(String supplyOrderId)
+	{
+		
+		return null;
+	}
+	/**
+	 * 产品列表清单
+	 * 根据 供应商订单id 产品列表
+	 * @param supplyOrderId
+	 * @param prolist
+	 * @return
+	 */
+	private List<ProductOrderVO> getSupplyOrderProducts(String supplyOrderId,List<OProductOrder> prolist)
+	{
+		if(ObjectUtils.isNotEmpty(prolist)&&!ObjectUtils.isEmpty(supplyOrderId))
+		{
+			List<ProductOrderVO> supProductList=new ArrayList<ProductOrderVO>();
+			for (OProductOrder pp : prolist) {
+				if(supplyOrderId.equals(pp.getSupplierOrderId()))
+				{
+					ProductOrderVO pro=new ProductOrderVO();
+					pro.setProductId(pp.getProductId());
+					pro.setProductTitle(pp.getProdcutTitle());
+					pro.setProductState(pp.getState());
+					pro.setCount(pp.getCount());
+					pro.setPrice(pp.getPrice());
+					pro.setCommission(pp.getCommision());
+					pro.setSumPrice(pp.getCount()*pp.getPrice());
+					supProductList.add(pro);
+				}
+			}
+			return supProductList;
+		}
+		return null;
+	}
+	
+	
+	/**
+	 * 获取订单状态名称
+	 * @param state
+	 * @return
+	 */
+	public String getOrderStateName(OrderStatusEnum state)
+	{
+		String name="";
+		switch (state) {
+		case Nopay:
+			name="未支付";
+			break;
+		case Payed:
+			name="已付款";
+			break;
+		case Deliveried:
+			name="已发货";
+			break;
+		case Accepted:
+			name="已收货";
+			break;
+		case Completed:
+			name="交易完成";
+			break;
+		case Canceled:
+			name="已取消";
+			break;
+		case Tovoided:
+			name="已过期";
+			break;
+		default:
+			break;
+		}
+		return name;
+	}
+	
+	/**
+	 * 预定单状态
+	 * @param orderState
+	 * @param tailPayType
+	 * @return
+	 */
+	public int getSupplyerBookState(int orderState,Short tailPayType)
+	{
+		OrderStatusEnum state=null;
+		for (OrderStatusEnum ee : OrderStatusEnum.values()) {
+			if(orderState==Integer.parseInt(ee.toString()))
+				state=ee;
+		}
+		switch (state) {
+		case WaitSure:
+			return Short.parseShort(SupplyBookOrderTypeEnum.Waitting.toString());
+		case Sured:
+			return Short.parseShort(SupplyBookOrderTypeEnum.Sured.toString());
+		case Completed:
+			return Short.parseShort(SupplyBookOrderTypeEnum.Complete.toString());
+		case PayedDeposit:
+			if(tailPayType==1)
+				return Short.parseShort(SupplyBookOrderTypeEnum.DaiFahuo.toString());
+			return Short.parseShort(SupplyBookOrderTypeEnum.NopayTail.toString());
+		case Payed:
+			return Short.parseShort(SupplyBookOrderTypeEnum.DaiFahuo.toString());
+		default:
+			return orderState;
+		}
+	}
+	/**
+	 * 预定单状态
+	 * @param orderState
+	 * @param tailPayType
+	 * @return
+	 */
+	public String getSupplyerBookStateName(int orderState,Short tailPayType)
+	{
+		OrderStatusEnum state=null;
+		for (OrderStatusEnum ee : OrderStatusEnum.values()) {
+			if(orderState==Integer.parseInt(ee.toString()))
+				state=ee;
+		}
+		switch (state) {
+		case WaitSure:
+			return "待确认";//Short.parseShort(SupplyBookOrderTypeEnum.Waitting.toString());
+		case Sured:
+			return "已确认";//Short.parseShort(SupplyBookOrderTypeEnum.Sured.toString());
+		case Completed:
+			return "已完成";//Short.parseShort(SupplyBookOrderTypeEnum.Complete.toString());
+		case PayedDeposit:
+			if(tailPayType==1)
+				return "待发货";//Short.parseShort(SupplyBookOrderTypeEnum.DaiFahuo.toString());
+			return "待付尾款";//Short.parseShort(SupplyBookOrderTypeEnum.NopayTail.toString());
+		case Payed:
+			return "待发货";//Short.parseShort(SupplyBookOrderTypeEnum.DaiFahuo.toString());
+		case Tovoided:
+			return "已过期";
+		default:
+			return "";//orderState;
+		}
+	}
+	
+}

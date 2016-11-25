@@ -1,0 +1,369 @@
+package com.okwei.supplyportal.service.impl;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.okwei.bean.domain.PParamKey;
+import com.okwei.bean.domain.PParamValues;
+import com.okwei.bean.domain.PPostAgeModel;
+import com.okwei.bean.domain.PPreOrder;
+import com.okwei.bean.domain.PProductBatchPrice;
+import com.okwei.bean.domain.PProductClass;
+import com.okwei.bean.domain.PProductImg;
+import com.okwei.bean.domain.PProductKeyWords;
+import com.okwei.bean.domain.PProductParamKv;
+import com.okwei.bean.domain.PProductSellKey;
+import com.okwei.bean.domain.PProductSellValue;
+import com.okwei.bean.domain.PProductStyleKv;
+import com.okwei.bean.domain.PProductStyles;
+import com.okwei.bean.domain.PProducts;
+import com.okwei.bean.domain.PShopClass;
+import com.okwei.bean.domain.UBatchSupplyer;
+import com.okwei.bean.domain.UYunSupplier;
+import com.okwei.supplyportal.bean.enums.SupplierStatusEnum;
+import com.okwei.supplyportal.bean.vo.BaseProduct;
+import com.okwei.supplyportal.bean.vo.BaseResultVO;
+import com.okwei.supplyportal.bean.vo.EditProductVO;
+import com.okwei.supplyportal.bean.vo.PPreOrderVO;
+import com.okwei.supplyportal.bean.vo.PostAgeModelVO;
+import com.okwei.supplyportal.bean.vo.ProductBatchPriceVO;
+import com.okwei.supplyportal.bean.vo.ProductClassVO;
+import com.okwei.supplyportal.bean.vo.ProductImgVO;
+import com.okwei.supplyportal.bean.vo.ProductParamVO;
+import com.okwei.supplyportal.bean.vo.ProductSellKeyVO;
+import com.okwei.supplyportal.bean.vo.ProductSellValueVO;
+import com.okwei.supplyportal.bean.vo.ProductStyleKVVO;
+import com.okwei.supplyportal.bean.vo.ProductStylesVO;
+import com.okwei.supplyportal.bean.vo.ShopClassVO;
+import com.okwei.supplyportal.dao.IEditProductInfoDAO;
+import com.okwei.supplyportal.service.IEditProductInfoService;
+import com.okwei.service.impl.BaseService;
+
+@Service
+public class EditProductInfoService extends BaseService implements IEditProductInfoService {
+	
+	@Autowired	
+	private IEditProductInfoDAO editProductInfoDAO;
+	
+	@Override
+	public boolean getPower(long weiID) {
+		//产品发布限制  
+		// 1.正式的云商 与 批发号 才能发布产品
+		UYunSupplier yunSupplier = editProductInfoDAO.getYunSupplier(weiID);
+		UBatchSupplyer batchSupplyer = editProductInfoDAO.getBatchSupplyer(weiID);
+		
+		// 2.判断该供应商 是否被限制发布 暂时不处理
+		
+		// 3.每个供应商每天最多发布2000
+		long todayPNum =  editProductInfoDAO.getTodayCreateProduct(weiID);
+		if((yunSupplier.getStatus() == Short.parseShort(SupplierStatusEnum.PayIn.toString())  || 
+				batchSupplyer.getStatus() == Short.parseShort(SupplierStatusEnum.PayIn.toString()))
+				&& todayPNum <2000)
+		{
+			return true;
+		}
+		// 4.审核通过  未交钱的 云商 与 批发号 只能发10个。
+		if((yunSupplier.getStatus() == Short.parseShort(SupplierStatusEnum.Pass.toString())  || 
+				batchSupplyer.getStatus() == Short.parseShort(SupplierStatusEnum.Pass.toString()))
+				&& todayPNum <10)
+		{
+			return true;
+		}
+		
+		return false;
+	}
+
+	@Override
+	public EditProductVO getProductInfo(long productID) {
+		EditProductVO baseProduct = new EditProductVO();
+		
+		//1.商品主表
+		PProducts product = editProductInfoDAO.getProduct(productID);
+		if(product ==null)
+		{
+			return null;
+		}
+		
+		baseProduct.setCommission(product.getDefaultConmision());
+		baseProduct.setFreightId(product.getFreightId());
+		baseProduct.setPrice(product.getDefaultPrice());
+		baseProduct.setProductId(product.getProductId());
+		baseProduct.setProductImg(product.getDefaultImg());
+		baseProduct.setProductMinTitle(product.getProductMinTitle());
+		baseProduct.setProductTitle(product.getProductTitle());
+		baseProduct.setSid(product.getSid());
+		baseProduct.setSupplyerWeiid(product.getSupplierWeiId());
+		baseProduct.setClassId(product.getClassId());
+		//7.商品分类信息
+		baseProduct.setClassVO( this.getClassInfo(product.getClassId()));
+		
+		//6.产品关键词
+		List<PProductKeyWords> keyWordList = editProductInfoDAO.getKeyWordList(productID);
+		if(keyWordList !=null && keyWordList.size()>0)
+		{
+			String keywords = "";
+			for (PProductKeyWords item : keyWordList) {
+				keywords += item.getKeyWord() +" ";
+			}
+			baseProduct.setKeyWords(keywords);
+		}
+		//2.商品属性
+		List<PProductParamKv> paramList = editProductInfoDAO.getParamList(productID);
+		if(paramList != null && paramList.size()>0)
+		{
+			List<ProductParamVO> paramVOList = new ArrayList<ProductParamVO>();
+			for (PProductParamKv item : paramList) {
+				ProductParamVO paramVO = new ProductParamVO();
+				paramVO.setParamName(item.getParamName());
+				paramVO.setParamValue(item.getParamName());
+				//paramVO.setProductId(item.getProductId());
+				//paramVO.setKvid(item.getKvid());
+				
+				paramVOList.add(paramVO);
+			}
+			baseProduct.setParamList(paramVOList);
+		}
+		//3.商品图片
+		List<PProductImg> imgList = editProductInfoDAO.getImgList(productID);
+		if(imgList !=null && imgList.size()>0)
+		{
+			List<ProductImgVO> imgVOList = new ArrayList<ProductImgVO>();
+			for (PProductImg item : imgList) {
+				ProductImgVO imgVO = new ProductImgVO();
+				imgVO.setImgPath(item.getImgPath());
+				imgVO.setProductImgId(item.getProductImgId());
+			
+				imgVOList.add(imgVO);
+			}
+			baseProduct.setImgList(imgVOList);
+		}
+		//4.商品销售属性
+		//a.属性Key
+		List<PProductSellKey> sellKeyList = editProductInfoDAO.getSellKeyList(productID);
+		if(sellKeyList != null && sellKeyList.size()>0)
+		{
+			List<ProductSellKeyVO> sellkeyVOList = new ArrayList<ProductSellKeyVO>();
+			for (PProductSellKey item : sellKeyList) {
+				ProductSellKeyVO sellKeyVO = new ProductSellKeyVO();
+				sellKeyVO.setAttributeId(item.getAttributeId());
+				sellKeyVO.setAttributeName(item.getAttributeName());
+				sellKeyVO.setSort(item.getSort());
+				
+				sellkeyVOList.add(sellKeyVO);
+			}
+			baseProduct.setSellKeyList(sellkeyVOList);
+		}
+		//b.属性value
+		List<PProductSellValue> sellValueList = editProductInfoDAO.getSellValueList(productID);
+		if(sellKeyList !=null && sellKeyList.size()>0)
+		{
+			List<ProductSellValueVO> sellValueVOList = new ArrayList<ProductSellValueVO>();
+			for (PProductSellValue item : sellValueList) {
+				ProductSellValueVO sellValueVO = new ProductSellValueVO();
+				sellValueVO.setAttributeId(item.getAttributeId());
+				sellValueVO.setClassId(item.getClassId());
+				sellValueVO.setDefaultImg(item.getDefaultImg());
+				sellValueVO.setKeyId(item.getKeyId());
+				sellValueVO.setProductId(item.getProductId());
+				sellValueVO.setValue(item.getValue());
+				
+				sellValueVOList.add(sellValueVO);
+			}
+			baseProduct.setSellValueList(sellValueVOList);
+		}
+		
+		//c. 款式 属性Kv
+		List<PProductStyles> styleList = editProductInfoDAO.getStyleList(productID);
+		List<PProductStyleKv> styleKVList = editProductInfoDAO.getStyleKvList(productID);
+		if(styleList !=null && styleKVList.size()>0)
+		{
+			List<ProductStylesVO> stylesVOList = new ArrayList<ProductStylesVO>();
+			for (PProductStyles styleItem : styleList) {
+				ProductStylesVO stylesVO = new ProductStylesVO();
+				stylesVO.setBussinessNo(styleItem.getBussinessNo());
+				stylesVO.setConmision(styleItem.getConmision());
+				stylesVO.setCount(styleItem.getCount());
+				stylesVO.setDefaultImg(styleItem.getDefaultImg());
+				stylesVO.setPrice(styleItem.getPrice());
+				stylesVO.setStylesId(styleItem.getStylesId());
+				
+				List<ProductStyleKVVO> styleKVVOList = new ArrayList<ProductStyleKVVO>();
+				for (PProductStyleKv kvItem : styleKVList) {
+					if(kvItem.getStylesId() == styleItem.getStylesId())
+					{
+						ProductStyleKVVO styleKVVO = new ProductStyleKVVO();
+						styleKVVO.setAttributeId(kvItem.getAttributeId());
+						styleKVVO.setKeyId(kvItem.getKeyId());
+						styleKVVO.setKvid(kvItem.getKvid());
+						styleKVVO.setStylesId(kvItem.getStylesId());
+						//键值对 添加到列表
+						styleKVVOList.add(styleKVVO);
+					}
+				}
+				//设置款式的属性键值对
+				stylesVO.setStyleKVList(styleKVVOList);
+				//款式添加到款式列表中
+				stylesVOList.add(stylesVO);
+			}
+			baseProduct.setStyleList(stylesVOList);
+		}
+		//5.批发阶梯价格
+		List<PProductBatchPrice> batchPriceList = editProductInfoDAO.getBatchPriceList(productID);
+		if(batchPriceList !=null && batchPriceList.size()>0)
+		{
+			List<ProductBatchPriceVO> batchPriceVOList = new ArrayList<ProductBatchPriceVO>();
+			for (PProductBatchPrice item : batchPriceList) {
+				ProductBatchPriceVO bPriceVO = new ProductBatchPriceVO();
+				bPriceVO.setBid(item.getBid());
+				bPriceVO.setCount(item.getCount());
+				bPriceVO.setPirce(item.getPirce());
+				bPriceVO.setStylesId(item.getStylesId());
+				
+				batchPriceVOList.add(bPriceVO);
+			}
+			baseProduct.setBatchPriceList(batchPriceVOList);			
+		}
+		//6.预定价格
+		PPreOrder preOrder = editProductInfoDAO.getPreOrder(productID);
+		if(preOrder !=null)
+		{
+			PPreOrderVO preOrderVO = new PPreOrderVO();
+			preOrderVO.setContent(preOrder.getContent());
+			preOrderVO.setPreOrderPrice(preOrder.getPreOrderPrice());
+			
+			baseProduct.setPreOrder(preOrderVO);
+		}
+		
+		return baseProduct;
+	}
+
+	@Override
+	public ProductClassVO getClassInfo(int classID) {
+		if(classID<1)
+		{
+			return null;
+		}
+		PProductClass pClass = editProductInfoDAO.getProductClass(classID);
+		if(pClass !=null)
+		{
+			ProductClassVO result = new ProductClassVO();
+			result.setClassID(pClass.getClassId());
+			result.setClssName(pClass.getClassName());
+			
+			PProductClass pClass2 = editProductInfoDAO.getProductClass(pClass.getParentId());
+			if(pClass2 !=null)
+			{
+				result.setTwoClassID(pClass2.getClassId());
+				result.setTwoClassName(pClass2.getClassName());
+				
+				PProductClass pClass1 = editProductInfoDAO.getProductClass(pClass2.getParentId());
+				if(pClass1 !=null)
+				{
+					result.setOneClassID(pClass.getClassId());
+					result.setOneClassName(pClass2.getClassName());
+				}
+			}
+			
+			return result;
+		}
+			
+		return null;
+	}
+	
+	@Override
+	public List<PostAgeModelVO> getPostAgeList(long weiID) {
+		List<PPostAgeModel> modelList = editProductInfoDAO.getPostAgeModelList(weiID);
+		
+		if(modelList !=null && modelList.size()>0)
+		{
+			List<PostAgeModelVO> result = new ArrayList<PostAgeModelVO>();
+			for (PPostAgeModel item : modelList) {
+				PostAgeModelVO modelVO = new PostAgeModelVO();
+				modelVO.setBillingType(item.getBillingType());
+				modelVO.setDeliveryAddress(item.getDeliveryAddress());
+				modelVO.setDeliverytime(item.getDeliverytime());
+				modelVO.setFree(item.getFree());
+				modelVO.setFreightId(item.getFreightId());
+				modelVO.setPostAgeName(item.getPostAgeName());
+				modelVO.setStatus(item.getStatus());
+				modelVO.setSupplierWeiId(item.getSupplierWeiId());
+				
+				result.add(modelVO);
+			}			
+			return result;
+		}
+		return null;
+	}
+
+	@Override
+	public List<ShopClassVO> getShopClassList(long weiID) {
+		List<PShopClass> shopClasseList = editProductInfoDAO.getShopClasseList(weiID);
+		if(shopClasseList !=null && shopClasseList.size()>0)
+		{
+			List<ShopClassVO> result = new ArrayList<ShopClassVO>();
+			for (PShopClass item : shopClasseList) {
+				ShopClassVO classVO = new ShopClassVO();
+				classVO.setSid(item.getSid());
+				classVO.setSname(item.getSname());
+				classVO.setSort(item.getSort());
+				classVO.setState(item.getState());
+				classVO.setType(item.getType());
+				classVO.setWeiid(item.getWeiid());
+				
+				result.add(classVO);
+			}
+			return result;
+		}
+		
+		return null;
+	}
+
+	@Override
+	public int saveProductParam(long weiID, int classID) {
+		// TODO Auto-generated method stub
+		return 0;
+	}
+	
+	@Override
+	public int saveShopClass(ShopClassVO sc) {
+		// TODO Auto-generated method stub
+		return 0;
+	}
+	
+	@Override
+	public BaseResultVO editProductInfo(BaseProduct product) {
+		// 1.修改产品 必须判断该商品是否是自己的
+		return null;
+	}
+
+	@Override
+	public List<ProductParamVO> getParamList(int tempID) {
+		List<PParamKey> keyList = editProductInfoDAO.getParamKeyList(tempID);
+		if(keyList !=null && keyList.size()>0)
+		{
+			return null;
+		}
+		List<Integer> keys = new ArrayList<Integer>();
+		List<ProductParamVO> paramVOList = new ArrayList<ProductParamVO>();
+		for (PParamKey key : keyList) {
+			keys.add(key.getAttributeId());
+			ProductParamVO paramVO = new ProductParamVO();
+			//paramVO.set
+		}
+		if(keys.size()>0)
+		{
+			List<PParamValues> valueList =  editProductInfoDAO.getParamValueList(keys);
+			if(valueList !=null && valueList.size()>0)
+			{
+				for (PParamKey key : keyList) {
+					keys.add(key.getAttributeId());
+				}
+			}
+		}
+		
+		return null;
+	}
+}

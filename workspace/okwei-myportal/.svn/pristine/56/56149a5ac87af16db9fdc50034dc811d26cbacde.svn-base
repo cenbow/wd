@@ -1,0 +1,195 @@
+<%@ page language="java" contentType="text/html; charset=UTF-8"
+	pageEncoding="UTF-8"%>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c"%>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/fmt" prefix="fmt"%>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/functions" prefix="fn"%>
+<%@ taglib prefix="pg" uri="http://www.okwei.com/pagination"%>
+<%@ page import="java.util.ResourceBundle"%>
+
+<%
+	String path = request.getContextPath();
+	String basePath = request.getScheme() + "://"
+			+ request.getServerName() + ":" + request.getServerPort()
+			+ path + "/";
+	String mydomain = ResourceBundle.getBundle("domain").getString(
+			"mydomain");
+%>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>店铺轮播图</title>
+<style type="text/css">
+.conter_right_xx_cz_table td {
+	padding: 15px 0;
+	border: 0px;
+}
+
+ 
+</style> 
+</head>
+<body>
+	<div class="fr conter_right bg_white bor_si">
+		<div class="gygl_xxk_t f16 ndfxs_1-2_border">
+			<div name="mzh_xxk" style="color: #333;" class="gygl_xxk_yes">
+				店铺轮播图<span style="width: 64px;"></span>
+			</div>
+		</div>
+
+		<form id="searcherForm" action="<%=basePath%>myShopMgt/homepage"
+			onsubmit="return false;">
+			<div style="border: none;" class="conter_right_xx">
+				<div style="margin-top: 0; height: auto;" class="xh-shurk">
+					<ul>
+						<li><span>标签：</span> <input type="text" class="btn_h24 w164"
+							name="title" value="${dto.title}" /></li>
+						<li><span>状态：</span> <select class="btn_h30 w164 mr_10"
+							name="status">
+								<option value="ALL"
+									<c:if test='${dto.status=="ALL"}'>selected</c:if>>全部</option>
+								<option value="NEW"
+									<c:if test='${dto.status=="NEW"}'>selected</c:if>>新建</option>
+								<option value="OPEN"
+									<c:if test='${dto.status=="OPEN"}'>selected</c:if>>开启</option>
+								<option value="CLOSE"
+									<c:if test='${dto.status=="CLOSE"}'>selected</c:if>>关闭</option>
+						</select></li>
+						<li><input type="submit" style="width: 80px;"
+							class="btn_submit_two" value="搜索" id="searchBtn" /></li>
+					</ul>
+				</div>
+			</div>
+			<div style="border-top: 1px solid #ddd; padding-bottom: 20px;"
+				class="outermost fl">
+				<a onclick="wins('添加推荐','add_zixun','500px','450px',1,0)"
+					style="float: left;" class="disbors ml_30" href="javascript:;">添加</a>
+			</div>
+			<div class="outermost bg_white fl tabnes">
+				<table style="border: none; border-top: 1px solid #ddd;">
+					<tbody>
+						<tr style="background: #f1f1f1; font-weight: bold;">
+							<td>标签</td>
+							<td>图片</td>
+							<td>链接</td>
+							<td>排序</td>
+							<td>状态</td>
+							<td>操作</td>
+						</tr>
+						<c:if test="${fn:length(pageResult.list) < 1 }">
+							<tr>
+								<td colspan="6"
+									style="vertical-align: middle; text-align: center; height: 200px;">暂无相关数据</td>
+							</tr>
+						</c:if>
+						<c:forEach items="${pageResult.list}" var="shopimage"
+							varStatus="status">
+							<tr>
+								<td>${shopimage.title}</td>
+								<td><div>
+										<img width="80" height="80" src="${shopimage.imgLog}" />
+									</div></td>
+								<td>${shopimage.url}</td>
+								<td>${shopimage.sort}</td>
+								<td><c:choose>
+										<c:when test="${shopimage.status==1}">新建</c:when>
+										<c:when test="${shopimage.status==2}">开启</c:when>
+										<c:when test="${shopimage.status==3}">关闭</c:when>
+									</c:choose></td>
+								<td><a
+									onclick="wins('修改推荐','add_zixun2','500px','450px',2,${shopimage.uadId})"
+									href="javascript:;">修改</a>&nbsp;&nbsp; <a href="#"
+									name="delete" redId="${shopimage.uadId}">删除</a>&nbsp;&nbsp; <c:choose>
+										<c:when test="${shopimage.status==1 || shopimage.status==3}">
+											<a href="javascript:;" name="open" redId="${shopimage.uadId}">开启</a>
+										</c:when>
+										<c:when test="${shopimage.status==2}">
+											<a href="javascript:;" name="close" redId="${shopimage.uadId}">关闭</a>
+										</c:when>
+									</c:choose></td>
+							</tr>
+						</c:forEach>
+					</tbody>
+				</table>
+			</div>
+			<div class="pull-right">
+				<pg:page pageResult="${pageResult}" />
+			</div>
+		</form>
+	</div>
+
+	<script>
+		$(function() {
+			var page = new Pagination({
+				formId : "searcherForm",
+				isAjax : true,
+				targetId : "navTab",
+				submitId : "searchBtn"
+			});
+			page.init();
+			
+			
+			$("a[name=delete]").click(function(){
+				var redId = $(this).attr("redId");
+				$.post("/myShopMgt/deleteImg/"+redId,function(data){
+					if(!data.error){
+						alert("删除成功",true);
+						window.location.href="/myShopMgt/homepage";
+					}
+				},"json");
+			});
+			
+			$("a[name=open]").click(function(){
+				var redId = $(this).attr("redId");
+				$.post("/myShopMgt/openImg/"+redId,function(data){
+					if(!data.error){
+						alert("开启成功",true);
+						window.location.href="/myShopMgt/homepage";
+					}else{
+						alert("开启状态的数量不能大于5个");
+					}
+				},"json");
+			});
+			
+			$("a[name=close]").click(function(){
+				var redId = $(this).attr("redId");
+				$.post("/myShopMgt/closeImg/"+redId,function(data){
+					if(!data.error){
+						alert("关闭成功",true);
+						window.location.href="/myShopMgt/homepage";
+					}
+				},"json");
+			});
+			
+		})
+		
+		/** 弹窗调用函数 **/
+		function wins(title,win_id,width,height,flag,id){ //title 标题 win_id 弹窗ID  width 弹窗宽度 height 弹窗高度
+			var pagei = $.layer({
+		   		type: 2,   //0-4的选择,0：信息框（默认），1：页面层，2：iframe层，3：加载层，4：tips层。 
+			   	/* btns: 2,
+				btn: ['确定','取消'], */
+			   	title: title,
+			   	border: [0],
+				closeBtn: [0, true],
+			   	shadeClose: false,
+			   	area: [width,height], 
+			   	// page: {dom : '#'+ win_id}
+				iframe: { src: '/myShopMgt/popup/add/'+flag+'/'+id},
+				yes: function(){
+		            layer.msg('重要', 1, 1);
+		            var data = $("#xubox_iframe1").contents().find("#popupForm").serializeJson()
+		            alert(data);
+		            /* $.post("/myShopMgt/doAdd",data,function(data){
+		            	if(!data.error){
+							alert("关闭成功",true);
+						}
+		            }); */
+		        }, no: function(){
+		            layer.msg('奇葩', 1, 13);
+		        }
+			 	//end: function(){ $("#AddCount").hide()}  
+			});
+		}
+	</script>
+</body>
+</html>

@@ -1,0 +1,386 @@
+package com.okwei.pay.web;
+
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.text.DecimalFormat;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Properties;
+import java.util.ResourceBundle;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.jdom.JDOMException;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+import chinapay.PrivateKey;
+import chinapay.SecureLink;
+
+import com.chinapay.bean.PaymentBean;
+import com.chinapay.bean.QueryBean;
+import com.chinapay.util.ChinaPaySetting;
+import com.chinapay.util.Config;
+import com.chinapay.util.connection.CPHttpConnection;
+import com.chinapay.util.connection.Http;
+import com.chinapay.util.connection.HttpSSL;
+import com.okwei.bean.domain.OPayOrder;
+import com.okwei.bean.enums.PayTypeEnum;
+import com.okwei.bean.vo.BResultMsg;
+import com.okwei.pay.bean.enums.PayResultStateEnum;
+import com.okwei.pay.bean.vo.BaseSSOController;
+import com.okwei.bean.vo.LoginUser;
+import com.okwei.pay.bean.vo.PayResult;
+import com.okwei.pay.service.IPayOrderService;
+import com.okwei.service.order.IBasicPayService;
+import com.tenpay.TenpayUtil;
+
+@Controller
+@RequestMapping(value="/chinapay")
+public class ChinaPayController extends BaseSSOController {
+
+    @Autowired
+    IPayOrderService service;
+    @Autowired 
+    IBasicPayService payService;
+    private Log logger = LogFactory.getLog(this.getClass());
+    String paydomain = ResourceBundle.getBundle("domain").getString("paydomain");
+    
+    @RequestMapping(value = "/payrequest",method ={RequestMethod.POST,RequestMethod.GET})
+    public String payrequest(@RequestParam(required = false,defaultValue = "") String orderNo,Model model,
+    		HttpServletRequest request,HttpServletResponse response) throws JDOMException, IOException
+    {
+    	int fee = 0;
+    	LoginUser loginUser = super.getLoginUser();
+    	PayResult payResult = service.verifilyOrder(orderNo, loginUser.getWeiID(),true);
+    	if(payResult.getState() == PayResultStateEnum.Success)
+    	{
+    		double totalAmout = Double.valueOf(payResult.getMessage());
+    		fee = (int) (totalAmout * 100);
+    	}
+    	else
+    	{	//跳转到错误页 并提示消息
+    		 return "redirect:"+paydomain+"/pay/error?type=" + payResult.getType()+"&msg="+new String(payResult.getMessage().getBytes(),"ISO8859-1");
+		}
+    	
+
+		String MerKeyPath = ChinaPaySetting.merkeyfilepath;
+		String pay_url = ChinaPaySetting.paymenturl;
+
+		String OrdId = orderNo;
+		DecimalFormat df = new DecimalFormat("0000000000000000");		
+		String TransAmt = df.format(fee);// 交易金额
+		
+		String MerId = ChinaPaySetting.MerId;		
+		String Version = ChinaPaySetting.Version;//版本号		
+		String CuryId = ChinaPaySetting.CuryId;
+		
+		SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd");		
+		String TransDate = sdf.format(new Date());//交易日期 年月日 
+		
+		String TransType = ChinaPaySetting.TransType;
+		String BgRetUrl = ChinaPaySetting.BgRetUrl;
+		String PageRetUrl = ChinaPaySetting.PageRetUrl;
+		String GateId = ChinaPaySetting.GateId;
+		String Priv1 ="okwei";
+		String ChkValue = null;
+		// 20140522������汾����ʹ������ClientIp����
+		String ClientIp = TenpayUtil.getIp(request);
+
+		boolean buildOK = false;
+		PrivateKey key = new PrivateKey();
+		try {
+			buildOK = key.buildKey(MerId, 0, MerKeyPath);
+		} catch (Exception e) {
+			return "redirect:"+paydomain+"/pay/error?type=0&msg="+new String("签名初始化异常".getBytes(),"ISO8859-1");
+		}
+		//签名错误咯
+		if (!buildOK) {
+			return "redirect:"+paydomain+"/pay/error?type=0&msg="+new String("签名初始化错误".getBytes(),"ISO8859-1");
+		}
+
+		try {
+			SecureLink sl = new SecureLink(key);
+
+			if (Version.equalsIgnoreCase("20141120")) {
+				ChkValue = sl.Sign(MerId + OrdId + TransAmt + CuryId
+						+ TransDate + TransType + Version + BgRetUrl + PageRetUrl + GateId + Priv1);
+			}else if (Version.equalsIgnoreCase("20140522")){
+				String plain = MerId + OrdId + TransAmt + CuryId + TransDate + TransType + Version + GateId + BgRetUrl+ PageRetUrl + Priv1+ ClientIp;
+				ChkValue = sl.Sign(plain);
+			}
+		} catch (Exception e) {
+			return "redirect:"+paydomain+"/pay/error?type=0&msg="+new String("签名过程中发生异常".getBytes(),"ISO8859-1");
+		}
+
+		PaymentBean pay = new PaymentBean();
+		pay.setMerId(MerId);
+		pay.setOrdId(OrdId);
+		pay.setTransAmt(TransAmt);
+		pay.setTransDate(TransDate);
+		pay.setTransType(TransType);
+		pay.setVersion(Version);
+		pay.setCuryId(CuryId);
+		pay.setGateId(GateId);
+		pay.setPageRetUrl(PageRetUrl);
+		pay.setBgRetUrl(BgRetUrl);
+		pay.setPriv1(Priv1);
+		pay.setChkValue(ChkValue);
+
+		// 20140522������汾����ʹ������ClientIp����
+		pay.setUserIp(ClientIp);
+		model.addAttribute("paybean",pay);
+		model.addAttribute("pay_url",pay_url);
+
+		return "chinapay/createOrderCommit";    	
+    }
+    
+   @ResponseBody
+   @RequestMapping(value = "/ChinaPayNotify",method ={RequestMethod.POST,RequestMethod.GET})
+    public String ChinaPayNotify(HttpServletRequest request,HttpServletResponse response) 
+    {
+	   //return String.valueOf( QueryOrder("2015050511580376","","20060831"));
+	   PayResult payResult = payedNotify(request,response);
+	   if(payResult.getState() != PayResultStateEnum.TryAgain)
+	   {
+		   return	"success";
+	   }
+	   else
+	   {
+		   return	"fail";
+	   }
+    }
+   
+   @RequestMapping(value = "/ChinaPayPageReturn",method ={RequestMethod.POST,RequestMethod.GET})
+   public String ChinaPayPageReturn(HttpServletRequest request,HttpServletResponse response) throws Exception
+   {
+	   PayResult payResult = payedNotify(request,response);
+	   if(payResult.getState() == PayResultStateEnum.Success)
+	   {
+		   //跳转成功页面
+		   return "redirect:"+paydomain+"/pay/success?orderNo="+payResult.getOrderNo();
+	   }
+	   else
+	   {
+		   //跳转错误页面
+		   return "redirect:"+paydomain+"/pay/error?type=" + payResult.getType()+"&msg="+payResult.getMessage();
+	   }
+   }
+   
+   private PayResult payedNotify(HttpServletRequest request,HttpServletResponse response) {
+	   PayResult payResult = new PayResult();
+	   payResult.setState(PayResultStateEnum.Failure); 
+	   
+	   String PubKeyPath = ChinaPaySetting.pubkeyfilepath;
+	   String Version = request.getParameter("version");
+	   String MerId = request.getParameter("merid");
+	   String OrdId = request.getParameter("orderno");
+	   String TransAmt = request.getParameter("amount");// 12
+	   String CuryId = request.getParameter("currencycode");// 3
+	   String TransDate = request.getParameter("transdate");// 8
+	   String TransType = request.getParameter("transtype");// 4
+	   String Status = request.getParameter("status");
+	   String BgRetUrl = request.getParameter("BgRetUrl");
+	   String PageRetUrl = request.getParameter("PageRetUrl");
+	   String GateId = request.getParameter("GateId");
+	   String Priv1 = request.getParameter("Priv1");
+	   String ChkValue = request.getParameter("checkvalue");
+	   boolean buildOK = false;
+		boolean res = false;
+		PrivateKey key = new PrivateKey();
+		try {
+			buildOK = key.buildKey("999999999999999", 0, PubKeyPath);
+		} catch (Exception e) {
+			payResult.setMessage("chinapay building error!");
+			return payResult;
+		}
+		if (!buildOK) {
+			payResult.setMessage("chinapay build error!");
+			return payResult;
+		}
+		try {
+			SecureLink sl = new SecureLink(key);
+			res=sl.verifyTransResponse(MerId, OrdId, TransAmt, CuryId, TransDate, TransType, Status, ChkValue);
+		} catch (Exception e) {
+			payResult.setMessage("chinapay checksing error!");
+			return payResult;
+		}
+	
+		logger.error("银联支付验证签名结果：" + String.valueOf(res));
+		logger.error("银联支付验证签名结果：" + Status);
+		if (res){
+			if (Status.equals("1001")){
+				
+				payResult = service.OrderPaymentSuccess(OrdId,Double.valueOf(TransAmt)/100, PayTypeEnum.ChinaPay);
+				if(payResult.getState() ==PayResultStateEnum.Success)
+				{
+//					payResult = service.orderDataProcessing(OrdId, PayTypeEnum.ChinaPay);
+					//支付5.0版本
+					try {
+						OPayOrder order=payService.getOPayOrder(OrdId, false);
+						BResultMsg resultMsg=payService.editOrderDataProcess(order, PayTypeEnum.ChinaPay);
+						if(resultMsg.getState()==1){
+							payResult.setState(PayResultStateEnum.Success);
+							return payResult;
+						}else {
+							payResult.setState(PayResultStateEnum.Failure);
+						}
+						logger.error("银联支付" + OrdId + "|" + resultMsg.getMsg());
+					} catch (Exception e) {
+						// TODO: handle exception
+						logger.error("银联支付" + OrdId + "|" + e.getMessage());
+					}
+				}
+				
+			}
+		}
+		
+		return payResult;
+   }
+   
+    public String ChinaPayQueryOrder(String orderNo ,String trannsDate) 
+    {
+	   if(orderNo ==null || "".equals(orderNo)){
+		   orderNo = "1509141709390002";
+	   }
+	   if(trannsDate ==null ||"".equals(trannsDate)){
+		   trannsDate ="20150914";
+	   }
+	   
+	   return String.valueOf(QueryOrder(orderNo,trannsDate,"20060831"));
+    }
+   
+   public boolean QueryOrder(String orderNo,String TransDate,String Version){
+	   String MerKeyPath = ChinaPaySetting.merkeyfilepath;
+		String query_url = ChinaPaySetting.queryurl;
+		String MerId = ChinaPaySetting.MerId;
+		String OrderId =orderNo;
+		String TransType = ChinaPaySetting.TransType;// 4
+		String Resv = "okwei";
+		String ChkValue = null;
+
+		boolean buildOK = false;
+		PrivateKey key = new PrivateKey();
+		try {
+			buildOK = key.buildKey(MerId, 0, MerKeyPath);
+		} catch (Exception e) {
+			logger.error("银联支付订单查询 初始化签名Key出现异常");
+			return false;
+		}
+		if (!buildOK) {
+			logger.error("银联支付订单查询 初始化签名Key失败");
+			return false;
+		}
+
+		try {
+			SecureLink sl = new SecureLink(key);
+			ChkValue = sl.Sign(MerId + TransDate + OrderId + TransType);
+		} catch (Exception e) {
+			logger.error("银联支付订单查询 初始化签名Key失败");
+		}
+
+		QueryBean query = new QueryBean();
+		query.setMerId(MerId);
+		query.setOrdId(OrderId);
+		query.setTransDate(TransDate);
+		query.setTransType(TransType);
+		query.setVersion(Version);//"20060831"
+		query.setResv(Resv);
+		query.setChkValue(ChkValue);
+
+		String httpType = "SSL";
+		String timeOut = "60000";
+		String res = sendHttpMsg(query_url, query.toString(), httpType,
+				timeOut);
+		logger.error("银联支付订单查询 返回消息"+res);
+		// ��ǩ
+		HashMap<String, String> returnMap = new HashMap<String, String>();
+		String[] retSplit = res.split("&");
+		for (int i = 0; i < retSplit.length; i++) {
+			int eqaulIndex = retSplit[i].indexOf("=");
+			String keyName = retSplit[i].substring(0, eqaulIndex);
+			String value =  retSplit[i].substring(eqaulIndex+1);
+			returnMap.put(keyName, value);
+		}
+		boolean verifyRet= verify(Version, returnMap, ChinaPaySetting.pubkeyfilepath);
+		res = "签名验证结果=["+verifyRet+"] 订单查询结果=["+res+"]";
+		logger.error(res);
+		return verifyRet;
+   }
+   
+   private String sendHttpMsg(String URL, String strMsg, String httpType,
+			String timeOut) {
+		String returnMsg = "";
+		CPHttpConnection httpSend = null;
+		if (httpType.equals("SSL")) {
+			httpSend = new HttpSSL(URL, timeOut);
+		} else {
+			httpSend = new Http(URL, timeOut);
+		}
+
+		httpSend.setLenType(0);
+		httpSend.setMsgEncoding("GBK");
+		int returnCode = httpSend.sendMsg(strMsg);
+		if (returnCode == 1) {
+			try {
+				returnMsg = new String(httpSend.getReceiveData(), "GBK").trim();
+			} catch (UnsupportedEncodingException e) {
+				logger.error("[getReceiveData Error!]");
+			}
+		} else {
+			logger.error("[报文处理失败,失败代码]"+ returnCode);
+		}
+		return returnMsg;
+	}
+   
+   private boolean verify(String version, HashMap<String, String> map, String pubKeyPath) {
+		
+		StringBuffer sbf = new StringBuffer();
+		sbf.append(map.get("merid"))
+		.append(map.get("orderno"))
+		.append(map.get("amount"))
+		.append(map.get("currencycode"))
+		.append(map.get("transdate"))
+		.append(map.get("transtype"))
+		.append(map.get("status"));
+		
+		if("20140520".equals(version)) {
+			sbf.append(map.get("cpdate"))
+			.append(map.get("cpseqid"));
+		}
+		
+		String chkValue = map.get("checkvalue");
+
+		boolean buildOK = false;
+		PrivateKey key = new PrivateKey();
+		try {
+			buildOK = key.buildKey("999999999999999", 0, pubKeyPath);
+		} catch (Exception e) {
+			logger.error("[银联支付 公钥初始化出现异常]");
+		}
+		if (!buildOK) {
+			logger.error("[银联支付公钥初始化失败]");
+		}
+		try {
+			SecureLink sl = new SecureLink(key);
+			logger.error("verify plain=["+sbf.toString()+"]");
+			return sl.verifyAuthToken(sbf.toString(), chkValue);
+		} catch (Exception e) {
+			logger.error("[银联支付 验签出现异常]"+ e.getMessage());
+		}
+
+		return false;
+	}
+    
+}

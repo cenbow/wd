@@ -1,0 +1,300 @@
+package com.okwei.supplyportal.service.impl;
+
+import java.util.Date;
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+
+import com.okwei.bean.domain.OPayOrder;
+import com.okwei.bean.domain.OProductOrder;
+import com.okwei.bean.domain.OSupplyerOrder;
+import com.okwei.bean.domain.TOrderBackTotal;
+import com.okwei.bean.domain.UCancleOrderAmoutDetail;
+import com.okwei.bean.domain.UTradingDetails;
+import com.okwei.bean.enums.OrderStatusEnum;
+import com.okwei.bean.enums.OrderTypeEnum;
+import com.okwei.bean.enums.PayTypeEnum;
+import com.okwei.bean.enums.UserAmountType;
+import com.okwei.bean.enums.userAmountStatus;
+import com.okwei.dao.impl.BaseDAO;
+import com.okwei.service.impl.BaseService;
+import com.okwei.supplyportal.bean.enums.LtwoTypeEnum;
+import com.okwei.supplyportal.bean.enums.ReFundStatusEnum;
+import com.okwei.supplyportal.bean.enums.RefundTypeEnum;
+import com.okwei.supplyportal.service.IConfirmRefundService;
+
+public class ConfirmRefundService extends BaseService implements IConfirmRefundService {
+
+    @Autowired
+    private BaseDAO baseDAO;
+
+    @Override
+    public String refundPenny(long sellerID, long refundID) {
+	String msg = "退款失败，请联系客服";
+	/*-------------------------------查询退款的信息---------------------------------*/
+	// 首先查找退款记录
+	TOrderBackTotal refOrder = getRefundOrder(sellerID, refundID);
+	if (refOrder == null)
+	    return msg;
+	// 验证该订单是否到了分钱的状态
+	// 退款类型
+	short type = refOrder.getType();
+	// 订单状态
+	short refundState = refOrder.getBackStatus();
+	// 退款时订单状态
+	short orderState = refOrder.getOistatus();
+	if (type == 1) {
+	    // 1.退款
+	    if (refundState != Short.parseShort(ReFundStatusEnum.ShenQingZhong.toString()) || refundState != Short.parseShort(ReFundStatusEnum.WeiDianIn.toString())) {
+		return msg;
+	    }
+	} else if (type == 2) {
+	    // 2.退货
+	    if (refundState != Short.parseShort(ReFundStatusEnum.BuyerFaHuo.toString())) {
+		return msg;
+	    }
+	} else {
+	    return msg;
+	}
+	// 查询供应商订单
+	OSupplyerOrder supOrder = getSupOrder(refOrder.getSupplierOrderId());
+	if (supOrder == null) {
+	    return msg;
+	}
+	// 退款金额
+	double refundAmout = refOrder.getRefundAmout();
+	// 订单总金额
+	double totalAmount = supOrder.getTotalPrice() + supOrder.getPostage();
+
+	// 查询该供应商已退款的金额
+	if (refundAmout > (totalAmount - getRefundedAmout(refOrder.getSupplierOrderId()))) {
+	    return "退款金额大于付款总金额，请联系客服";
+	}
+
+	// 查询退款的产品订单
+	List<OProductOrder> proList = getProList(refOrder.getSupplierOrderId(), refOrder.getBackOrder());
+	if (proList == null || proList.size() <= 0) {
+	    return msg;
+	}
+	/*-------------------------------退款金额处理---------------------------------*/
+	List<UTradingDetails> tradList = getTradingList(refOrder.getSupplierOrderId());
+	if (tradList == null || tradList.size() < 0) {
+	    return msg;
+	}
+	// 已处理退款金额
+	double deductedAmount = 0;
+	// 1.先退佣金
+	for (OProductOrder pro : proList) {
+	    for (UTradingDetails trading : tradList) {
+		if (pro.getProductOrderId().equals(trading.getProductOrder()) && trading.getType().equals(Short.parseShort(UserAmountType.orderYj.toString()))) {
+		    trading.setState(Short.parseShort(userAmountStatus.yiFangKuan.toString()));
+		    trading.setSurplusAmout(0d);
+		    trading.setInTime(new Date());
+		    baseDAO.update(trading);
+		    // 插入一条退款的佣金的记录
+		    UTradingDetails temp = new UTradingDetails();
+		    temp.setWeiId(trading.getWeiId());
+		    temp.setSupplyOrder(trading.getSupplyOrder());
+		    temp.setOrderNo(trading.getOrderNo());
+		    temp.setAmount(trading.getAmount() * -1);// 退款负的金额
+		    temp.setType(Short.parseShort(UserAmountType.refund.toString()));
+		    temp.setState(Short.parseShort(userAmountStatus.yiFangKuan.toString()));
+		    temp.setLtwoType(trading.getType());
+		    temp.setSurplusAmout(0d);
+		    temp.setCreateTime(new Date());
+		    baseDAO.save(temp);
+		    deductedAmount += trading.getAmount();
+		}
+	    }
+	}
+	// 2.不是云商通的单退抽成
+	if (supOrder.getOrderType().intValue() != Integer.parseInt(OrderTypeEnum.Pt.toString())) {
+	    // 按比例退抽成
+	    double scale = refundAmout / totalAmount;
+	    scale = scale > 1 ? 1 : scale;
+	    for (UTradingDetails trading : tradList) {
+		if (trading.getType().equals(Short.parseShort(UserAmountType.rzYj.toString())) && trading.getLtwoType().equals(Short.parseShort(LtwoTypeEnum.BookCut.toString()))) {
+		    double surAmout = trading.getSurplusAmout() * (1 - scale);
+		    surAmout = surAmout < 0 ? 0 : surAmout;
+		    trading.setSurplusAmout(surAmout);
+		    trading.setInTime(new Date());
+		    // 如果是整单退款 状态为已放款
+		    if (refOrder.getSingle().shortValue() == 1) {
+			trading.setState(Short.parseShort(userAmountStatus.yiFangKuan.toString()));
+		    }
+		    baseDAO.update(trading);
+		    // 插入一条退款抽成的记录
+		    double amount = trading.getAmount() * scale;
+		    UTradingDetails temp = new UTradingDetails();
+		    temp.setWeiId(trading.getWeiId());
+		    temp.setSupplyOrder(trading.getSupplyOrder());
+		    temp.setOrderNo(trading.getOrderNo());
+		    temp.setAmount(amount * -1);// 退款负的金额
+		    temp.setType(Short.parseShort(UserAmountType.refund.toString()));
+		    if (refOrder.getSingle().shortValue() == 1) {
+			temp.setState(Short.parseShort(userAmountStatus.yiFangKuan.toString()));
+		    } else {
+			temp.setState(trading.getState());
+		    }
+		    temp.setLtwoType(trading.getType());
+		    temp.setSurplusAmout(0d);
+		    temp.setCreateTime(new Date());
+		    baseDAO.save(temp);
+		    deductedAmount += amount;
+		}
+	    }
+	}
+
+	// 3.扣货款
+	for (UTradingDetails trading : tradList) {
+	    if (trading.getWeiId().equals(sellerID) && trading.getType().equals(Short.parseShort(UserAmountType.supplyPrice.toString()))) {
+		// 货款还需要退款的金额
+		double amount = refundAmout - deductedAmount;
+		if (amount > 0) {
+		    double surAmout = trading.getSurplusAmout() - amount;
+		    surAmout = surAmout < 0 ? 0 : surAmout;
+		    trading.setSurplusAmout(surAmout);
+		    trading.setInTime(new Date());
+		    // 如果是整单退款 状态为已放款
+		    if (refOrder.getSingle().shortValue() == 1) {
+			trading.setState(Short.parseShort(userAmountStatus.yiFangKuan.toString()));
+		    }
+		    baseDAO.update(trading);
+		    // 插入一条退款的记录
+		    UTradingDetails temp = new UTradingDetails();
+		    temp.setWeiId(trading.getWeiId());
+		    temp.setSupplyOrder(trading.getSupplyOrder());
+		    temp.setOrderNo(trading.getOrderNo());
+		    temp.setAmount(amount * -1);// 退款负的金额
+		    temp.setType(Short.parseShort(UserAmountType.refund.toString()));
+		    if (refOrder.getSingle().shortValue() == 1) {
+			temp.setState(Short.parseShort(userAmountStatus.yiFangKuan.toString()));
+		    } else {
+			temp.setState(trading.getState());
+		    }
+		    temp.setLtwoType(trading.getType());
+		    temp.setSurplusAmout(0d);
+		    temp.setCreateTime(new Date());
+		    baseDAO.save(temp);
+		}
+		break;
+	    }
+	}
+	// 4.给买家退款，钱从哪里来，回哪里去。
+	// 查询支付订单
+	OPayOrder payOrder = getParOrder(supOrder.getPayOrderId());
+	if (payOrder == null)
+	    throw new RuntimeException();
+	if (payOrder.getPayType().equals(Short.parseShort(PayTypeEnum.WeiWallet.toString()))) {
+	    // 微钱包支付
+	    // 插入一条退款到买家微钱包的记录
+	    UTradingDetails temp = new UTradingDetails();
+	    temp.setWeiId(supOrder.getBuyerID());
+	    temp.setSupplyOrder(refOrder.getSupplierOrderId());
+	    temp.setOrderNo(supOrder.getPayOrderId());
+	    temp.setAmount(refundAmout);// 退款的金额
+	    temp.setType(Short.parseShort(UserAmountType.buyerPrice.toString()));
+	    temp.setState(Short.parseShort(userAmountStatus.yiFangKuan.toString()));
+	    temp.setLtwoType((short) 0);
+	    temp.setSurplusAmout(refundAmout);
+	    temp.setCreateTime(new Date());
+	    baseDAO.save(temp);
+
+	} else {
+	    // 银行卡支付
+	    UCancleOrderAmoutDetail model = new UCancleOrderAmoutDetail();
+	    model.setWeiId(supOrder.getBuyerID());
+	    model.setrId(refOrder.getBackOrder());
+	    model.setTkorderNo(supOrder.getSupplierOrderId());
+	    model.setOrderNo(supOrder.getPayOrderId());
+	    model.setPayType(payOrder.getPayType());
+	    model.setTransactionType((short) supOrder.getOrderType().intValue());
+	    model.setRefundType(Short.parseShort(RefundTypeEnum.gouwu.toString()));
+	    model.setAmount(refundAmout);
+	    model.setCounterFee(0d);
+	    model.setCreateTime(new Date());
+	    model.setState((short) 0);
+	    model.setType((short) 2);
+	    baseDAO.save(model);
+	}
+	// 5.修改订单状态
+	if (refOrder.getSingle().shortValue() == 1) {
+	    // 整单退 订单状态改为退款中
+	    supOrder.setState(Short.parseShort(OrderStatusEnum.Refunded.toString()));
+	} else {
+	    // 非整单退 订单状态改为原先的状态
+	    supOrder.setState(refOrder.getOistatus());
+	}
+	baseDAO.update(supOrder);
+	// 修改退款记录的状态
+	refOrder.setBackStatus(Short.parseShort(ReFundStatusEnum.GysQueRen.toString()));
+	return "1";
+    }
+
+    private double getRefundedAmout(String supOrderID) {
+	double amout = 0d;
+	String hql = "select sum(refundAmout) TOrderBackTotal where supplierOrderId=? and backStatus=?";
+	List<Object[]> list = baseDAO.find(hql, new Object[] { supOrderID, Short.parseShort(ReFundStatusEnum.GysQueRen.toString()) });
+	if (list != null && list.size() > 0) {
+	    amout = (double) list.get(0)[0];
+	}
+	return amout;
+    }
+
+    /**
+     * 查询该供应商的支付订单
+     * 
+     * @param payOrderID
+     * @return
+     */
+    private OPayOrder getParOrder(String payOrderID) {
+	String hql = "from OPayOrder where payOrderId=?";
+	return baseDAO.getUniqueResultByHql(hql, new Object[] { payOrderID });
+    }
+
+    /**
+     * 查询该供应商的佣金记录
+     * 
+     * @param supOrderID
+     * @return
+     */
+    private List<UTradingDetails> getTradingList(String supOrderID) {
+	String hql = "from UTradingDetails where supplyOrder=?";
+	return baseDAO.find(hql, new Object[] { supOrderID });
+    }
+
+    /**
+     * 查询退款的产品
+     * 
+     * @param supOrderID
+     * @param backOrder
+     * @return
+     */
+    private List<OProductOrder> getProList(String supOrderID, Long backOrder) {
+	String hql = "from OProductOrder where supplierOrderId=? and backOrder=?";
+	return baseDAO.find(hql, new Object[] { supOrderID, backOrder });
+    }
+
+    /**
+     * 获取供应商订单
+     * 
+     * @param supOrderID
+     * @return
+     */
+    private OSupplyerOrder getSupOrder(String supOrderID) {
+	String hql = "from OSupplyerOrder where supplierOrderId=?";
+	return baseDAO.getUniqueResultByHql(hql, new Object[] { supOrderID });
+    }
+
+    /**
+     * 查询退款记录
+     * 
+     * @param sellerID
+     * @param refundID
+     * @return
+     */
+    private TOrderBackTotal getRefundOrder(long sellerID, long refundID) {
+	String hql = "from TOrderBackTotal where backOrder=? and sellerId=?";
+	return baseDAO.getUniqueResultByHql(hql, new Object[] { refundID, sellerID });
+    }
+}

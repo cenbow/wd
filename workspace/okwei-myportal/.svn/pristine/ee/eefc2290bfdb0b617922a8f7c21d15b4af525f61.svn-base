@@ -1,0 +1,49 @@
+package com.okwei.myportal.web;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+
+import com.okwei.common.Limit;
+import com.okwei.common.PageResult;
+import com.okwei.myportal.bean.dto.QueryParam;
+import com.okwei.myportal.bean.vo.DistributorVO;
+import com.okwei.myportal.service.IDistributorMgtService;
+import com.okwei.web.base.BaseController;
+
+@Controller
+@RequestMapping(value = "/myDistributor")
+public class DistributorMgtController extends BaseController
+{
+
+    private final static Log logger = LogFactory.getLog(DistributorMgtController.class);
+
+    @Autowired
+    private IDistributorMgtService distributorMgtService;
+
+    @RequestMapping(value = "/list")
+    public String list(@ModelAttribute("queryParam") QueryParam queryParam,@RequestParam(required = false,defaultValue = "1") int pageId,Model model)
+    {
+        PageResult<DistributorVO> pageResult = distributorMgtService.getMyDistributors(Long.parseLong("1111"),Limit.buildLimit(pageId,10));
+        model.addAttribute("pageResult",pageResult);
+        return "distributor/list";
+    }
+    
+    @RequestMapping(value = "/putaway")
+    public String putaway(@ModelAttribute("queryParam") QueryParam queryParam,@RequestParam(required = false,defaultValue = "1") int pageId,Model model)
+    {
+        return "distributor/putaway";
+    }
+    
+    @RequestMapping(value = "/myPutaway")
+    public String myPutaway(@ModelAttribute("queryParam") QueryParam queryParam,@RequestParam(required = false,defaultValue = "1") int pageId,Model model)
+    {
+        return "distributor/myPutaway";
+    }
+
+}

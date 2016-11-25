@@ -1,0 +1,18 @@
+package com.okwei.supplyportal.service.impl;
+
+import com.okwei.common.Limit;
+import com.okwei.common.PageResult;
+import com.okwei.service.impl.BaseService;
+import com.okwei.supplyportal.bean.vo.ParamOrderSearch;
+import com.okwei.supplyportal.bean.vo.SupplyOrderVO;
+import com.okwei.supplyportal.service.IOrderManageService;
+
+public class OrderManageService extends  BaseService implements IOrderManageService {
+
+	@Override
+	public PageResult<SupplyOrderVO> getOrderListPageResult(ParamOrderSearch param,Limit limit)
+	{
+		
+		return null;
+	}
+}

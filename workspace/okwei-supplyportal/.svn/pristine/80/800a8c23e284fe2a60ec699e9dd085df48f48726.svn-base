@@ -1,0 +1,35 @@
+package com.okwei.supplyportal.bean.vo;
+
+import java.util.List;
+
+public class ProductManageVO {
+private SupplyerMsg supmsg;
+private SupplyOrderCount ordercount;
+private SupplyerProductCount productcount;
+private List<SupplyerProductMsg> productlist;
+public SupplyerMsg getSupmsg() {
+	return supmsg;
+}
+public void setSupmsg(SupplyerMsg supmsg) {
+	this.supmsg = supmsg;
+}
+public SupplyOrderCount getOrdercount() {
+	return ordercount;
+}
+public void setOrdercount(SupplyOrderCount ordercount) {
+	this.ordercount = ordercount;
+}
+public SupplyerProductCount getProductcount() {
+	return productcount;
+}
+public void setProductcount(SupplyerProductCount productcount) {
+	this.productcount = productcount;
+}
+public List<SupplyerProductMsg> getProductlist() {
+	return productlist;
+}
+public void setProductlist(List<SupplyerProductMsg> productlist) {
+	this.productlist = productlist;
+}
+
+}

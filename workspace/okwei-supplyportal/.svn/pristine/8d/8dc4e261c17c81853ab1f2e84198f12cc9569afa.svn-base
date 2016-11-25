@@ -1,0 +1,104 @@
+package com.okwei.supplyportal.bean.vo;
+
+import javax.servlet.http.Cookie;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+
+import com.okwei.bean.domain.UShopInfo;
+import com.okwei.bean.domain.USupplyer;
+import com.okwei.bean.domain.UWeiSeller;
+import com.okwei.dao.IBaseDAO;
+import com.okwei.util.ImgDomain;
+import com.okwei.util.ObjectUtils;
+import com.okwei.util.RedisUtil;
+import com.okwei.web.base.BaseController;
+
+public class BaseSSOController extends BaseController
+{
+    @Autowired
+    HttpServletRequest request; // 这里可以获取到request
+    @Autowired
+    HttpServletResponse response;
+
+    @Autowired
+    @Qualifier("baseDAO_User")
+    private IBaseDAO baseDAO;
+    private LoginUser loginUser;
+
+    public LoginUser getLoginUser()
+    {
+        return getUser();
+    }
+
+    public LoginUser getUser()
+    {
+        /* 测试用 */
+
+        // LoginUser testLoginUser = new LoginUser();
+        // testLoginUser.setWeiID(1036799);
+        // if(testLoginUser != null)
+        // {
+        // return testLoginUser;
+        // }
+
+        /* 用的时候删除上面代码 */
+
+        // 从上下文中获取cookie
+        Cookie[] cookies = request.getCookies();
+        String cookie_tiket = "";
+        for(Cookie cookie : cookies)
+        {
+            if("tiket".equals(cookie.getName()))
+            {
+                cookie_tiket = cookie.getValue();
+                break;
+            }
+        }
+        LoginUser user = new LoginUser();
+        if(!ObjectUtils.isEmpty(cookie_tiket))
+        {
+            // 先判断又没有ibs的tiket
+            Object userObject = RedisUtil.getObject(cookie_tiket + "_IBS");
+            if(userObject != null)// 如果存在
+            {
+                RedisUtil.setExpire(cookie_tiket + "_IBS",1800);// 延长时间
+                user = (LoginUser) userObject;
+                return user;
+            }
+            else
+            {
+                String userWeiIdObject = RedisUtil.getString(cookie_tiket + "_java");
+                userWeiIdObject = userWeiIdObject.replaceAll("\"","");
+                if(userWeiIdObject != null)
+                {
+                    long weiId = Long.parseLong(userWeiIdObject);
+                    UWeiSeller userSeller = baseDAO.get(UWeiSeller.class,weiId);
+                    USupplyer userSupplyer = baseDAO.get(USupplyer.class,weiId);
+                    UShopInfo shopInfo = baseDAO.get(UShopInfo.class,weiId);
+                    user.setWeiID(weiId);
+                    user.setWeiImg(ImgDomain.GetFullImgUrl(userSeller.getImages()));
+                    user.setWeiName(userSeller.getWeiName());
+                    user.setWeiType(Short.valueOf("0"));
+                    if(userSupplyer != null && userSupplyer.getType() != 0)
+                    {
+                        user.setWeiName(userSupplyer.getCompanyName());
+                        user.setWeiImg(ImgDomain.GetFullImgUrl(userSupplyer.getSupplierLogo()));
+                        user.setWeiType(userSupplyer.getType());
+                    }
+                    if(shopInfo != null)
+                    {
+                        user.setWeiImg(ImgDomain.GetFullImgUrl(shopInfo.getShopImg()));
+                        user.setWeiName(shopInfo.getShopName());
+                    }
+                    RedisUtil.setObject(cookie_tiket + "_IBS",user,1800);
+                    // 添加redis缓存的时间
+                    return user;
+                }
+            }
+        }
+        return user;
+    }
+}

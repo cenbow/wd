@@ -1,0 +1,281 @@
+package com.okwei.supplyportal.web;
+
+import java.util.List;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+import com.okwei.bean.domain.OSupplyerOrder;
+import com.okwei.bean.domain.TOrderBackTotal;
+import com.okwei.bean.enums.OrderStatusEnum;
+import com.okwei.common.AjaxUtil;
+import com.okwei.flow.mothed.FlowMethod;
+import com.okwei.flow.vo.FTask;
+import com.okwei.flow.vo.ReturnModel;
+import com.okwei.flow.vo.ReturnStatus;
+import com.okwei.supplyportal.bean.vo.BaseSSOController;
+import com.okwei.supplyportal.bean.vo.LoginUser;
+import com.okwei.supplyportal.bean.vo.MsgResult;
+import com.okwei.supplyportal.bean.vo.ProductPriceEditParam;
+import com.okwei.supplyportal.bean.vo.SupplyBookOrderParam;
+import com.okwei.supplyportal.dao.IOrderManageDAO;
+import com.okwei.supplyportal.service.IOrderManageService;
+import com.okwei.util.ObjectUtils;
+
+@Controller
+@RequestMapping(value = "/order")
+public class OrderAjaxController extends BaseSSOController
+{
+    @Autowired
+    private IOrderManageService orderService;
+    @Autowired
+    private IOrderManageDAO orderBase;
+
+    private Log logger = LogFactory.getLog(this.getClass());
+
+    @ResponseBody
+    @RequestMapping(value = "/orderajax",method =
+    {RequestMethod.POST,RequestMethod.GET})
+    public String orderajax(String key,String orderNo,String msg,Long cadid,String danhao,Long processId,String kuaidi,String postage,String totalPrice,String kuaidiname)
+    {
+        String returnData = "";
+        if(key == null || key == "")
+        {
+            return AjaxUtil.ajaxSuccess("参数有误!");
+        }
+        LoginUser user = super.getLoginUser();
+        if(user == null || user.getWeiID() == 0)
+        {
+            return AjaxUtil.ajaxSuccess("请登录!");
+        }
+        long weiid = user.getWeiID();
+        switch(key)
+        {
+            case "delivery":// 发货
+                returnData = delivery(orderNo,weiid,kuaidi,kuaidiname,danhao);
+                break;
+            case "updateorder":// 修改价格
+                returnData = updateorder(weiid,postage,orderNo,totalPrice);
+                break;
+            case "confirmsh":// 确认收货地址*
+                returnData = confirmsh(processId,weiid,cadid);
+                break;
+            case "delete":// 删除订单操作*
+                returnData = delete(weiid,orderNo);
+                break;
+            case "agreed":// 同意退款*
+                returnData = agreed(weiid,processId);
+                break;
+            case "notagreed":// 不同意退款*
+                returnData = notagreed(weiid,processId,msg);
+                break;
+            case "refused":// 拒绝订单*
+                returnData = refused(weiid,orderNo);
+                break;
+            case "confirmcargo":// 确认收货操作*
+                returnData = confirmcargo(weiid,processId);
+                break;
+            case "finalpayment":// 支付尾款确认
+                returnData = finalpayment(weiid,orderNo);
+                break;
+
+            default:
+                return AjaxUtil.ajaxSuccess("参数有误!");
+        }
+        return AjaxUtil.ajaxSuccess(returnData);
+    }
+
+    /**
+     * 支付尾款确认
+     */
+    public String finalpayment(Long weiId,String orderNo)
+    {
+        MsgResult mr = orderService.bookOrderComplete(weiId,orderNo);
+        return String.valueOf(mr.getState());
+    }
+
+    /**
+     * 确认收货操作
+     */
+    public String confirmcargo(Long weiId,Long processId)
+    {
+        if(processId == null)
+        {
+            return "参数有误";
+        }
+        MsgResult mr = orderService.saveRefundRecieved(processId,weiId);
+        return String.valueOf(mr.getState());
+    }
+
+    /**
+     * 拒绝预订单
+     */
+    public String refused(Long weiid,String orderNo)
+    {
+        SupplyBookOrderParam sb = new SupplyBookOrderParam();
+        sb.setWeiid(weiid);
+        sb.setSupplyOrderid(orderNo);
+        sb.setSured(false);
+        MsgResult mr = orderService.insertBookOrder(sb);
+        return String.valueOf(mr.getState());
+    }
+
+    /**
+     * 不同意退款
+     */
+    public String notagreed(Long weiId,Long processId,String msg)
+    {
+        if(processId == null)
+        {
+            return "参数有误";
+        }
+        boolean ret = editRefundState(weiId,processId,false,msg);
+        if(ret)
+        {
+            return "1";
+        }
+        else
+        {
+
+            return "0";
+        }
+    }
+
+    /**
+     * 同意退款
+     */
+    public String agreed(Long weiId,Long processId)
+    {
+        if(processId == null)
+        {
+            return "参数有误";
+        }
+        boolean ret = editRefundState(weiId,processId,true,"");
+        if(ret)
+        {
+            return "1";
+        }
+        else
+        {
+
+            return "0";
+        }
+    }
+
+    /**
+     * 删除订单
+     */
+    public String delete(Long weiId,String orderNo)
+    {
+        MsgResult ret = orderService.deleteSupplyOrder(weiId,orderNo);
+        return String.valueOf(ret.getState());
+    }
+
+    /**
+     * 确认收货地址
+     */
+    public String confirmsh(Long processId,Long weiId,Long addrid)
+    {
+        if(processId == null || addrid == null)
+        {
+            return "参数有误";
+        }
+        MsgResult ret = orderService.saveRefundOrderAddr(processId,weiId,addrid);
+        return String.valueOf(ret.getState());
+    }
+
+    /**
+     * 修改价格
+     */
+    public String updateorder(long weiid,String postage,String supplyOrderId,String totalPrice)
+    {
+        if(ObjectUtils.isEmpty(postage) || ObjectUtils.isEmpty(supplyOrderId) || ObjectUtils.isEmpty(totalPrice))
+        {
+            return "参数有误";
+        }
+        ProductPriceEditParam param = new ProductPriceEditParam();
+        param.setPostPrice(Double.parseDouble(postage));
+        param.setSupplyOrderId(supplyOrderId);
+        param.setTotalPrice(Double.parseDouble(totalPrice));
+        param.setSupplyWeiid(weiid);
+        MsgResult mResult = orderService.editProductPrice(param);
+        return String.valueOf(mResult.getState());
+    }
+
+    /**
+     * 发货
+     */
+    public String delivery(String supplyOrderid,long weiid,String dcomanpyNo,String deliveryCompany,String deliveryOrderNo)
+    {
+        OSupplyerOrder order = orderBase.getEntity(OSupplyerOrder.class,supplyOrderid);
+        if(order != null && Short.parseShort(OrderStatusEnum.Refunding.toString()) == order.getState())
+        {
+            List<TOrderBackTotal> list = orderBase.getTOrderBackTotals(order.getSupplierOrderId());
+            if(list != null && list.size() > 0)
+            {
+                for(TOrderBackTotal too : list)
+                {
+                    ReturnModel reModel = FlowMethod.QueryTask(too.getFlowId().toString(),order.getSupplyerId());
+                    if(reModel != null && reModel.getStatu().equals(ReturnStatus.Success))
+                    {
+                        FTask task = (FTask) reModel.getBasemodle();
+                        FlowMethod.ActionFlow(task.getTaskId(),task.getTaskUser(),"disagree","卖家已经发货");
+                    }
+                }
+            }
+        }
+        MsgResult mr = orderService.sendGoods(supplyOrderid,weiid,dcomanpyNo,deliveryCompany,deliveryOrderNo);
+        return String.valueOf(mr.getState());
+    }
+
+    public boolean editRefundState(long supplyweiid,long refundid,boolean isAgree,String content)
+    {
+        String msgString = "开始";
+        TOrderBackTotal refund = orderBase.getEntity(TOrderBackTotal.class,refundid);
+        if(refund != null)
+        {
+            msgString += "floid:" + refund.getFlowId() + ";weiid:" + supplyweiid;
+            ReturnModel reModel = FlowMethod.QueryTask(refund.getFlowId().toString(),supplyweiid);
+            if(reModel != null)
+                msgString += reModel.getStatu() + ";";
+
+            if(reModel != null) // && reModel.getStatu().equals(ReturnStatus.Success)
+            {
+                FTask task = (FTask) reModel.getBasemodle();
+                if(isAgree)
+                {
+                    if("".equals(content))
+                        content = "卖家同意退款";
+                    if(FlowMethod.ActionFlow(task.getTaskId(),task.getTaskUser(),"agree",content))
+                    {
+                        OSupplyerOrder oso = orderBase.getEntity(OSupplyerOrder.class,refund.getSupplierOrderId());
+                        oso.setState(Short.parseShort("6"));
+                        orderService.update(oso);
+                        return true;
+                    }
+                    msgString += "操作失败；";
+                }
+                else
+                {
+                    if("".equals(content))
+                        content = "卖家不同意退款";
+                    if(FlowMethod.ActionFlow(task.getTaskId(),task.getTaskUser(),"disagree",content))
+                        return true;
+                    msgString += "操作失败；";
+                }
+            }
+            else
+            {
+                msgString += "任务不存在；";
+            }
+        }
+        msgString += "退款记录不存在";
+        logger.error(msgString);
+        return false;
+    }
+}

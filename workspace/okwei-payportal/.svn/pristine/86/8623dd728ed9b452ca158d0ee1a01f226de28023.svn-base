@@ -1,0 +1,510 @@
+.mar1200 {
+	width: 1200px;
+	margin: 0 auto;
+}
+.type_count {
+	height: 45px;
+	line-height: 45px;
+	color: #787878;
+}
+.type_count span {
+	display: block;
+	float: left;
+	margin-right: 10px;
+}
+.type_count a {
+	display: block;
+	padding-left: 10px;
+	padding-right: 10px;
+	margin-right: 10px;
+	margin-top: 10px;
+	border: 1px solid #eee;
+	background: #fff;
+	height: 23px;
+	float: left;
+	line-height: 23px;
+}
+.type_count a span {
+	display: inherit;
+	float: right;
+	margin-left: 10px;
+}
+.FX {
+	background: url("http://base.okimgs.com/images/xh_fx.gif") no-repeat scroll 0 0 rgba(0, 0, 0, 0);
+	color: #FFFFFF;
+	float: left;
+	font-family: "宋体";
+	font-size: 12px;
+	height: 20px;
+	line-height: 20px;
+	position: relative;
+	text-indent: 24px;
+	width: 54px;
+}
+.fx_WKX {
+	background: none repeat scroll 0 0 #FFFFFF;
+	border: 1px solid #1A9A5C;
+	height: 40px;
+	right: 0px;
+	top: 20px;
+	overflow: hidden;
+	position: absolute;
+	width: 120px;
+	z-index: 1;
+}
+.ZF div {
+	float: left;
+}
+.pro_right ul.pro_right_txt .mzh_erweima {
+	float: left;
+	width: 42px;
+	color: #ececec;
+	margin-left: 10px;
+	display: inline;
+	position: relative;
+}
+.pro_right ul.pro_right_txt .mzh_erweima .mzh_erweima_tp {
+	float: left;
+	width: 42px;
+	color: #ececec;
+	display: inline;
+	cursor: pointer;
+}
+.pro_right ul.pro_right_txt .mzh_erweima .mzh_erweima_dw {
+	width: 183px;
+	position: absolute;
+	left: -68px;
+	top: 36px;
+	z-index: 999;
+	display: none;
+}
+.pro_right ul.pro_right_txt .mzh_erweima .mzh_erweima_dw .mzh_erweima_dw_jiantou {
+	width: 183px;
+	float: left;
+	background: url("images/mzh-2014518-jiantou.png") center 0px no-repeat;
+	color: #000000;
+	margin: 0px 0 0 0px;
+	height: 5px;
+	overflow: hidden;
+}
+.pro_right ul.pro_right_txt .mzh_erweima .mzh_erweima_dw .mzh_erweima_dw_bj {
+	background: url("http://base.okimgs.com/images/nav_app_bj.png") 0px 0px no-repeat;
+	width: 183px;
+	height: 164px;
+	float: left;
+	margin: 0px 0 0 7px;
+	padding: 20px 0px 0px;
+	text-align: center;
+	color: #9e958c;
+	line-height: 32px;
+}
+/* 分页 */
+.page {
+	width: 960px;
+	float: left;
+	height: 26px;
+	margin: 12px 0 0 0;
+	overflow: hidden;
+	font-size: 14px;
+	height: 30px;
+}
+.page a {
+	background: #fff;
+	display: block;
+	float: left;
+	border: 1px solid #ccc;
+	color: #a0a0a0;
+	height: 24px;
+	line-height: 24px;
+	padding: 0 9px 0 9px;
+	margin: 0 4px 0 4px;
+	text-align: center;
+}
+.page a:hover {
+	background: #cc0000;
+	text-decoration: none;
+	color: #fff;
+	border: none;
+	height: 26px;
+	line-height: 26px;
+	padding: 0 10px 0 10px;
+}
+.prev {
+	background: #cc0000;
+	color: #fff;
+	border: none;
+	height: 26px;
+	line-height: 26px;
+	padding: 0 10px 0 10px;
+}
+.page span.current {
+	background: #c00;
+	display: block;
+	float: left;
+	border: 1px solid #ccc;
+	color: #fff;
+	height: 24px;
+	line-height: 24px;
+	padding: 0 9px 0 9px;
+	margin: 0 4px 0 4px;
+	text-align: center;
+}
+.page span {
+	float: left;
+	line-height: 30px;
+}
+/***************** 详情页新加 **************************/
+    
+.cft-weixin {
+	background-attachment: scroll;
+	background-clip: border-box;
+	background-color: rgba(0, 0, 0, 0);
+	background-image: url("http://base.okimgs.com/images/xh_weixin_xingxi.png");
+	background-origin: padding-box;
+	background-position: 0 0;
+	background-repeat: no-repeat;
+	background-size: auto auto;
+	display: inline-block;
+	height: 20px;
+	margin-bottom: 0;
+	margin-left: 0;
+	margin-right: 10px;
+	margin-top: 0;
+	width: 90px;
+}
+.cft-ico {
+	background-attachment: scroll;
+	background-clip: border-box;
+	background-color: rgba(0, 0, 0, 0);
+	background-image: url("http://base.okimgs.com/images/cft_ico2.png");
+	background-origin: padding-box;
+	background-position: 0 0;
+	background-repeat: no-repeat;
+	background-size: auto auto;
+	display: inline-block;
+	height: 20px;
+	margin-bottom: 0;
+	margin-left: 0;
+	margin-right: 10px;
+	margin-top: 0;
+	width: 124px;
+}
+.pprz-ico {
+	display: inline-block;
+	background: url(http://base.okimgs.com/images/douguanni_xqing.gif) no-repeat;
+	height: 20px;
+	margin-bottom: 0;
+	margin-left: 0;
+	margin-right: 10px;
+	margin-top: 0;
+	width: 84px;
+	cursor: pointer;
+	position: relative;
+}
+.htc_borkandan {
+	position: absolute;
+	width: 225px;
+	overflow: hidden;
+	z-index: 5;
+	top: 20px;
+	right: -120px;
+	cursor: auto;
+	display: none;
+}
+.jibi_1 {
+	background: url(http://base.okimgs.com/images/jibi_sb1.gif) no-repeat;
+	width: 225px;
+	height: 11px;
+	overflow: hidden;
+}
+.jibi_2 {
+	background: url(http://base.okimgs.com/images/jibi_sb2.gif) repeat-y;
+	width: 225px;
+	overflow: hidden;
+}
+.jibi_2 ul li {
+	line-height: 30px;
+	color: #000;
+	font-size: 12px;
+	text-align: left;
+	height: 30px;
+	font-weight: 100;
+	color: #8d8d8d;
+	margin-left: 12px;
+	padding-left: 26px;
+}
+.bgone_1 {
+	background: url(http://base.okimgs.com/images/weibaiotinenduo.gif) no-repeat;
+	background-position: 0% 50%;
+}
+.bgone_2 {
+	background: url(http://base.okimgs.com/images/zheng_uud.gif) no-repeat;
+	background-position: 0% 50%;
+}
+.bgone_3 {
+	background: url(http://base.okimgs.com/images/moneyooe.gif) no-repeat;
+	background-position: 0% 50%;
+}
+.bgone_4 {
+	background: url(http://base.okimgs.com/images/moneyooy.gif) no-repeat;
+	background-position: 0% 50%;
+}
+.jibi_3 {
+	background: url(http://base.okimgs.com/images/jibi_sb3.gif) no-repeat;
+	width: 225px;
+	height: 5px;
+	overflow: hidden;
+}
+.mzh_dazhe {
+	float: left;
+	width: 37px;
+	height: 17px;
+	background: none repeat scroll 0% 0% rgb(119, 119, 119);
+	color: rgb(255, 255, 255);
+	text-align: center;
+	line-height: 17px;
+	margin: 5px 10px 0px 0px;
+}
+.mzh_yuanjia {
+	color: rgb(153, 153, 153);
+	float: left;
+	margin: 0px 15px 0px 0px;
+	font-family: '微软雅黑';
+	text-decoration: line-through;
+	font-size: 14px;
+}
+.mzh_xqy_mf_10_1_r_three_time_l {
+	float: left;
+}
+#endTime {
+	float: right;
+	background: url("http://base2.okimgs.com/images/mzh_11_19_sj.png") 0 4px no-repeat;
+	background-size: 1.3em;
+	text-indent: 25px;
+	color: #535353;
+	font-size: 16px;
+	font-family: "微软雅黑";
+}
+.mzh_xqy_xx_5 font {
+	color: #333;
+}
+.mzh_dztzw {
+	position: absolute;
+	right: 0px;
+	top: 0px;
+	width: 105px;
+	height: 36px;
+	background: url("http://base2.okimgs.com/images/mzh_12_9_bg.png");
+}
+.mzh_dztzw_li {
+	float: left;
+	width: 93px;
+	height: 26px;
+	line-height: 26px;
+	border: 1px solid #b61a02;
+	background: #fff;
+	color: #666;
+	margin: 5px;
+	border-radius: 2px;
+	cursor: pointer;
+}
+.mzh_dztzw_li img {
+	float: left;
+	margin: 5px 5px 0 7px;
+	width: 15px;
+	height: 14px;
+}
+/* 原价 */
+.mzh_yuanjia {
+	color: #999;
+	text-decoration: line-through;
+	font-size: 12px;
+	margin-right: 10px;
+}
+.mzh_tishi_4 {
+	float: left;
+	width: 200px;
+	background: #61b612;
+	color: #fff;
+	border-radius: 5px;
+	text-align: center;
+	line-height: 40px;
+	border: 1px solid #ddd;
+	margin: 20px 0 0 100px;
+	font-size: 16px;
+	cursor: pointer;
+}
+.mzh_tishi_4:hover {
+	background: #50a005;
+}
+.mzh_tishi_5 {
+	float: left;
+	width: 100%;
+	text-align: center;
+	font-size: 16px;
+	color: #ccc;
+	margin-top: 20px;
+}
+.mzh_tishi_5 a {
+	color: #2b72f5;
+}
+/* 弹出层 */
+.mzh_12_10_tc {
+	float: left;
+	width: 100%;
+}
+.mzh_12_10_tc .mzh_tcc1 {
+	margin: 0px auto;
+	width: 470px;
+	height: 310px;
+}
+.mzh_12_10_tc .mzh_tcc1 li {
+	float: left;
+	font-size: 17px;
+	font-family: "微软雅黑";
+	margin: 0 40px 0 20px;
+	display: inline;
+	line-height: 28px;
+}
+.mzh_12_10_tc .mtcc {
+	margin: 0px auto;
+	;
+	z-index: 999;
+	border: 1px solid #6b93b5;
+	width: 470px;
+	background: #86a9c6;
+	padding: 4px;
+	overflow: hidden;
+	height: 310px;
+}
+.mzh_12_10_tc .tcc1 {
+	float: left;
+	width: 468px;
+	background: #f9f9f9;
+	height: 308px;
+	border: 1px solid #6b93b5;
+}
+.mzh_12_10_tc .mzh_quxiao {
+	float: left;
+	line-height: 30px;
+	margin-left: 10px;
+	cursor: pointer;
+	color: #323232;
+}
+.mzh_12_10_tc .tcc_biaoqian {
+	float: left;
+	width: 468px;
+	border-top: 1px solid #b8cfe2;
+	border-bottom: 1px solid #7ea3c2;
+	line-height: 32px;
+	background: #99b5cd;
+	color: #fff;
+	font-weight: bold;
+	text-indent: 10px;
+}
+.mzh_12_10_tc .mzh_tishi {
+	float: left;
+	width: 408px;
+	padding: 32px 20px 20px 40px;
+	overflow: hidden;
+}
+.mzh_12_10_tc .mzh_tishi li.mzh_tishi_1 {
+	float: left;
+	width: 408px;
+	font-size: 20px;
+	font-family: "微软雅黑";
+	color: #000;
+	margin-bottom: 20px;
+	display: inline;
+}
+.mzh_12_10_tc .mzh_tishi li.mzh_tishi_2 {
+	float: left;
+	width: 408px;
+	font-size: 12px;
+	font-family: "宋体";
+	color: #000;
+	line-height: 28px;
+}
+.mzh_12_10_tc .mzh_tishi li.mzh_tishi_3 {
+	margin-top: 15px;
+	display: inline;
+	float: left;
+	width: 130px;
+	height: 38px;
+	font-size: 16px;
+	background: url("http://base2.okimgs.com/images/xin/mzh_2014529-anniu.png") no-repeat;
+	color: #fff;
+	line-height: 38px;
+	text-align: center;
+}
+.mzh_12_10_tc .mzh_tishi li.mzh_tishi_3:hover {
+	margin-top: 15px;
+	display: inline;
+	float: left;
+	width: 130px;
+	height: 38px;
+	font-size: 16px;
+	background: url("http://base2.okimgs.com/images/xin/mzh_2014529-anniu_1.png") no-repeat;
+	cursor: pointer;
+	color: #fff;
+	line-height: 38px;
+	text-align: center;
+}
+.bg {
+	width: 100%;
+	height: 100%;
+	background: url("http://base2.okimgs.com/images/xin/mzh_tcc_beijing.png");
+	position: absolute;
+	left: 0px;
+	top: 0px;
+	z-index: 998;
+}
+.tebu {
+	display: block;
+	float: left;
+	margin-top: 13px;
+	margin-right: 4px;
+}
+.dian-s {
+	font-size: 16px;
+	font-weight: bold;
+}
+#forLoadSwf {
+	visibility: hidden
+}
+.erwemas {
+	width: 220px;
+	height: 30px;
+	float: left;
+	margin-left: 14px;
+	position: relative;
+	cursor: pointer;
+	font-family: "宋体";
+	font-size: 12px;
+	color: #666;
+}
+.img-pus1 {
+	position: relative;
+	top: 5px;
+}
+.img-pus2 {
+	position: relative;
+	top: -3px;
+}
+.div-posabues {
+	z-index: 999;
+	width: 206px;
+	height: 213px;
+	cursor: auto;
+	position: absolute;
+	background: url(http://base2.okimgs.com/images/xh-addtop009.png) no-repeat;
+	top: 22px;
+	left: 0px;
+	display: none;
+}
+.eweim-imgs {
+	width: 174px;
+	height: 174px;
+	margin-top: 24px;
+	margin-left: 16px;
+}

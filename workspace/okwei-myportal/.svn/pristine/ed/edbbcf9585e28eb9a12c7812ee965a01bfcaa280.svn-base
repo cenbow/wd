@@ -1,0 +1,90 @@
+package com.okwei.myportal.bean.vo;
+
+public class SupplyOrderStateCountVO
+{
+
+    /**
+     * 待支付
+     */
+    private int noPayCount;
+    /**
+     * 待发货
+     */
+    private int noFaHuoCount;
+    /**
+     * 待收货
+     */
+    private int noShouHuoCount;
+    /**
+     * 待评价
+     */
+    private int noPingjiaCount;
+    /**
+     * 已完成
+     */
+    private int completedCount;
+    /**
+     * 退款中
+     */
+    private int refundCount;
+
+    public int getRefundCount()
+    {
+        return refundCount;
+    }
+
+    public void setRefundCount(int refundCount)
+    {
+        this.refundCount = refundCount;
+    }
+
+    public int getCompletedCount()
+    {
+        return completedCount;
+    }
+
+    public void setCompletedCount(int completedCount)
+    {
+        this.completedCount = completedCount;
+    }
+
+    public int getNoPayCount()
+    {
+        return noPayCount;
+    }
+
+    public void setNoPayCount(int noPayCount)
+    {
+        this.noPayCount = noPayCount;
+    }
+
+    public int getNoFaHuoCount()
+    {
+        return noFaHuoCount;
+    }
+
+    public void setNoFaHuoCount(int noFaHuoCount)
+    {
+        this.noFaHuoCount = noFaHuoCount;
+    }
+
+    public int getNoShouHuoCount()
+    {
+        return noShouHuoCount;
+    }
+
+    public void setNoShouHuoCount(int noShouHuoCount)
+    {
+        this.noShouHuoCount = noShouHuoCount;
+    }
+
+    public int getNoPingjiaCount()
+    {
+        return noPingjiaCount;
+    }
+
+    public void setNoPingjiaCount(int noPingjiaCount)
+    {
+        this.noPingjiaCount = noPingjiaCount;
+    }
+}

@@ -1,0 +1,33 @@
+package com.okwei.supplyportal.web;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+
+import com.okwei.supplyportal.bean.dto.QueryParam;
+import com.okwei.supplyportal.service.IProductMgtService;
+import com.okwei.web.base.BaseController;
+
+@Controller
+@RequestMapping(value="/product")
+public class ProductMgtController extends BaseController {
+
+	private final static Log logger = LogFactory.getLog(ProductMgtController.class);
+
+	@Autowired
+	private IProductMgtService productMgtService;
+
+	
+	@RequestMapping(value="/list")
+	public String list(@ModelAttribute("queryParam") QueryParam queryParam, @RequestParam(required = false, defaultValue = "1") int pageId, Model model) {
+		logger.info("ProductMgtController list method starting............");
+		
+		return "productmgt/list";
+	}
+
+}

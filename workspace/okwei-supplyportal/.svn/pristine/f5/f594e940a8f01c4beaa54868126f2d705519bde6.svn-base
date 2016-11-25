@@ -1,0 +1,19 @@
+package com.okwei.supplyportal.utility;
+import java.util.List;
+import java.util.Map;
+
+import com.okwei.util.AppSettingUtil;
+
+
+
+public class LogisticsHelper {
+
+	/**
+	 * 获取物流公司列表
+	 * @return
+	 */
+	public static List<Map<String, String>> getLogistics()
+	{
+		return AppSettingUtil.getMaplist("transports");
+	}
+}

@@ -1,0 +1,167 @@
+/**
+ * 卖家公共js
+ */
+// 删除订单的弹窗
+function deletewin(orderNo) {
+	var pagei = $.layer({
+		type : 1,
+		btns : 2,
+		btn : [
+				'是', '否'
+		],
+		title : "删除订单",
+		border : [
+			0
+		],
+		closeBtn : [
+			0
+		],
+		closeBtn : [
+				0, true
+		],
+		yes : function(index) {
+			deleteByOrderNo(orderNo, index)
+		},
+		shadeClose : true,
+		area : [
+				'500px', '280px'
+		],
+		page : {
+			dom : "#delete_ts"
+		}
+	});
+}
+function deleteByOrderNo(orderNo, index) {
+	$.ajax({
+		url : "orderajax",
+		type : "post",
+		dataType : "json",
+		data : {
+			"key" : "delete",
+			"orderNo" : orderNo
+		},
+		error : function() {
+			alert("异常！");
+		},
+		success : function(data) {
+			if (data.msg == "1") {
+				alert("删除成功");
+			}
+			else {
+				alert("删除失败");
+			}
+			location.replace(document.referrer);
+		}
+	});
+	layer.close(index);
+}
+
+// 拒绝订单
+function refusedwin(orderNo) {
+	var pagei = $.layer({
+		type : 1,
+		btns : 2,
+		btn : [
+				'是', '否'
+		],
+		title : "拒绝订单",
+		border : [
+			0
+		],
+		closeBtn : [
+			0
+		],
+		closeBtn : [
+				0, true
+		],
+		yes : function(index) {
+			refused(orderNo, index)
+		},
+		shadeClose : true,
+		area : [
+				'500px', '280px'
+		],
+		page : {
+			dom : "#refused_ts"
+		}
+	});
+}
+function refused(orderNo, index) {
+	$.ajax({
+		url : "orderajax",
+		type : "post",
+		dataType : "json",
+		data : {
+			"key" : "refused",
+			"orderNo" : orderNo
+		},
+		error : function() {
+			alert("异常！");
+		},
+		success : function(data) {
+			if (data.msg == "1") {
+				alert("拒绝成功");
+			}
+			else {
+				alert("拒绝失败");
+			}
+			location.replace(document.referrer);
+		}
+	});
+	layer.close(index);
+}
+
+// 确认收货
+function confirmcargowin(orderNo) {
+	var pagei = $.layer({
+		type : 1,
+		btns : 2,
+		btn : [
+				'我已确认收货', '点错了，取消'
+		],
+		title : "确认收货",
+		border : [
+			0
+		],
+		closeBtn : [
+			0
+		],
+		closeBtn : [
+				0, true
+		],
+		yes : function(index) {
+			confirmByOrder(orderNo, index)
+		},
+		shadeClose : true,
+		area : [
+				'500px', '280px'
+		],
+		page : {
+			dom : "#quren_ts"
+		}
+	});
+}
+function confirmByOrder(processId, index) {
+	$.ajax({
+		url : "orderajax",
+		type : "post",
+		dataType : "json",
+		data : {
+			"key" : "confirmcargo",
+			"processId" : processId
+		},
+		error : function() {
+			alert("异常！");
+		},
+		success : function(data) {
+			if (data.msg == "1") {
+				alert("确认成功");
+			}
+			else {
+				alert("确认失败");
+			}
+			location.replace(document.referrer);
+		}
+	});
+	layer.close(index);
+}

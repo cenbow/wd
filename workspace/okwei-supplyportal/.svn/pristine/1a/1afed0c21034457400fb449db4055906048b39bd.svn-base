@@ -1,0 +1,61 @@
+package com.okwei.supplyportal.bean.vo;
+
+import java.util.List;
+
+import com.okwei.bean.domain.OOrderFlow;
+
+public class SupplyOrderDetailsVO extends BaseOrder{
+	
+	/**
+	 * 订单产品列表
+	 */
+	private List<ProductOrderVO> proList;
+	/**
+	 * 收货人
+	 */
+	private String reciverName;
+	
+	/**
+	 * 收货人联系方式
+	 */
+	private String reciverPhoneNumber;
+	/**
+	 * 收货地址
+	 */
+	private String reciverAddress;
+	/**
+	 * 订单记录信息
+	 */
+	private List<OOrderFlow> orderFlows;
+	
+	public List<ProductOrderVO> getProList() {
+		return proList;
+	}
+	public void setProList(List<ProductOrderVO> proList) {
+		this.proList = proList;
+	}
+	public String getReciverName() {
+		return reciverName;
+	}
+	public void setReciverName(String reciverName) {
+		this.reciverName = reciverName;
+	}
+	public String getReciverPhoneNumber() {
+		return reciverPhoneNumber;
+	}
+	public void setReciverPhoneNumber(String reciverPhoneNumber) {
+		this.reciverPhoneNumber = reciverPhoneNumber;
+	}
+	public String getReciverAddress() {
+		return reciverAddress;
+	}
+	public void setReciverAddress(String reciverAddress) {
+		this.reciverAddress = reciverAddress;
+	}
+	public List<OOrderFlow> getOrderFlows() {
+		return orderFlows;
+	}
+	public void setOrderFlows(List<OOrderFlow> orderFlows) {
+		this.orderFlows = orderFlows;
+	}
+}

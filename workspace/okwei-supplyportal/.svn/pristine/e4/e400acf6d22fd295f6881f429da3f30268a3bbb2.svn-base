@@ -1,0 +1,184 @@
+package com.okwei.supplyportal.web;
+
+import java.util.List;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+import com.okwei.common.AjaxResponse;
+import com.okwei.common.AjaxUtil;
+import com.okwei.supplyportal.bean.dto.ProductParam;
+import com.okwei.supplyportal.bean.vo.ProductManageVO;
+import com.okwei.supplyportal.service.IProductListService;
+import com.okwei.web.base.BaseController;
+
+@Controller
+@RequestMapping(value="/manage")
+public class ProductManageController extends BaseController{
+	private final static Log logger = LogFactory.getLog(ProductMgtController.class);
+
+	@Autowired
+	private IProductListService productMgtService;
+	
+	/**
+	 * @ResponseBody 添加这个@ 可以用于ajax请求
+	 */
+	@RequestMapping(value="/list")
+	public String list(@ModelAttribute("queryParam") ProductParam queryParam, @RequestParam(required = false, defaultValue = "1") int pageId, Model model) {
+		logger.info("ProductMgtController list method starting............");
+		
+		/*AjaxResponse<OPayOrder> ajaxResponse = new AjaxResponse<OPayOrder>();
+		ajaxResponse.setResult(entity);
+		return AjaxUtil.ajaxSuccess(ajaxResponse);*/
+        
+		ProductManageVO manageVO = productMgtService.getManageMsg(queryParam.getPtype(), 10, pageId);
+		model.addAttribute("manavo", manageVO);
+		return "productmgt/productManage";
+	}
+	/**
+	 * 取消置顶
+	 * @param queryParam
+	 * @param pageId
+	 * @param model
+	 * @return
+	 */
+	@ResponseBody
+	@RequestMapping(value="/offsort")
+	public String offsort(@ModelAttribute("queryParam") ProductParam queryParam, @RequestParam(required = false, defaultValue = "1") int pageId, Model model){
+		Long weiid = 116170L;
+		int result = productMgtService.offTop(queryParam.getProductid(),weiid);
+		if(result==1)
+		{
+			return AjaxUtil.ajaxSuccess("取消置顶成功！");
+		}
+		else
+		{
+			return AjaxUtil.ajaxFail("取消置顶失败！");
+		}
+		
+	}
+	/**
+	 * 置顶产品
+	 * @param queryParam
+	 * @param pageId
+	 * @param model
+	 * @return
+	 */
+	@ResponseBody
+	@RequestMapping(value="/onsort")
+	public String onsort(@ModelAttribute("queryParam") ProductParam queryParam, @RequestParam(required = false, defaultValue = "1") int pageId, Model model){
+		Long weiid = 116170L;
+		int result = productMgtService.onTop(queryParam.getProductid(),weiid);
+		if(result==1)
+		{
+			return AjaxUtil.ajaxSuccess("置顶成功！");
+		}
+		else
+		{
+			return AjaxUtil.ajaxFail("置顶失败！");
+		}
+		
+	}
+	/**
+	 * 移动置顶位置
+	 * @param queryParam
+	 * @param pageId
+	 * @param model
+	 * @return
+	 */
+	@ResponseBody
+	@RequestMapping(value="/updown")
+	public String moveposition(@ModelAttribute("queryParam") ProductParam queryParam, @RequestParam(required = false, defaultValue = "1") int pageId, Model model){
+		Long weiid = 116170L;
+		int result = productMgtService.moveposition(queryParam.getProductid(),queryParam.getUpdown(),weiid);
+		if(result==1)
+		{
+			return AjaxUtil.ajaxSuccess("移动成功！");
+		}
+		else
+		{
+			return AjaxUtil.ajaxFail("移动失败！");
+		}
+		
+	}
+	/**
+	 * 批量置顶
+	 * @param queryParam
+	 * @param pageId
+	 * @param model
+	 * @return
+	 */
+	@ResponseBody
+	@RequestMapping(value="/batchontop")
+	public String batchontop(@ModelAttribute("queryParam") ProductParam queryParam, @RequestParam(required = false, defaultValue = "1") int pageId, Model model){
+		Long weiid = 116170L;
+		String products = queryParam.getProducts();
+		String[] temp=products.split(",");
+		int result = productMgtService.batchontop(temp,weiid);
+		if(result==1)
+		{
+			return AjaxUtil.ajaxSuccess("置顶成功！");
+		}
+		else
+		{
+			return AjaxUtil.ajaxFail("置顶失败！");
+		}
+		
+	}
+	/**
+	 * 批量下架
+	 * @param queryParam
+	 * @param pageId
+	 * @param model
+	 * @return
+	 */
+	@ResponseBody
+	@RequestMapping(value="/batchoffshow")
+	public String batchoffshow(@ModelAttribute("queryParam") ProductParam queryParam, @RequestParam(required = false, defaultValue = "1") int pageId, Model model){
+		Long weiid = 116170L;
+		String products = queryParam.getProducts();
+		String[] temp=products.split(",");
+		int result = productMgtService.batchoffshow(temp,weiid);
+		if(result==1)
+		{
+			return AjaxUtil.ajaxSuccess("取消置顶成功！");
+		}
+		else
+		{
+			return AjaxUtil.ajaxFail("取消置顶失败！");
+		}
+		
+	}
+	
+	/**
+	 * 批量操作产品
+	 * @param queryParam
+	 * @param pageId
+	 * @param model
+	 * @return
+	 */
+	@ResponseBody
+	@RequestMapping(value="/batchoperate")
+	public String batchoperate(@ModelAttribute("queryParam") ProductParam queryParam, @RequestParam(required = false, defaultValue = "1") int pageId, Model model){
+		Long weiid = 116170L;
+		String products = queryParam.getProducts();
+		String[] temp=products.split(",");
+		int result = productMgtService.batchoperate(temp,weiid,queryParam.getUpdown());
+		if(result==1)
+		{
+			return AjaxUtil.ajaxSuccess("取消置顶成功！");
+		}
+		else
+		{
+			return AjaxUtil.ajaxFail("取消置顶失败！");
+		}
+		
+	}
+}

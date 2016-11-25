@@ -1,0 +1,49 @@
+package com.okwei.supplyportal.bean.vo;
+
+import java.util.List;
+
+public class SupplyerProductCollect {
+	private List<SupplyerProductMsg> productlist;
+	private int pagecount;
+	private int pageindex;
+	private int pagesize;
+	private int totalcount;
+	private int type;
+	public List<SupplyerProductMsg> getProductlist() {
+		return productlist;
+	}
+	public void setProductlist(List<SupplyerProductMsg> productlist) {
+		this.productlist = productlist;
+	}
+	public int getPagecount() {
+		return pagecount;
+	}
+	public void setPagecount(int pagecount) {
+		this.pagecount = pagecount;
+	}
+	public int getPageindex() {
+		return pageindex;
+	}
+	public void setPageindex(int pageindex) {
+		this.pageindex = pageindex;
+	}
+	public int getPagesize() {
+		return pagesize;
+	}
+	public void setPagesize(int pagesize) {
+		this.pagesize = pagesize;
+	}
+	public int getType() {
+		return type;
+	}
+	public void setType(int type) {
+		this.type = type;
+	}
+	public int getTotalcount() {
+		return totalcount;
+	}
+	public void setTotalcount(int totalcount) {
+		this.totalcount = totalcount;
+	}
+	
+}

@@ -1,0 +1,434 @@
+package com.okwei.walletportal.service.impl;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.okwei.bean.domain.UBankCard;
+import com.okwei.bean.domain.UBatchSupplyer;
+import com.okwei.bean.domain.UCancleOrderAmoutDetail;
+import com.okwei.bean.domain.UPublicBanks;
+import com.okwei.bean.domain.UTuizhu;
+import com.okwei.bean.domain.UVerifier;
+import com.okwei.bean.domain.UWallet;
+import com.okwei.bean.domain.UWalletDetails;
+import com.okwei.bean.domain.UWeiSeller;
+import com.okwei.bean.domain.UYunSupplier;
+import com.okwei.bean.domain.UYunVerifier;
+import com.okwei.bean.enums.BondType;
+import com.okwei.bean.enums.OperationEnum;
+import com.okwei.bean.enums.OrderStatusEnum;
+import com.okwei.bean.enums.UserAmountType;
+import com.okwei.bean.enums.VerifierTypeEnum;
+import com.okwei.bean.enums.VerifyCodeType;
+import com.okwei.bean.enums.WalletMainTypeEnum;
+import com.okwei.service.impl.BaseService;
+import com.okwei.util.ObjectUtil;
+import com.okwei.util.RedisUtil;
+import com.okwei.util.VerifyCode;
+import com.okwei.walletportal.bean.enums.BaseResultState;
+import com.okwei.walletportal.bean.enums.SupplierStatusEnum;
+import com.okwei.walletportal.bean.vo.BankCardVO;
+import com.okwei.walletportal.bean.vo.BaseResultVO;
+import com.okwei.walletportal.bean.vo.WalletTxVO;
+import com.okwei.walletportal.dao.IWalletMgtDAO;
+import com.okwei.walletportal.dao.IWalletTxDAO;
+import com.okwei.walletportal.service.IWalletTxService;
+
+@Service
+public class WalletTxService extends BaseService implements IWalletTxService {
+
+	@Autowired
+	private IWalletTxDAO walltDAO;
+	@Autowired
+	private IWalletMgtDAO walletMgtDAO;
+	
+	@Override
+	public BaseResultVO getIsCanUserWallt(long weiID) {
+		
+		UWeiSeller user = super.getById(UWeiSeller.class, weiID);
+		UWallet wallet = super.getById(UWallet.class, weiID);
+		boolean isBindMobile = false;
+		boolean isSetPayPwd = false;
+		boolean isRealName = false;
+		if(user !=null && user.getMobilePhone() !=null && !"".equals(user.getMobilePhone())
+			&& user.getMobileIsBind() !=null && (short)user.getMobileIsBind() ==(short)2){
+			isBindMobile = true;
+		}
+		if(wallet !=null){
+			if(wallet.getPayPassword() !=null && !"".equals(wallet.getPayPassword())){
+				isSetPayPwd = true;
+			}
+			if(wallet.getStatus() !=null && wallet.getStatus() == 1){
+				isRealName = true;
+			}
+		}
+		
+		BaseResultVO resultVO = new BaseResultVO();
+		resultVO.setState(BaseResultState.Failure);		
+		if(isBindMobile && isSetPayPwd && isRealName){
+			resultVO.setState(BaseResultState.Success);		
+		}else if(!isBindMobile && !isSetPayPwd){
+			resultVO.setMessage("1");
+		}else if(!isBindMobile){
+			resultVO.setMessage("2");
+		}else if(!isSetPayPwd){
+			resultVO.setMessage("3");
+		}else if(!isRealName){
+			resultVO.setMessage("4");
+		}	
+
+		return resultVO;
+	}
+
+	@Override
+	public WalletTxVO getWalletTxInfo(long weiID) {
+		WalletTxVO walletTx = new WalletTxVO();
+		//钱包
+		UWallet wallet = super.getById(UWallet.class, weiID);
+		if(wallet !=null && wallet.getBalance() !=null){
+			walletTx.setBalance(wallet.getBalance());
+			walletTx.setAccountIng(wallet.getAccountIng());
+			walletTx.setAccountNot(wallet.getAccountNot());
+		}else{
+			walletTx.setBalance((double)0);
+			walletTx.setAccountIng((double)0);
+			walletTx.setAccountNot((double)0);
+		}
+		//云商保证金
+		double bond = (double) 0;
+		UYunSupplier ys = super.getById(UYunSupplier.class, weiID);
+		if (null != ys && ys.getStatus() != null && ys.getStatus() == Short.valueOf(SupplierStatusEnum.PayIn.toString())) {
+			try{
+				bond += ys.getBond();
+			}catch(Exception ex)
+			{
+				bond += 5000;
+			}			
+		}
+		//已退驻
+		if (null != ys && (ys.getStatus() == Short.valueOf(com.okwei.bean.enums.SupplierStatusEnum.TuiZhu.toString())
+				|| ys.getStatus() == Short.valueOf(com.okwei.bean.enums.SupplierStatusEnum.Pass.toString())) ) {
+			walletTx.setTuizhu(true);
+			if (ys.getStatus() == Short.valueOf(com.okwei.bean.enums.SupplierStatusEnum.TuiZhu.toString())) {
+				UTuizhu tz = walletMgtDAO.getTuizhuRecord(weiID, Short.valueOf(BondType.YunSupplier.toString()));
+				if (tz != null) {
+					//已打款 保证金金额不显示 未打款 保证金金额依然显示
+					if (!Short.valueOf(OperationEnum.Resolved.toString()).equals(tz.getState())) {
+						try{
+							bond += ys.getBond();
+						}catch(Exception ex)
+						{
+							bond += 5000;
+						}					
+					}
+				}
+			}
+		}
+		
+		//批发号保证金
+		UBatchSupplyer bs = super.getById(UBatchSupplyer.class, weiID);
+		if (null != bs && bs.getStatus() !=null && (bs.getStatus() == Short.parseShort(SupplierStatusEnum.PayIn.toString()))) {
+			try{
+				bond += bs.getBond();
+			}catch(Exception ex){
+				bond +=1000;			
+			}		
+		}
+		if (null != bs && (bs.getStatus() == Short.valueOf(com.okwei.bean.enums.SupplierStatusEnum.TuiZhu.toString()) 
+				|| bs.getStatus() == Short.valueOf(com.okwei.bean.enums.SupplierStatusEnum.Pass.toString()))) {
+			walletTx.setTuizhu(true);
+			if (bs.getStatus() == Short.valueOf(com.okwei.bean.enums.SupplierStatusEnum.TuiZhu.toString())) {
+				UTuizhu tz = walletMgtDAO.getTuizhuRecord(weiID, Short.valueOf(BondType.BatchSupplier.toString()));
+				if (tz == null) {
+					tz = walletMgtDAO.getTuizhuRecord(weiID, Short.valueOf(BondType.Port.toString()));
+				}
+				if (tz != null) {
+					//已打款 保证金金额不显示 未打款 保证金金额依然显示
+					if (!Short.valueOf(OperationEnum.Resolved.toString()).equals(tz.getState())) {
+						try{
+							bond += bs.getBond();
+						}catch(Exception ex){
+							bond +=1000;			
+						}				
+					}
+				}
+			}
+		}
+		//云商认证员保证金
+		UVerifier vf = super.getById(UVerifier.class, weiID);
+		if (null != vf && vf.getType() !=null && vf.getType() > 0) {
+			if (((short) vf.getType() & Short.parseShort(VerifierTypeEnum.percent.toString())) > 1) {
+				UYunVerifier yv = walltDAO.get(UYunVerifier.class,weiID);
+				if (yv != null) {
+					if (null!=yv.getBond()&&yv.getBond() > 0) {
+						bond += yv.getBond(); // 临时
+					}
+				}
+			}
+		}
+		walletTx.setBond(bond);
+		//银行卡 
+		List<BankCardVO> bcList = new ArrayList<BankCardVO>();
+		List<UBankCard> uBankCards = walltDAO.getBankCards(weiID);
+		if(uBankCards !=null && uBankCards.size()>0){
+			for (UBankCard item : uBankCards) {
+				BankCardVO bcVo = new BankCardVO();
+				bcVo.setBankName(item.getBanckName());
+				bcVo.setCardID(item.getId());
+				if(item.getBanckCard() !=null && item.getBanckCard().length()> 4){
+					bcVo.setCardNo(item.getBanckCard().substring(item.getBanckCard().length()-4, item.getBanckCard().length()));
+				}else{
+					bcVo.setCardNo("");
+				}	
+				bcList.add(bcVo);
+			} 
+		}	
+                //2015-09-17 黄俊达 添加对公账户
+                UPublicBanks pb = walltDAO.getPublicBanks(weiID);	
+                if(pb!=null){
+                    BankCardVO bcnow = new BankCardVO();
+                    bcnow.setBankName("对公账户 " + pb.getBanckName());     
+                    bcnow.setCardID(pb.getPid().longValue());
+                    if(!ObjectUtil.isEmpty(pb.getBanckNo()) && pb.getBanckNo().length()>3){
+                        bcnow.setCardNo(pb.getBanckNo().substring(pb.getBanckNo().length() - 4,pb.getBanckNo().length()));
+                    }
+                    else{
+                        bcnow.setCardNo("");
+                    }
+                    bcList.add(bcnow);
+                }
+		walletTx.setBankCardVOs(bcList);
+		//用户手机号
+		String mobile = getUserMobile(weiID);
+		if(!"".equals(mobile)){
+			try {
+				mobile = mobile.substring(0, 3) + "****" + mobile.substring(mobile.length()-4,mobile.length());
+			} catch (Exception ex) {
+
+			}
+					
+			walletTx.setMobile(mobile);
+		}
+		//是否本月第一次提现
+		long txNum = walltDAO.getMothTxNum(weiID);
+		if(txNum>0){
+			walletTx.setFirst(false);
+		}else{
+			walletTx.setFirst(true);
+		}
+			
+		return walletTx;
+	}
+
+	@Override
+	public BaseResultVO saveTxInfo(long weiID, double amount,String checkCode,long cardID) {
+		
+		BaseResultVO result = new BaseResultVO();
+		result.setState(BaseResultState.Failure);
+		result.setMessage("参数错误!");
+		//校验金额 是否正确
+		UWallet wallet = super.getById(UWallet.class, weiID);
+		if(wallet ==null || wallet.getBalance() ==null || amount > wallet.getBalance()){
+			return result;
+		}
+				
+		//计算手续费		
+		double free =0;
+		//是否本月第一次提现
+		long txNum = walltDAO.getMothTxNum(weiID);
+		if(txNum>0){
+			free = amount * 0.01;
+			//最少2元 手续费
+			if(free < 2){
+				free =2;
+			}
+		}
+		
+		if(amount <=free){
+			return result;
+		}
+		
+		String mobile = getUserMobile(weiID);
+		if("".equals(mobile)){
+			return result;
+		}
+		//校验 验证码	
+		Object obj =RedisUtil.getObject("depositNum"+mobile);
+		int depositCode =0;
+		if(obj !=null){
+			depositCode = (int) obj;
+			if(depositCode >=3){
+				result.setMessage("验证码错误次数过多,请重新获取!");
+				return result;
+			}
+		}
+		
+		if(!VerifyCode.checkVerifyCode(mobile, VerifyCodeType.deposit, checkCode)){
+			RedisUtil.setObject("depositCode"+mobile, depositCode ++, 600);
+			result.setMessage("验证码错误,请重试!");
+			return result;
+		}
+		
+		String orderNo = com.okwei.util.GenerateOrderNum.getInstance().GenerateOrder();
+		if(orderNo ==null ||"".equals(orderNo)){
+			result.setMessage("数据提交失败,请稍后重试!");
+			return result;
+		}
+
+		UBankCard bcard = walltDAO.getBankCard(cardID, weiID); 
+		//2015-7-15 黄俊达 添加对公账户
+		UPublicBanks pb = walltDAO.getPublicBanks(weiID);
+                //提现表
+                UCancleOrderAmoutDetail coad = new UCancleOrderAmoutDetail();
+                coad.setBankType((short)1);//1代表普通银行卡，2代表对公账户
+		if(bcard ==null  ){
+		    if(pb == null|| !pb.getPid().equals(Integer.parseInt(String.valueOf(cardID))))//添加对公账户判断
+		    {
+                        result.setMessage("未找到该银行卡！");
+                        return result;
+		    } 
+                    coad.setBankType((short)2);//1代表普通银行卡，2代表对公账户
+		}
+		else{
+		    if(bcard.getCardType() != 2){
+                        result.setMessage("提现只能使用储蓄卡！");
+                        return result;
+		    }
+		} 
+		coad.setAmount(amount);
+		coad.setWeiId(weiID);
+		coad.setOrderNo(orderNo);
+		coad.setCounterFee(free);
+		coad.setCreateTime(new Date());
+		coad.setType((short)1);
+		coad.setState((short)0);
+		if(pb != null){
+                    coad.setBankName(pb.getBanckName());
+                    coad.setTxname(pb.getName());
+                    coad.setBankNum(pb.getBanckNo());
+		}
+		else{
+                    coad.setBankName(bcard.getBanckName());
+                    coad.setTxname(bcard.getName());
+                    coad.setBankNum(bcard.getBanckCard());
+		}
+		walltDAO.save(coad);
+		//用户金额表		
+		UWalletDetails wDetails = new UWalletDetails();
+		wDetails.setAmount(amount * -1);
+		wDetails.setCreateTime(new Date());
+		wDetails.setMainType(Short.valueOf(WalletMainTypeEnum.outcome.toString()));
+		wDetails.setRestAmount(wallet.getBalance() - amount);
+		wDetails.setWeiId(weiID);
+		wDetails.setType(Short.valueOf(UserAmountType.tixian.toString()));
+		wDetails.setPayOrder(orderNo);
+		
+		walltDAO.save(wDetails);
+		//更新钱包表
+		String sql ="UPDATE U_Wallet a SET a.Balance = a.Balance - ?,a.AccountIng=a.AccountIng+ ? where WeiID= ?; ";
+		walltDAO.updateBySql(sql, amount,amount,wallet.getWeiId());
+		
+		result.setState( BaseResultState.Success);
+		result.setMessage(orderNo);
+		return result;
+	}
+
+	@Override
+	public BaseResultVO getMobileCode(long weiID) {
+		//用户手机号	
+		BaseResultVO result = new BaseResultVO();	
+		String mobile = getUserMobile(weiID);
+		if(!"".equals(mobile)){
+			Object obj =RedisUtil.getObject("depositNum"+mobile);
+			int depositNum =0;
+			if(obj !=null){
+				depositNum = (int) obj;
+				if(depositNum >=3){
+					result.setState(BaseResultState.Failure);
+					result.setMessage("您短时间内获取的短信数量过多，请10分钟后重试！");
+					return result;
+				}
+			}
+	
+			boolean isSend = VerifyCode.insertVCode(mobile, VerifyCodeType.deposit);
+			if(isSend){
+				RedisUtil.setObject("depositNum"+mobile,depositNum ++, 600);
+				
+				result.setState(BaseResultState.Success);
+				result.setMessage("验证码已发送,请注意查收！");
+				return result;
+			}else{
+				result.setState(BaseResultState.Failure);
+				result.setMessage("验证码发送失败,请稍后重试！");
+				return result;
+			}
+		}
+		result.setState(BaseResultState.Failure);
+		result.setMessage("您还没有绑定手机！");
+		return result;
+	}
+	
+	private String getUserMobile(long weiID) {
+		UWeiSeller user = super.getById(UWeiSeller.class, weiID);
+		if(user !=null && user.getMobileIsBind() !=null && user.getMobileIsBind()==2){
+			return  user.getMobilePhone();
+		}
+		
+		return "";
+	}
+
+	@Override
+	public boolean getIsMyBankCard(long weiID, long cardID) {
+		if(weiID < 1 || cardID < 1){
+			return false;
+		}
+		UBankCard bCard =walltDAO.getBankCard(cardID,weiID);
+		if(bCard !=null && bCard.getWeiId() !=null && (long)bCard.getWeiId() == weiID){
+			return true;
+		}
+		//添加对公账户判断 2015-09-17 黄俊达
+		UPublicBanks pb = walltDAO.getPublicBanks(weiID);
+		if(pb!=null && pb.getPid().equals(Integer.parseInt(String.valueOf(cardID)))){
+		    return true;
+		} 	
+		return false;
+	}
+
+	@Override
+	public long getLowerSupplyerCount(long weiId) {
+		String hql = "select count(*) from UAttention where attentioner=? and status in (1,2)";
+		return walltDAO.count(hql, weiId);
+	}
+
+	@Override
+	public long getSponsorCount(long weiId) {
+		String hql = "select count(*) from UAttentioned where attTo=? and status in (1,2)";
+		return walltDAO.count(hql, weiId);
+	}
+
+	@Override
+	public long getCompletedOrderCount(long weiId) {
+		String hql = "select count(*) from OSupplyerOrder where supplyerId=? and state=?";
+		return walltDAO.count(hql, weiId,Short.valueOf(OrderStatusEnum.Completed.toString()));
+	}
+
+	@Override
+	public long getNotAuditByWeiId(long weiId) {
+		String hql = "select count(*) from UBatchSupplyer where verifier=? and inType!=2";
+		return walltDAO.count(hql, weiId);
+	}
+
+	@Override
+	public long getAuditedNoPayInByWeiId(long weiId) {
+		String hql = "select count(*) from UBatchSupplyer where verifier=? and inType!=2 and status=?";
+		return walltDAO.count(hql, weiId,Short.valueOf(SupplierStatusEnum.Pass.toString()));
+	}
+
+
+
+
+}

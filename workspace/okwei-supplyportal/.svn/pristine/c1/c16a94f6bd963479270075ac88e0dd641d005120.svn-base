@@ -1,0 +1,8 @@
+package com.okwei.supplyportal.service.impl;
+
+import com.okwei.service.impl.BaseService;
+import com.okwei.supplyportal.service.IOrderManageService;
+
+public class OrderManageService extends  BaseService implements IOrderManageService {
+
+}

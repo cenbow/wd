@@ -1,0 +1,66 @@
+package com.okwei.myportal.web;
+
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+import com.okwei.bean.vo.LoginUser;
+import com.okwei.common.JsonUtil;
+import com.okwei.myportal.bean.enums.BaseResultStateEnum;
+import com.okwei.myportal.bean.vo.BaseResultVO; 
+import com.okwei.myportal.service.ICustomerQQService;
+import com.okwei.web.base.SSOController;
+
+
+@Controller
+@RequestMapping(value = "/userinfo")
+public class CustomerQQController extends SSOController {
+    @Autowired
+    private ICustomerQQService service;
+
+    @RequestMapping(value = "/serviceQQ")
+    public String getServiceQQ(Model model)
+    {
+    	LoginUser user = getLoginUser();  	
+ 		//如果不是供应商 去微店中心吧
+ 		if(user ==null || (user.getYunS()==null && user.getBatchS() ==null)){
+ 			return "redirect:/maininfo/maininfo"; 
+ 		}
+ 		if(!((user.getYunS() !=null && user.getYunS() ==1) || (user.getBatchS() != null && user.getBatchS() ==1)
+ 				|| (user.getPph() != null && user.getPph() ==1)|| (user.getPth() != null && user.getPth() ==1))){
+ 			return "redirect:/maininfo/maininfo"; 
+ 		}
+    	
+    	String[] QQs = service.getCustomerQQs(user.getWeiID());
+    	model.addAttribute("userinfo",user);
+    	model.addAttribute("QQs",QQs);
+        return "userinfo/serviceQQ";
+    }
+    
+    @ResponseBody
+    @RequestMapping(value="/saveServiceQQ")
+	public String getVerified(@RequestParam(required = false, defaultValue = "") String QQs, Model model){
+    	LoginUser user = getLoginUser();  	
+    	BaseResultVO result = new BaseResultVO();
+    	result.setMessage("提交的数据错误！");
+    	result.setState(BaseResultStateEnum.Failure);
+    	if(QQs != null && !"".equals(QQs)){
+    		String[] qqStrings = QQs.split("\\|",4);
+    		for (String item : qqStrings) {
+    			 if(!item.matches("^[0-9_]+$") && !"".equals(item)){
+    				 result.setMessage("请输入正确的QQ号");
+    				 return JsonUtil.objectToJson(result);
+    			 }
+			}
+    		result = service.saveCustomerQQ(user.getWeiID(), QQs);
+    	}
+    	
+    	return JsonUtil.objectToJson(result);
+    }
+    
+    
+}

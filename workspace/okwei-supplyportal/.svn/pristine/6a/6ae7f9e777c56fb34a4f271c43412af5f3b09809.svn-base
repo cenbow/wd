@@ -1,0 +1,62 @@
+package com.okwei.supplyportal.dao.impl;
+
+
+import org.springframework.stereotype.Repository;
+
+import com.okwei.bean.domain.UBatchSupplyer;
+import com.okwei.bean.domain.USupplyer;
+import com.okwei.bean.domain.UVerifier;
+import com.okwei.bean.domain.UYunSupplier;
+import com.okwei.dao.impl.BaseDAO;
+import com.okwei.supplyportal.dao.IProductManageDao;
+
+@Repository
+public class ProductManageDAO extends BaseDAO implements IProductManageDao {
+
+
+	@Override
+	public UBatchSupplyer getSupplyerMsg(Long weiid) {
+		// TODO 自动生成的方法存根
+		
+		return get(UBatchSupplyer.class,weiid);
+	}
+
+	@Override
+	public int getOrderCountByState(Long weiid, Short state) {
+		// TODO 自动生成的方法存根
+		String hql = " from OSupplyerOrder p where p.supplyerId=? and p.state=?";
+		Object[] b=new Object[2];
+		b[0]=weiid;
+		b[1]=state;
+		return (int)countBySql(hql, b); // (int)countBySql(hql, b);
+	}
+
+	@Override
+	public int getProductCountyByState(Long weiid, Short state) {
+		// TODO 自动生成的方法存根
+		String hql = " from PProducts p where p.supplierWeiId=? and p.state=?";
+		Object[] b=new Object[2];
+		b[0]=weiid;
+		b[1]=state;
+		return (int)countBySql(hql, b);//countByHql(hql, b);
+	}
+
+	@Override
+	public UYunSupplier getYunSupplyerMsg(Long weiid) {
+		// TODO 自动生成的方法存根
+		return get(UYunSupplier.class,weiid);
+	}
+
+	@Override
+	public USupplyer getBaseSupplyerMsg(Long weiid) {
+		// TODO 自动生成的方法存根
+		return get(USupplyer.class,weiid);
+	}
+
+	@Override
+	public UVerifier getBaseVerifierMsg(Long weiid) {
+		// TODO 自动生成的方法存根
+		return get(UVerifier.class,weiid);
+	}
+
+}

@@ -1,0 +1,102 @@
+package com.okwei.supplyportal.web;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+import com.okwei.common.AjaxUtil;
+import com.okwei.supplyportal.bean.vo.MsgResult;
+import com.okwei.supplyportal.bean.vo.ProductPriceEditParam;
+import com.okwei.supplyportal.service.IOrderManageService;
+
+@Controller
+@RequestMapping(value = "/order")
+public class OrderAjaxController
+{
+    @Autowired
+    private IOrderManageService orderService;
+
+    @ResponseBody
+    @RequestMapping(value = "/orderajax",method =
+    {RequestMethod.POST,RequestMethod.GET})
+    public String orderajax(String key,String orderNo,String danhao,String kuaidi,String postPrice,String supplyOrderId,String totalPrice)
+    {
+        String returnData = "";
+        if(key == null || key == "" || orderNo == null || orderNo == "")
+        {
+            return AjaxUtil.ajaxSuccess("参数有误!");
+        }
+        long weiid = 1036799;
+        switch(key)
+        {
+            case "refused":// 拒绝订单操作
+                break;
+            case "cancel":// 取消订单操作
+                // orderNo 取消订单订单号
+                break;
+            case "delete":// 删除订单操作
+                // orderNo 删除订单号
+                break;
+            case "confirmcargo":// 确认收货操作
+                // processId 流程ID
+                break;
+            case "refund":// 退款申请
+                // orderNo 申请退款订单号
+                break;
+            case "cancelrefund":// 取消退款操作
+                // refundId 退款流程ID
+                break;
+            case "meddle":// 微店网介入
+                // refundId 退款流程ID
+                break;
+            case "refunddelivery":// 退款发货
+                // kuaidi 快递
+                // danhao 订单号
+                // refundID 流程ID
+                break;
+            case "agreed":// 同意退款
+                // processId 退款流程ID
+                break;
+            case "notagreed":// 同意退款
+                // processId 退款流程ID
+                // msg 不同意理由
+                break;
+            case "updateorder":// 修改订单
+                // orderNo 订单号
+                // kuaidi 快递运费
+                // totalprice 总价（包括运费）
+                break;
+            case "delivery":// 发货
+                returnData = delivery(orderNo,weiid,"",kuaidi,danhao);
+                // orderNo 订单号
+                // danhao 单号
+                break;
+            case "confirmsh":// 确认收货地址
+                // cadid 地址ID
+                // processId 退款流程ID
+                break;
+            default:
+                return AjaxUtil.ajaxSuccess("参数有误!");
+        }
+        return AjaxUtil.ajaxSuccess(returnData);
+    }
+
+    public String updateorder(long weiid,String postPrice,String supplyOrderId,String totalPrice)
+    {
+        ProductPriceEditParam param = new ProductPriceEditParam();
+        param.setProductParamList(null);// productParamList
+        MsgResult mResult = orderService.editProductPrice(param);
+        return "";
+    }
+
+    /**
+     * 发货
+     */
+    public String delivery(String supplyOrderid,long weiid,String dcomanpyNo,String deliveryCompany,String deliveryOrderNo)
+    {
+        MsgResult mr = orderService.sendGoods(supplyOrderid,weiid,dcomanpyNo,deliveryCompany,deliveryOrderNo);
+        return String.valueOf(mr.getState());
+    }
+}

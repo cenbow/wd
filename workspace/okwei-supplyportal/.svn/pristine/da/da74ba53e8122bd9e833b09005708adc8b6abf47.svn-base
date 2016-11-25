@@ -1,0 +1,63 @@
+package com.okwei.supplyportal.bean.vo;
+
+import javax.servlet.http.Cookie;
+import javax.servlet.http.HttpServletResponse;
+
+import org.apache.struts2.ServletActionContext;
+
+import com.okwei.util.ObjectUtils;
+import com.okwei.util.RedisUtil;
+import com.okwei.web.base.BaseController;
+
+public class BaseSSOController extends BaseController
+{
+    private LoginUser loginUser;
+
+    public LoginUser getLoginUser()
+    {
+        return getUser();
+    }
+
+    public LoginUser getUser()
+    {
+        /* 测试用 */
+        LoginUser testLoginUser = new LoginUser();
+        testLoginUser.setWeiID(1036799);
+        if(testLoginUser != null)
+        {
+            return testLoginUser;
+        }
+        /* 用的时候删除上面代码 */
+
+        // 从上下文中获取cookie
+        Cookie[] cookies = ServletActionContext.getRequest().getCookies();
+        String cookie_tiket = "";
+        for(Cookie cookie : cookies)
+        {
+            if("tiket".equals(cookie.getName()))
+            {
+                cookie_tiket = cookie.getValue();
+            }
+        }
+        // 判断cookie不为空
+        if(!ObjectUtils.isEmpty(cookie_tiket))
+        {
+            LoginUser user = (LoginUser) RedisUtil.GetObjectByTiket(cookie_tiket);
+            if(user != null)
+            {
+                return user;
+            }
+        }
+        // 跳转
+        HttpServletResponse response = ServletActionContext.getResponse();
+        try
+        {
+            response.sendRedirect("http://port.okwei.com/login.aspx");
+        }
+        catch(Exception e)
+        {
+            // TODO: handle exception
+        }
+        return null;
+    }
+}

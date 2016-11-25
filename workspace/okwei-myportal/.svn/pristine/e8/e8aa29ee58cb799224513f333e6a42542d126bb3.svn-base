@@ -1,0 +1,110 @@
+package com.okwei.myportal.dao.impl;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.stereotype.Repository;
+
+import com.okwei.bean.domain.PBrand;
+import com.okwei.bean.domain.PClassForBrand;
+import com.okwei.bean.domain.PProductClass;
+import com.okwei.common.Limit;
+import com.okwei.common.PageResult;
+import com.okwei.dao.impl.BaseDAO;
+import com.okwei.myportal.bean.dto.BrandProveDTO;
+import com.okwei.myportal.bean.vo.BrandListVO;
+import com.okwei.myportal.dao.IBrandProveDAO;
+
+@Repository
+public class BrandProveDAO extends BaseDAO implements IBrandProveDAO {
+
+	@Override
+	public PageResult<BrandListVO> getBrands(long weiID, BrandProveDTO dto,
+			Limit limit) {
+		if(weiID <1){
+			return null;
+		}
+		
+		String hql ="select p.brandId as brandID,p.brandLogo as brandLOGO,"
+				+ "	p.brandName as brandName,p.status as state"
+				+ " from PBrand p where p.companyNo =:companyNo";
+		Map<String, Object> params = new HashMap<String, Object>();
+		params.put("companyNo", weiID);
+		if(dto !=null){
+			if(dto.getBrandName() !=null && !"".equals(dto.getBrandName())){
+				hql += " and p.brandName like :brandName ";
+				params.put("brandName", "%" +dto.getBrandName() + "%");
+			}
+			if(dto.getBrandState() !=null && dto.getBrandState() >-1){
+				hql += " and p.status=:status ";
+				params.put("status", dto.getBrandState());
+			}
+			if(dto.getClassIDs() !=null && dto.getClassIDs().length>0){				
+				hql +=" and  p.brandId in "
+						+ " (select q.brandId from PClassForBrand q "
+						+ " where q.weiId=:companyNo  and  q.typeId in (:classIDs)) ";
+				params.put("classIDs", dto.getClassIDs());
+			}		
+		}
+		//定义排序规则
+		hql += " order by p.reviewTime desc ";
+		
+		return super.findPageResultTransByMap(hql, BrandListVO.class, limit, params);
+	}
+
+	@Override
+	public List<PClassForBrand> getcfbList(Integer[] brandIDs) {
+		if(brandIDs ==null || brandIDs.length <1){
+			return null;
+		}
+		String hql ="from PClassForBrand p where p.brandId in(:brandIds)";
+		Map<String, Object> params = new HashMap<String, Object>();
+		params.put("brandIds", brandIDs);
+		
+		return super.findByMap(hql, params);
+	}
+	
+	@Override
+	public List<PClassForBrand> getcfbList(int brandID) {
+		if(brandID <1){
+			return null;
+		}
+		
+		String hql ="from PClassForBrand p where p.brandId=?";
+		
+		return super.find(hql, brandID);
+	}
+
+	@Override
+	public List<PProductClass> getClassList(Integer[] classIDs) {
+		if(classIDs ==null || classIDs.length <1){
+			return null;
+		}
+		String hql ="from PProductClass p where p.classId in(:classIds)";
+		Map<String, Object> params = new HashMap<String, Object>();
+		params.put("classIds", classIDs);
+		
+		return super.findByMap(hql, params);
+	}
+
+	@Override
+	public List<PProductClass> getPClassList(short step) {
+		if(step <1){
+			return null;
+		}
+		String hql ="from PProductClass p where p.step=?";
+		
+		return super.find(hql, step);
+	}
+
+	@Override
+	public void deleteProductForClass(int brandID) {
+		if(brandID <1){
+			return;
+		}
+		
+		String hql ="delete from PClassForBrand p where p.brandId=?";
+		super.executeHql(hql, brandID);
+	}
+}

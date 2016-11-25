@@ -1,0 +1,37 @@
+package com.okwei.supplyportal.service;
+
+import java.util.List;
+
+import com.okwei.common.Limit;
+import com.okwei.common.PageResult;
+import com.okwei.service.IBaseService;
+import com.okwei.supplyportal.bean.vo.ParamOrderSearch;
+import com.okwei.supplyportal.bean.vo.ProductOrderVO;
+import com.okwei.supplyportal.bean.vo.SupplyBookOrderVO;
+import com.okwei.supplyportal.bean.vo.SupplyOrderVO;
+
+public interface IOrderManageService  extends IBaseService 
+{
+	/**
+	 * 获取零售订单列表（供应商零售订单）
+	 * @param param
+	 * @param limit
+	 * @return
+	 */
+	public PageResult<SupplyOrderVO> getOrderListPageResult(ParamOrderSearch param,Long supplyWeiid,Limit limit);
+	/**
+	 * 获取供应商预定单列表（供应商预定订单）
+	 * @param param
+	 * @param supplyWeiid
+	 * @param limit
+	 * @return
+	 */
+	public PageResult<SupplyBookOrderVO> getBookOrderListPageResult(ParamOrderSearch param,Long supplyWeiid, Limit limit);
+	
+	/**
+	 * 获取订单产品清单
+	 * @param supplyOrderId
+	 * @return
+	 */
+	public List<ProductOrderVO> getOrderProductListBySupplyOrderId(String supplyOrderId);
+}

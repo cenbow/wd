@@ -1,0 +1,20 @@
+package com.okwei.supplyportal.service.impl;
+
+import java.util.List;
+
+import org.springframework.stereotype.Service;
+
+import com.okwei.bean.domain.PProducts;
+import com.okwei.service.impl.BaseService;
+import com.okwei.supplyportal.service.IProductMgtService;
+
+@Service
+public class ProductMgtService extends BaseService implements IProductMgtService {
+
+	@Override
+	public List<PProducts> getProducts() {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+}

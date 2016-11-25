@@ -1,0 +1,515 @@
+package com.okwei.supplyportal.dao.impl;
+
+import java.io.Serializable;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import okwei.okwei.supplyportal.bean.enumExtend.SupplyBookOrderTypeEnum;
+
+import org.apache.commons.lang.RandomStringUtils;
+import org.springframework.stereotype.Repository;
+
+import com.okwei.bean.domain.OBookAssist;
+import com.okwei.bean.domain.OOrderFlow;
+import com.okwei.bean.domain.OPayOrder;
+import com.okwei.bean.domain.OProductOrder;
+import com.okwei.bean.domain.OSupplyerOrder;
+import com.okwei.bean.domain.TOrderBackTotal;
+import com.okwei.bean.domain.TRefundImg;
+import com.okwei.bean.domain.UWeiSeller;
+import com.okwei.bean.enums.OrderStatusEnum;
+import com.okwei.bean.enums.OrderTypeEnum;
+import com.okwei.common.Limit;
+import com.okwei.common.PageResult;
+import com.okwei.dao.impl.BaseDAO;
+import com.okwei.supplyportal.bean.vo.MsgResult;
+import com.okwei.supplyportal.bean.vo.ParamOrderSearch;
+import com.okwei.supplyportal.dao.IOrderManageDAO;
+import com.okwei.util.ObjectUtils;
+
+@Repository
+public class OrderManageDAO extends BaseDAO implements IOrderManageDAO
+{
+
+    @Override
+    public PageResult<OSupplyerOrder> getSupplyOrderlistResult(ParamOrderSearch param,Long supperWeiid,Limit limit)
+    {
+        Map<String,Object> map = new HashMap<String,Object>();
+        StringBuilder hql = new StringBuilder();
+        hql.append(" from OSupplyerOrder o where o.supplierOrderId>0 ");
+        if(supperWeiid > 0)
+        {
+            hql.append(" and o.supplyerId=:supweiid");
+            map.put("supweiid",supperWeiid);
+        }
+        if(param != null)
+        {
+            hql.append(" and o.orderType in(:ordertype)");
+            Integer[] orderTypes = null;
+            // 订单类型
+            if(param.getOrderType() != null)
+            {
+                switch(param.getOrderType())
+                {
+                    case 1:// 零售订单
+                        orderTypes = new Integer[]
+                        {Integer.parseInt(OrderTypeEnum.Pt.toString()),Integer.parseInt(OrderTypeEnum.BatchOrder.toString()),};
+                        break;
+                    case 2:// 批发订单
+                        orderTypes = new Integer[]
+                        {Integer.parseInt(OrderTypeEnum.BatchWholesale.toString()),};
+                        break;
+                    case 3:// 预定订单
+                        orderTypes = new Integer[]
+                        {Integer.parseInt(OrderTypeEnum.BookOrder.toString()),};
+                        break;
+                    default:
+                        orderTypes = new Integer[]
+                        {Integer.parseInt(OrderTypeEnum.Pt.toString()),Integer.parseInt(OrderTypeEnum.BatchOrder.toString()),};
+                        break;
+                }
+            }
+            else
+            {
+                orderTypes = new Integer[]
+                {Integer.parseInt(OrderTypeEnum.Pt.toString()),Integer.parseInt(OrderTypeEnum.BatchOrder.toString()),};
+            }
+            map.put("ordertype",orderTypes);
+            // 订单状态
+            if(null != param.getState() && -1 != param.getState())
+            {
+                hql.append(" and o.state=:state");
+                map.put("state",param.getState());
+            }
+            else
+            {
+                hql.append(" and o.state!=14");
+            }
+            if(null != param.getBeginTime())
+            {
+                hql.append(" and o.orderTime>:beginTime ");
+                map.put("beginTime",param.getBeginTime());
+            }
+            if(null != param.getEndTime())
+            {
+                hql.append(" and o.orderTime<=:endtime ");
+                map.put("endtime",param.getEndTime());
+            }
+            if(null != param.getMinPrice() && param.getMinPrice() > 0)
+            {
+                hql.append(" and o.totalPrice>=:minprice ");
+                map.put("minprice",param.getMinPrice());
+            }
+            if(null != param.getMaxPrice() && param.getMaxPrice() > 0)
+            {
+                hql.append(" and o.totalPrice<=:maxprice ");
+                map.put("maxprice",param.getMaxPrice());
+            }
+            // 订单号
+            if(param.getOrderNo() != null && !"".equals(param.getOrderNo()))
+            {
+                hql.append(" and o.supplierOrderId=:supplierOrderId");
+                map.put("supplierOrderId",param.getOrderNo());
+            }
+            // 买家微店号
+            if(param.getBuyerid() != null && param.getBuyerid() > 0)
+            {
+                hql.append(" and o.buyerID=:buyerID");
+                map.put("buyerID",param.getBuyerid());
+            }
+            hql.append(" order by o.orderTime desc ");
+        }
+        // TODO map查询方式
+        PageResult<OSupplyerOrder> result = super.findPageResultByMap(hql.toString(),limit,map);
+        return result;
+    }
+
+    public PageResult<OSupplyerOrder> getSupplyBookOrderlistResult(ParamOrderSearch param,Long supperWeiid,Limit limit)
+    {
+        if(param != null && param.getState() != null)
+        {
+            SupplyBookOrderTypeEnum stateEnum = null;
+            for(SupplyBookOrderTypeEnum ee : SupplyBookOrderTypeEnum.values())
+            {
+                if(Integer.parseInt(ee.toString()) == param.getState().shortValue())
+                    stateEnum = ee;
+            }
+            Integer begin = (limit.getPageId() - 1) * limit.getSize();
+            // 第一页要多查找一个数据，中间页要多次两个数据
+            Integer pagesize = limit.getPageId() * limit.getSize();
+
+            // String sql="";
+            StringBuilder sql = new StringBuilder();
+            StringBuilder sqlCount = new StringBuilder();
+            if(null == stateEnum)
+            {
+                sql.append("SELECT A.supplierOrderId from  O_SupplyerOrder AS A where  supplyerId=" + supperWeiid + " and orderType=12 ");
+                // sqlCount.append("SELECT count(A.supplierOrderId) from  O_SupplyerOrder AS A where  supplyerId="+supperWeiid+" and orderType=12");
+            }
+            else
+            {
+                // sql.append(" select s from OSupplyerOrder s , OBookAssist b where s.supplierOrderId=b.supplierOrderId and s.supplyerId=? and ((s.state=12 and b.tailPayType=1) or s.state=1 ) and s.orderType=12 ");
+                // sql.append("SELECT A.* from  O_SupplyerOrder A left join O_BookAssist B where A.supplierOrderId=B.supplierOrderId and A.supplyerId="+supperWeiid+" and ((A.state=12 and B.tailPayType=1) or A.state=1 ) and A.orderType=12 ");
+                sql.append("SELECT A.supplierOrderId from  O_SupplyerOrder A left join O_BookAssist AS B on A.supplierOrderId=B.supplierOrderId where A.supplyerId=" + supperWeiid
+                        + " and ((A.state=12 and B.tailPayType=1) or A.state=1 ) and A.orderType=12 ");
+                // sqlCount.append("SELECT count(A.supplierOrderId) from  O_SupplyerOrder A left join O_BookAssist AS B on A.supplierOrderId=B.supplierOrderId where A.supplyerId="+supperWeiid+" and ((A.state=12 and B.tailPayType=1) or A.state=1 ) and A.orderType=12 ");
+                //
+            }
+            List<Object> paramList = new ArrayList<Object>();
+            paramList.add(supperWeiid);
+            if(param.getOrderNo() != null && !"".equals(param.getOrderNo()))
+            {
+                sql.append(" and A.supplierOrderId= " + param.getOrderNo());
+                // paramList.add(param.getOrderNo());
+            }
+            if(param.getBuyerid() != null && param.getBuyerid() > 0)
+            {
+                sql.append(" and A.buyerID=" + param.getBuyerid());
+                // paramList.add(param.getBuyerid());
+            }
+            if(null != param.getBeginTime())
+            {
+                sql.append(" and A.orderTime>" + param.getBeginTime());
+                // paramList.add(param.getBeginTime());
+            }
+            if(null != param.getEndTime())
+            {
+                sql.append(" and A.orderTime<=" + param.getEndTime());
+                // paramList.add(param.getEndTime());
+            }
+            if(null != param.getMinPrice() && param.getMinPrice() > 0)
+            {
+                sql.append(" and A.totalPrice>=" + param.getMinPrice());
+                // paramList.add(param.getMinPrice());
+            }
+            if(null != param.getMaxPrice() && param.getMaxPrice() > 0)
+            {
+                sql.append(" and A.totalPrice<=" + param.getMaxPrice());
+                // paramList.add(param.getMaxPrice());
+            }
+            sql.append(" order by A.OrderTime desc ");
+            String sqlCountStr = sql.toString();
+            sql.append(" limit " + begin + "," + pagesize);
+            int totalCount = super.queryBySql(sqlCountStr).size();
+            if(stateEnum == null)
+            {
+                List<Object[]> list = super.queryBySql(sql.toString());
+                PageResult<OSupplyerOrder> result = new PageResult<OSupplyerOrder>();
+                result.setPageIndex(limit.getPageId());
+                result.setPageSize(limit.getSize());
+                result.setPageCount((int) Math.ceil((double) totalCount / limit.getSize()));
+                result.setTotalCount(totalCount);
+                if(list != null && list.size() > 0)
+                {
+                    String[] idsStrings = new String[list.size()];
+                    for(int i = 0; i < list.size(); i++)
+                    {
+                        Object bb = list.get(i);
+                        idsStrings[i] = String.valueOf(bb);
+                    }
+                    String hqlresult = " from OSupplyerOrder o where o.supplierOrderId in(:orderids)";
+                    Map<String,Object> map1 = new HashMap<String,Object>();
+                    map1.put("orderids",idsStrings);
+                    List<OSupplyerOrder> list2 = super.findByMap(hqlresult,map1);
+                    result.setList(list2);
+                }
+                return result;
+            }
+            switch(stateEnum)
+            {
+                case Waitting:// 待确认
+                    param.setState(Short.parseShort(OrderStatusEnum.WaitSure.toString()));
+                    return getSupplyOrderlistResult(param,supperWeiid,limit);
+                case Sured:// 已确认
+                    param.setState(Short.parseShort(OrderStatusEnum.Sured.toString()));
+                    return getSupplyOrderlistResult(param,supperWeiid,limit);
+                case NopayTail:// 未付尾款
+                    param.setState(Short.parseShort(OrderStatusEnum.PayedDeposit.toString()));
+                    return getSupplyOrderlistResult(param,supperWeiid,limit);
+                case Complete:// 交易完成
+                    param.setState(Short.parseShort(OrderStatusEnum.Completed.toString()));
+                    return getSupplyOrderlistResult(param,supperWeiid,limit);
+                case DaiFahuo:// 待发货
+                    // PageResult<OSupplyerOrder> result=super.findPageResult(sql.toString(), limit,
+                    // paramList.toArray());
+                    // return result;
+                    List<Object[]> list = super.queryBySql(sql.toString());
+                    PageResult<OSupplyerOrder> result = new PageResult<OSupplyerOrder>();
+                    result.setPageIndex(limit.getPageId());
+                    result.setPageSize(limit.getSize());
+                    result.setPageCount((int) Math.ceil((double) totalCount / limit.getSize()));
+                    result.setTotalCount(totalCount);
+                    if(list != null && list.size() > 0)
+                    {
+                        String[] idsStrings = new String[list.size()];
+                        for(int i = 0; i < list.size(); i++)
+                        {
+                            Object bb = list.get(i);
+                            idsStrings[i] = String.valueOf(bb);
+                        }
+                        String hqlresult = " from OSupplyerOrder o where o.supplierOrderId in(:orderids)";
+                        Map<String,Object> map1 = new HashMap<String,Object>();
+                        map1.put("orderids",idsStrings);
+                        List<OSupplyerOrder> list2 = super.findByMap(hqlresult,map1);
+                        result.setList(list2);
+                    }
+                    return result;
+                default:
+                    break;
+            }
+        }
+        else
+        {
+            if(param == null)
+                param = new ParamOrderSearch();
+            param.setOrderType(3);
+            return getSupplyOrderlistResult(param,supperWeiid,limit);
+        }
+        return null;
+    }
+
+    @Override
+    public List<OPayOrder> getOPayOrderlistBySupplyOrderIds(String[] supplyOrderIds)
+    {
+        if(!ObjectUtils.isEmpty(supplyOrderIds))
+        {
+            String hql = " from OPayOrder o where o.supplierOrder in(:sids)";
+            Map<String,Object> map = new HashMap<String,Object>();
+            map.put("sids",supplyOrderIds);
+            // TODO map查询方式 需要更改
+            return super.findByMap(hql,map);
+        }
+        return null;
+    }
+
+    @Override
+    public List<OBookAssist> getOBookAssistlistBySupplyOrderIds(String[] supplyOrderIds)
+    {
+        if(!ObjectUtils.isEmpty(supplyOrderIds))
+        {
+            String hql = " from OBookAssist o where o.supplierOrderId in(:sids)";
+            Map<String,Object> map = new HashMap<String,Object>();
+            map.put("sids",supplyOrderIds);
+            // TODO map查询方式 需要更改
+            return super.findByMap(hql,map);
+        }
+        return null;
+    }
+
+    @Override
+    public List<OProductOrder> getProductOrderListBySupplyOrderIds(String[] supplyOrderIds)
+    {
+        if(!ObjectUtils.isEmpty(supplyOrderIds))
+        {
+            String hql = " from OProductOrder o where o.supplierOrderId in(:sids)";
+            Map<String,Object> map = new HashMap<String,Object>();
+            map.put("sids",supplyOrderIds);
+            // TODO map查询方式 需要更改
+            return super.findByMap(hql,map);
+        }
+        return null;
+    }
+
+    public List<UWeiSeller> getUsersByWeiids(Long[] weiids)
+    {
+        if(!ObjectUtils.isEmpty(weiids))
+        {
+            String hql = " from UWeiSeller o where o.weiId in(:sids)";
+            Map<String,Object> map = new HashMap<String,Object>();
+            map.put("sids",weiids);
+            // TODO map查询方式 需要更改
+            return super.findByMap(hql,map);
+        }
+        return null;
+    }
+
+    @Override
+    public List<OSupplyerOrder> getSupplyOrderlist(Long weiid,Integer[] typeStates)
+    {
+        if(weiid > 0 && !ObjectUtils.isEmpty(typeStates))
+        {
+            String hqlString = " from OSupplyerOrder o where o.supplyerId=:weiid and o.orderType in(:typeStates) and o.state!=14  ";
+            Map<String,Object> map = new HashMap<String,Object>();
+            map.put("weiid",weiid);
+            map.put("typeStates",typeStates);
+            return findByMap(hqlString,map);
+        }
+        return null;
+    }
+
+    @Override
+    public List<OOrderFlow> getOrderFlows(String supplyOrderId)
+    {
+        if(!ObjectUtils.isEmpty(supplyOrderId))
+        {
+            String hqlString = " from OOrderFlow f where f.supplierOrderId=? order by f.operateTime desc";
+            Object[] bb = new Object[1];
+            bb[0] = supplyOrderId;
+            List<OOrderFlow> list = find(hqlString,bb);
+            return list;
+        }
+        return null;
+    }
+
+    @Override
+    public <T> T getEntity(Class<T> objClass,Serializable id)
+    {
+        return get(objClass,id);
+    }
+
+    public List<OPayOrder> getOPayOrdersBySupplyOrderid(String supplyOrderid)
+    {
+        String hqlString = " from OPayOrder o where o.supplierOrder=?";
+        Object[] bb = new Object[1];
+        bb[0] = supplyOrderid;
+        List<OPayOrder> list = find(hqlString,bb);
+        return list;
+    }
+
+    @Override
+    public boolean UP_supplyOrder(Long supplyweiid,String supplyOrderId,OrderStatusEnum state)
+    {
+        if(ObjectUtils.isEmpty(supplyOrderId) || supplyweiid == null || supplyweiid.longValue() <= 0)
+            return false;
+        OSupplyerOrder order = get(OSupplyerOrder.class,supplyOrderId);
+        if(order != null && order.getSupplyerId().equals(supplyweiid))
+        {
+            if(Short.parseShort(OrderStatusEnum.WaitSure.toString()) == order.getState())
+            {
+                switch(state)
+                {
+                    case Refunded:
+                    case Sured:
+                        order.setState(Short.parseShort(state.toString()));
+                        update(order);
+                        return true;
+                    default:
+                        return false;
+                }
+            }
+        }
+        return false;
+    }
+
+    @Override
+    /**
+     * 新增支付订单
+     * @param supplyOrderid
+     * @param buyerId
+     * @param totalPrice
+     * @param orderFrom
+     * @param ordertype
+     * @return
+     */
+    public MsgResult insertPayOrder(String supplyOrderid,long buyerId,double totalPrice,Short orderFrom,Short ordertype)
+    {
+        MsgResult result = new MsgResult();
+        OPayOrder payOrder = new OPayOrder();
+        String orderno = GenerateOrder();
+        payOrder.setPayOrderId(orderno);
+        payOrder.setWeiId(buyerId);
+        payOrder.setSellerUpWeiId((long) 0);
+        payOrder.setSellerWeiId((long) 0);
+        payOrder.setTotalPrice(totalPrice);
+        payOrder.setWalletmoney(0d);
+        payOrder.setSupplierOrder(supplyOrderid);
+        payOrder.setState(Short.parseShort(OrderStatusEnum.Nopay.toString()));
+        payOrder.setTypeState(ordertype);
+        Date nowtimeDate = new Date();
+        payOrder.setOrderDate(nowtimeDate);
+        payOrder.setOrderTime(nowtimeDate);
+        payOrder.setOrderFrom(orderFrom);
+        super.save(payOrder);
+        result.setState(1);
+        result.setMsg(orderno);
+        return result;
+    }
+
+    @Override
+    public void insertOrderFlow(String supplyOrderid,long weiid,String content)
+    {
+        if(ObjectUtils.isEmpty(supplyOrderid) || weiid <= 0)
+            return;
+        OOrderFlow flow = new OOrderFlow();
+        flow.setOperateTime(new Date());
+        flow.setSupplierOrderId(supplyOrderid);
+        flow.setWeiId(weiid);// 操作人，当前商家
+        flow.setOperateContent(content);
+        try
+        {
+            save(flow);
+        }
+        catch(Exception e)
+        {
+            System.out.println(e.getMessage());
+            // TODO: handle exception
+        }
+
+    }
+
+    /**
+     * 生成订单号
+     * 
+     * @return
+     */
+    public String GenerateOrder()
+    {
+        String num = RandomStringUtils.random(4,false,true); // 随机生成四位数
+        SimpleDateFormat sdf = new SimpleDateFormat("yyMMddHHmmss");// 时间戳
+        String str = sdf.format(new Date());
+        return str + num;
+    }
+
+    @Override
+    public List<TOrderBackTotal> getRefundOrders(Object[] refundIds)
+    {
+        if(!ObjectUtils.isEmpty(refundIds))
+        {
+            String hqlString = " from TOrderBackTotal t where t.backOrder in (:refundids)";
+            Map<String,Object> map = new HashMap<String,Object>();
+            map.put("refundids",refundIds);
+            return findByMap(hqlString,map);
+        }
+        return null;
+    }
+
+    public List<TOrderBackTotal> getTOrderBackTotals(String supplyOrderid)
+    {
+        if(!ObjectUtils.isEmpty(supplyOrderid))
+        {
+            String hqlString = " from TOrderBackTotal t where t.supplierOrderId =?";
+            Object[] bb = new Object[1];
+            bb[0] = supplyOrderid;
+            return find(hqlString,bb);
+        }
+        return null;
+    }
+
+    public List<TRefundImg> getRefundImgs(long refundid)
+    {
+        if(refundid > 0)
+        {
+            String hqlString = " from TRefundImg t where t.backOrder =?";
+            Object[] bb = new Object[1];
+            bb[0] = refundid;
+            return find(hqlString,bb);
+        }
+        return null;
+    }
+
+    public List<OProductOrder> getProductsByRefundId(long refundid)
+    {
+        if(refundid > 0)
+        {
+            String hqlString = " from OProductOrder t where t.backOrder =?";
+            Object[] bb = new Object[1];
+            bb[0] = refundid;
+            return find(hqlString,bb);
+        }
+        return null;
+    }
+}

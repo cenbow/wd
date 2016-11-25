@@ -1,0 +1,66 @@
+package com.okwei.supplyportal.utility;
+
+import java.io.UnsupportedEncodingException;
+import java.util.ResourceBundle;
+
+import org.aspectj.weaver.patterns.ThisOrTargetAnnotationPointcut;
+
+import com.okwei.util.AppSettingUtil;
+
+import javassist.expr.NewArray;
+
+public class ConfigSetting {
+	
+	/**
+	 * 获取系统初始销售规格
+	 * @return
+	 */
+	public static String[] sellParam()
+	{
+		String strs=AppSettingUtil.getSingleValue("SellParam"); //getConfigString("SellParam");
+		if(strs !=null && strs !=""){
+			return strs.split(",");
+		}
+		return null;
+	}
+	
+	/**
+	 * 获取供应商每天发布的数量限制
+	 * @return
+	 */
+	public static int SupplyTodayPNum() {		
+		return Integer.parseInt(getConfigString("SupplyTodayPNum"));
+	}
+	
+	/**
+	 * 未交钱的供应商 总发布数量限制
+	 * @return
+	 */
+	public static int NoPaySupplyPNum() {		
+		return Integer.parseInt(getConfigString("NoPaySupplyPNum"));
+	}
+	
+	/**
+	 * 获取配置的参数
+	 * @param paramName
+	 * @return
+	 */
+	private static String getConfigString(String paramName){
+		if(paramName =="" || paramName ==null){
+			return "";
+		}
+		
+//		return ResourceBundle.getBundle("ConfigSetting").getString(paramName);
+		byte[] bytes;
+		String strs="";
+		try {
+			bytes = ResourceBundle.getBundle("ConfigSetting").getString(paramName).getBytes("ISO-8859-1");
+			strs = new String(bytes,"UTF-8");
+		} catch (UnsupportedEncodingException e) {
+			e.printStackTrace();
+		}
+		
+		return strs;
+	}
+
+}

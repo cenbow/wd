@@ -1,0 +1,35 @@
+package com.okwei.myportal.bean.vo;
+
+public class SupplyOrderCountSumVO 
+{
+	/**
+	 * 零售订单数
+	 */
+	private int lingshowCount;
+	/**
+	 * 批发订单数
+	 */
+	private int pifaCount;
+	/**
+	 * 预定订单数
+	 */
+	private int yudingCount;
+	public int getLingshowCount() {
+		return lingshowCount;
+	}
+	public void setLingshowCount(int lingshowCount) {
+		this.lingshowCount = lingshowCount;
+	}
+	public int getPifaCount() {
+		return pifaCount;
+	}
+	public void setPifaCount(int pifaCount) {
+		this.pifaCount = pifaCount;
+	}
+	public int getYudingCount() {
+		return yudingCount;
+	}
+	public void setYudingCount(int yudingCount) {
+		this.yudingCount = yudingCount;
+	}
+}

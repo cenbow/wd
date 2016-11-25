@@ -1,0 +1,278 @@
+<%@ page language="java" contentType="text/html; charset=UTF-8"
+	pageEncoding="UTF-8"%>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c"%>
+<%
+	String path = request.getContextPath();
+	String basePath = request.getScheme() + "://" + request.getServerName() + ":" + request.getServerPort() + path + "/";
+%>
+
+<head>
+<title>添加银行卡</title>
+<script type="text/javascript" src="<%=path %>/statics/js/district.js"></script>
+<script type="text/javascript" src="<%=path %>/statics/js/uploadify/jquery.uploadify-3.1.min.js"></script>
+<style type="text/css">
+</style>
+<script type="text/javascript">
+$(function(){
+	// 初始化省市区列表
+	var province = $("#province").val();
+	var city = $("#city").val();
+	var dis = new district();
+	dis.init('#selProvince', '#selCity', '');
+	dis.bdbycode(province, city, '');
+	
+	//取消
+	$("#cancelop").click(function(){
+    	location.href = "/companyAccount/info";
+    })
+    var img = '${businessLicenceImg}';
+    if(img==''){
+    	img = '<%=path %>/statics/images/sctp_3_28.jpg';
+    }
+    //执照上传
+    $('#businessLicenceImg').uploadify({
+		"buttonText" : "<img id='showUpImg' class='fl' src='"+img+"' height='80px' width='80px'>",
+		'buttonClass' : '',
+		'dataType' : 'html',
+		'removeCompleted' : false,
+		'swf' : '/statics/js/uploadify/uploadify.swf',
+		'debug' : false,
+		'width' : '80',
+		'height' : '80',
+		'auto' : true,
+		'multi' : false,
+		'fileTypeExts' : '*.jpg;*.gif;*.png;*.jpeg',
+		'fileTypeDesc' : '图片类型(*.jpg;*.jpeg;*.gif;*.png)',
+		'formData' : {
+			'cate' : "1",
+			'type' : "3"
+		},
+		'uploader' : 'http://fdfsservice.okwei.com/handle/UploadImg.ashx',
+		'fileSizeLimit' : '1024',
+		'progressData' : 'speed',
+		'removeCompleted' : true,
+		'removeTimeout' : 0,
+		'requestErrors' : true,
+		'onFallback' : function() {
+			alert("您的浏览器没有安装Flash");
+		},
+		'onUploadStart' : function(file) {
+			$(".uploadify-queue").css("height", "50px");
+		},
+		'onUploadSuccess' : function(file, data, response) {
+			var json = JSON.parse(data);
+			if (json.Status != 1) {
+				alert(json.StatusReason);
+			} else {
+				$("#showUpImg").attr("src", "http://img1.okimgs.com" + json.ImgUrl);
+				$("#license").val(json.ImgUrl);
+			}
+		}
+	});
+	
+	//数据校验提交
+	var rules = { // 定义验证规则,其中属性名为表单的name属性
+			license : {
+				required : true
+			},
+			name : {
+				required : {
+					depends : function() {
+						$(this).val($.trim($(this).val()));
+						return true;
+					}
+				}
+			},
+			banckName : {
+				required : {
+					depends : function() {
+						$(this).val($.trim($(this).val()));
+						return true;
+					}
+				}
+			},
+			province : {
+				required : true
+			},
+			city : {
+				required : true
+			},
+			branchName : {
+				required : true
+			},
+			banckNo : {
+				required : {
+					depends : function() {
+						$(this).val($.trim($(this).val()));
+						return true;
+					}
+				},
+				maxlength : 30,
+				digits : true
+			}
+		};
+
+		var messages = { // 自定义验证消息
+			license : {
+				required : "<font color=red>请上传图片!</font>"
+			},
+			name : {
+				required : "<font color=red>请输入开户名!</font>"
+			},
+			banckName : {
+				required : "<font color=red>请输入开户银行!</font>"
+			},
+			province : {
+				required : "<font color=red>请选择开户银行所在省!</font>"
+			},
+			city : {
+				required : "<font color=red>请选择开户银行所在市!</font>"
+			},
+			branchName : {
+				required : "<font color=red>请输入开户银行支行名称!</font>"
+			},	
+			banckNo : {
+				maxlength : "<font color=red>请输入合法的对公银行账号!</font>",
+				required : "<font color=red>请输入对公银行账号!</font>",
+				digits : "<font color=red>请输入数字!</font>"
+			}
+		};
+		
+		var validator = $("#mainForm").validate({
+			debug : false, // 调试模式取消submit的默认提交功能
+			errorClass : "error",// 默认为错误的样式类为：error
+			focusInvalid : false,
+			onkeyup : false,
+			ignore: "",
+			rules : rules,
+			messages : messages
+		}); 
+		
+		$('#submitBtn').click(function(){
+			$.ajax({
+				url : "<%=basePath%>companyAccount/save",
+				type : "post",
+				async : false,
+				contentType : "application/x-www-form-urlencoded; charset=utf-8",
+				data : $('#mainForm').serialize(),
+				error : function(XMLHttpRequest, textStatus, errorThrown) {
+					alert("服务器出现异常");
+				},
+				success : function(data) {
+					if (!data.error) {
+						alert(data.msg,true);
+						$("#navTab").load("/companyAccount/info.ajax");
+					}else{
+						alert(data.msg);
+					}
+				},
+				beforeSend:function(){
+						return $("#mainForm").valid()
+					}
+			});
+			
+		});
+		
+		$("#mzh_pfh").click(function(){
+			if($(this).attr("class") == "gygl_xxk_no"){
+		        var html ='当前位置：<a href="/walletMgt/index">钱包管理</a>><span>银行卡</span>';
+				$("#breadcrumb").empty().append(html);
+				$("#leftMenu li.now").removeClass("now");
+				$("#leftMenu li").eq(1).addClass("now")
+				$("#navTab").load("/bankCardMgt/bankCard.ajax", function(data){});
+			}
+	    })
+	    if ($('#selProvince option:selected').text() == '') {
+	    	$('#selProvince').val(0);
+		}
+		
+		$("#businessLicenceImg").attr("style","height: 80px; width: 80px;float:left;");
+	
+});
+	
+</script>
+</head>
+<body class="bg_f3">
+	<div class="fl conter_right bg_white bor_si">
+        <div class="gygl_xxk_t f16 ndfxs_1-2_border">
+             <div class="gygl_xxk_no" id="mzh_pfh">个人账户<span style="width: 60px;"></span></div>
+             <c:if test="${ userinfo.yunS ==1 || userinfo.batchS ==1 }">
+             	<div class="gygl_xxk_yes" id="mzh_rzfwd">对公账户<span style="width:60px;"></span></div>
+             </c:if>
+         </div>
+        <div class="gygl_xxk_t f16 ndfxs_1-2_border">
+            <div style="color: #000;" name="mzh_xxk" class="gygl_xxk_yes">添加对公账户<span></span></div>
+        </div>
+ 		<form id="mainForm" action="" method="post">
+	        <div class="fl mzh_width_100">
+	          <dl class="mzh_add_dgzh">
+	            <dd>营业执照：</dd>
+	            <dt>
+	            	<c:choose>
+	            		<c:when test="${isSupImg || isPassed}"><img class="fl" src="${businessLicenceImg}" width="80"/></c:when>
+	            		<c:otherwise>
+		            		<span id="businessLicenceImg"></span>
+			            	<span class="fl f12 w189 ml_20 ft_c9">不得超过1M</span><br>
+	            		</c:otherwise>
+	            	</c:choose>
+	            	<span class="fl f12 w189 ml_20 ft_c9 lin20">开户名须与营业执照一致，若不一致，将不予通过</span> 
+	            	&nbsp;&nbsp;&nbsp;&nbsp;<input type="hidden" name="license" id="license" value="${accountInfo.license }"/>
+	            </dt>
+	          </dl>
+	          <dl class="mzh_add_dgzh">
+	            <dd>开户名：</dd>
+	            <dt>
+	              <c:choose>
+	              	<c:when test="${isPassed }">
+			              <input type="text"  class="mzh_add_dgzh_text ft_c6" name="name" maxlength="80" readonly="readonly" value="${accountInfo.name }"/>
+	              	</c:when>
+	              	<c:otherwise>
+	              		<input type="text"  class="mzh_add_dgzh_text" name="name" maxlength="80" value="${accountInfo.name }"/>
+	              	</c:otherwise>
+	              </c:choose>
+	            </dt>
+	          </dl>
+	          <dl class="mzh_add_dgzh">
+	            <dd>开户银行：</dd>
+	            <dt>
+	                <input type="text" class="mzh_add_dgzh_text" name="banckName" maxlength="80" value="${accountInfo.banckName }"/>
+	            </dt>
+	          </dl>
+	          <dl class="mzh_add_dgzh">
+	            <dd>开户银行所在地：</dd>
+	            <dt>
+		             <select class="mzh_add_dgzh_text" style="width: 115px;" id="selProvince" name="province"></select>
+                     <select class="mzh_add_dgzh_text ml_10" style="width: 115px;" id="selCity" name="city"></select>
+                     <input type="hidden" id="province" value="${accountInfo.province}"> 
+                     <input type="hidden" id="city" value="${accountInfo.city }"> 
+	            </dt>
+	          </dl>
+	          <dl class="mzh_add_dgzh">
+	            <dd>开户银行支行名称：</dd>
+	            <dt>
+	                <input type="text" class="mzh_add_dgzh_text" name="branchName" maxlength="80"  value="${accountInfo.branchName }"/>
+	            </dt>
+	          </dl>
+	          <dl class="mzh_add_dgzh">
+	            <dd>对公银行账号：</dd>
+	            <dt>
+	              <input type="text" class="mzh_add_dgzh_text" maxlength="30" name="banckNo"  value="${accountInfo.banckNo }"/>
+	            </dt>
+	          </dl>
+	          <dl class="mzh_add_dgzh">
+	            <dd></dd>
+	            <dt> <span class="fl f12 ft_c9">请认真核对账户信息，填写错误将不能进行提现等操作</span> </dt>
+	          </dl>
+	          <dl class="mzh_add_dgzh">
+	            <dd></dd>
+	            <dt>
+	              <div class="jbzl_dl_qrdz mr_20" type="button" id="submitBtn">确认</div>
+	              <div class="jbzl_dl_qrdz" id="cancelop">取消</div>
+	            </dt>
+	          </dl>
+	        </div>
+	        <div class="blank"></div>
+    	</form>
+	</div>
+</body>
+</html>

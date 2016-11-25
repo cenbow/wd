@@ -1,0 +1,64 @@
+package com.okwei.supplyportal.bean.vo;
+
+import java.util.Date;
+
+public class ParamOrderSearch 
+{
+	private String orderNo;
+	private Short state;
+	private Short orderType;
+	private Date beginTime;
+	private Date endTime;
+	private Long buyerid;
+	private Double minPrice;
+	private Double maxPrice;
+	
+	public String getOrderNo() {
+		return orderNo;
+	}
+	public void setOrderNo(String orderNo) {
+		this.orderNo = orderNo;
+	}
+	public Date getBeginTime() {
+		return beginTime;
+	}
+	public void setBeginTime(Date beginTime) {
+		this.beginTime = beginTime;
+	}
+	public Date getEndTime() {
+		return endTime;
+	}
+	public void setEndTime(Date endTime) {
+		this.endTime = endTime;
+	}
+	public Short getState() {
+		return state;
+	}
+	public void setState(Short state) {
+		this.state = state;
+	}
+	public Short getOrderType() {
+		return orderType;
+	}
+	public void setOrderType(Short orderType) {
+		this.orderType = orderType;
+	}
+	public Long getBuyerid() {
+		return buyerid;
+	}
+	public void setBuyerid(Long buyerid) {
+		this.buyerid = buyerid;
+	}
+	public Double getMinPrice() {
+		return minPrice;
+	}
+	public void setMinPrice(Double minPrice) {
+		this.minPrice = minPrice;
+	}
+	public Double getMaxPrice() {
+		return maxPrice;
+	}
+	public void setMaxPrice(Double maxPrice) {
+		this.maxPrice = maxPrice;
+	}
+}

@@ -1,0 +1,132 @@
+package com.okwei.supplyportal.bean.vo;
+
+public class AddressVO {
+    /**
+     * 收货地址ID
+     */
+    private int caddrId;
+
+    /**
+     * 收货人
+     */
+    private String receiverName;
+
+    /**
+     * 省
+     */
+    private int province;
+
+    /**
+     * 市
+     */
+    private int city;
+
+    /**
+     * 区
+     */
+    private int district;
+
+    /**
+     * 详细地址
+     */
+    private String detailAddr;
+
+    /**
+     * 地址文字
+     */
+    private String address;
+    /**
+     * 手机号
+     */
+    private String mobilePhone;
+
+    /**
+     * QQ
+     */
+    private String qq;
+
+    /**
+     * 是否默认
+     */
+    private int isDefault;
+    
+    public int getCaddrId() {
+        return caddrId;
+    }
+
+    public void setCaddrId(int caddrId) {
+        this.caddrId = caddrId;
+    }
+
+    public String getReceiverName() {
+        return receiverName;
+    }
+
+    public void setReceiverName(String receiverName) {
+        this.receiverName = receiverName;
+    }
+
+    public int getProvince() {
+        return province;
+    }
+
+    public void setProvince(int province) {
+        this.province = province;
+    }
+
+    public int getCity() {
+        return city;
+    }
+
+    public void setCity(int city) {
+        this.city = city;
+    }
+
+    public int getDistrict() {
+        return district;
+    }
+
+    public void setDistrict(int district) {
+        this.district = district;
+    }
+
+    public String getDetailAddr() {
+        return detailAddr;
+    }
+
+    public void setDetailAddr(String detailAddr) {
+        this.detailAddr = detailAddr;
+    }
+
+    public String getAddress() {
+        return address;
+    }
+
+    public void setAddress(String address) {
+        this.address = address;
+    }
+
+    public String getMobilePhone() {
+        return mobilePhone;
+    }
+
+    public void setMobilePhone(String mobilePhone) {
+        this.mobilePhone = mobilePhone;
+    }
+
+    public String getQq() {
+        return qq;
+    }
+
+    public void setQq(String qq) {
+        this.qq = qq;
+    }
+
+    public int getIsDefault() {
+        return isDefault;
+    }
+
+    public void setIsDefault(int isDefault) {
+        this.isDefault = isDefault;
+    }
+}

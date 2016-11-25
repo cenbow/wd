@@ -1,0 +1,76 @@
+/**
+ * 
+ */
+$(function(){
+	
+	//分页
+   	var page = new Pagination( {
+		formId: "searcherForm",
+		isAjax : true,
+		targetId : "navTab",
+		submitId:"submitBtn",
+		validateFn:function(){
+			return true;
+		}
+	});
+   	page.init();
+   	//初始化省列表
+   
+   	
+   	var province =$("#txtProvince").val();
+   	var city =$("#txtCity").val();   	
+   	if(province !=null &&province >0){
+   		getRegion(2,-1,province);
+   		if(city !=null && city>0){
+   			getRegion(3,province,city);
+   		}else{
+   			getRegion(3,province,-1);
+   		}
+   	}else{ 		
+   		getRegion(2); 		
+   	}
+   	
+   	//选择省
+   	$("#selProvince").bind("change",function(){
+   		var province = $(this).val();
+  		if(province ==null || province <0){
+   			$("#selCity option:not(:first)").remove();
+   			return;
+   		}
+   		getRegion(3,province);
+   	});
+	
+});
+
+
+function getRegion(lever,parent,checkcode){
+	$.ajax({
+        url: "/demand/getRegion",
+        type: "post",
+        data: {lever:lever,parent:parent },
+        success: function (data) {          
+            if(data ==null){
+            	return ;
+            }
+            data = eval(data);
+            var html="";
+            $.each(data,function(index,item){
+            	if(item.code !=checkcode){
+            		html +="<option value='"+item.code+"'>"+item.name+"</option>"; 
+            	}else{
+            		html +="<option selected='selected' value='"+item.code+"'>"+item.name+"</option>";    	
+            	}       	       	
+            });
+            if(lever ==2){
+            	html ="<option value='-1'>选择省</option>" + html;
+            	$("#selProvince").html(html);
+            }else{
+            	html ="<option value='-1'>选择市</option>" + html;
+            	$("#selCity").html(html);
+            }
+        },
+        error: function () {
+           alert("数据提交失败，请稍后重试");
+        }
+    });	
+}

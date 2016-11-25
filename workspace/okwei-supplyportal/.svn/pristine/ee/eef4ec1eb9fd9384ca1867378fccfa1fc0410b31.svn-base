@@ -1,0 +1,27 @@
+package com.okwei.supplyportal.bean.vo;
+
+import com.okwei.supplyportal.bean.enums.BaseResultStateEnum;
+
+
+public class BaseResultVO {
+	
+	private BaseResultStateEnum result;
+	private String Message;
+	
+	
+	public String getMessage() {
+		return Message;
+	}
+
+	public void setMessage(String message) {
+		Message = message;
+	}
+	
+	public BaseResultStateEnum getResult() {
+		return result;
+	}
+
+	public void setResult(BaseResultStateEnum result) {
+		this.result = result;
+	}
+}

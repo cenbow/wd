@@ -1,0 +1,175 @@
+package com.okwei.pay.web;
+
+import java.awt.image.BufferedImage;
+import java.awt.image.DataBufferByte;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.util.ResourceBundle;
+import java.util.SortedMap;
+import java.util.TreeMap;
+
+import javax.imageio.ImageIO;
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.jdom.JDOMException;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+import com.fasterxml.jackson.databind.deser.Deserializers.Base;
+import com.llpay.client.utils.LLPayUtil;
+import com.okwei.bean.domain.OPayOrder;
+import com.okwei.bean.enums.OrderStatusEnum;
+import com.okwei.bean.enums.PayTypeEnum;
+import com.okwei.pay.bean.enums.PayResultStateEnum;
+import com.okwei.pay.bean.vo.BaseSSOController;
+import com.okwei.bean.vo.LoginUser;
+import com.okwei.pay.bean.vo.PayResult;
+import com.okwei.pay.service.IPayOrderService;
+import com.okwei.pay.util.QRCodeUtil;
+import com.tenpay.RequestHandler;
+import com.tenpay.TenPaySetting;
+import com.tenpay.TenpayUtil;
+import com.wxpay.WxPaySetting;
+import com.wxpay.WxRequestHandler;
+import com.wxpay.WxResponseHandler;
+
+@Controller
+@RequestMapping(value="/wxpay")
+public class WxPayController extends BaseSSOController{
+	
+	
+    @Autowired
+    IPayOrderService service;
+    private Log logger = LogFactory.getLog(this.getClass());
+    String paydomain = ResourceBundle.getBundle("domain").getString("paydomain");
+	 /***
+     * 调起微信支付
+     * @param request
+     * @param response
+     * @param out_trade_no
+     * @param fee
+     * @return
+     * @throws IOException 
+     * @throws JDOMException 
+     */
+    @RequestMapping(value = "/payrequest",method ={RequestMethod.POST,RequestMethod.GET})
+	private String gotoWxPay(HttpServletRequest request,HttpServletResponse response,
+			@RequestParam(required = false,defaultValue = "") String orderNo,Model model)
+    		throws JDOMException, IOException 
+    {   
+    	LoginUser loginUser = super.getLoginUser();
+    	int fee =0;
+    	PayResult payResult = service.verifilyOrder(orderNo, loginUser.getWeiID(),true);
+    	if(payResult.getState() == PayResultStateEnum.Success)
+    	{
+    		double totalAmout = Double.valueOf(payResult.getMessage());
+    		fee = (int) (totalAmout * 100);
+    	}
+    	else
+    	{	//跳转到错误页 并提示消息
+    		 return "redirect:"+paydomain+"/pay/error?type=" + payResult.getType()+"&msg="+new String(payResult.getMessage().getBytes(),"ISO8859-1");
+		}
+    	
+    	//创建支付请求对象
+    	WxRequestHandler reqHandler = new WxRequestHandler(null, null);
+    	reqHandler.setKey(WxPaySetting.key);  //设置密钥   	 	
+    	//reqHandler.setGateUrl("https://api.mch.weixin.qq.com/pay/unifiedorder");//设置支付网关
+    	//-----------------------------
+    	//设置生成预支付订单参数
+    	//-----------------------------
+    	SortedMap<String, String> packageParams = new TreeMap<String, String>();
+    	packageParams.put("appid", WxPaySetting.appid);				//公众账号ID
+    	packageParams.put("mch_id", WxPaySetting.partner);				//商户号
+    	packageParams.put("nonce_str",String.valueOf(TenpayUtil.buildRandom(32)) );			//随机字符串 
+    	packageParams.put("body", "微店网订单:"+orderNo );							//商品描述
+    	packageParams.put("out_trade_no", orderNo);					//商户订单号
+    	packageParams.put("total_fee", String.valueOf(fee));				//总金额
+    	packageParams.put("spbill_create_ip",TenpayUtil.getIp(request));	//终端IP 
+    	packageParams.put("notify_url", WxPaySetting.notify_url);			//通知地址
+    	packageParams.put("trade_type", "NATIVE");							//交易类型
+    	packageParams.put("product_id", orderNo);							//商品ID trade_type=NATIVE，此参数必传
+    	//packageParams.put("openid", "oaWp-t_TzCVUc21XwYKYWJnnfSHY");				//用户标识 交易类型为JSAPI 必传
+    	
+    	//-----------------------------
+    	//系统可选参数
+    	//-----------------------------  	
+/*    	packageParams.put("fee_type", "CNY");								//货币类型
+    	packageParams.put("time_start", TenpayUtil.getCurrTime());		//交易起始时间 yyyyMMddHHmmss
+    	packageParams.put("device_info", "WEB");							//设备号
+    	packageParams.put("detail", "微店网订单");							//商品详情
+    	packageParams.put("attach", "微店网订单");							//附加数据
+    	packageParams.put("time_expire", "");								//交易结束时间 yyyyMMddHHmmss
+    	packageParams.put("goods_tag", "");								//商品标记 代金券或立减优惠功能的参数   	
+    	packageParams.put("limit_pay", "");								//no_credit--指定不能使用信用卡支付
+*/    	
+    	String sign = reqHandler.createSign(packageParams); //签名
+    	packageParams.put("sign", sign);
+    	reqHandler.setParameters(packageParams);
+    	String xml_body = reqHandler.parseToXML();       	//转换xml    		
+    	String result = WxRequestHandler.httpPost(WxPaySetting.placeOrder_url, xml_body);//获取预支付订单号及二维码Url
+    	//判断是否成功
+    	SortedMap<String, String>  map = TenpayUtil.xml2Map(result);
+    	if(TenpayUtil.isWXsign(map, WxPaySetting.key))
+    	{
+	    	if(map !=null && map.get("return_code").equals("SUCCESS") && map.get("result_code").equals("SUCCESS"))
+	    	{
+	    		String code_url = (String) map.get("code_url");
+	    		model.addAttribute("requestUrl","/wxpay/CreateQRcode?qrcodeUrl="+code_url);
+	    	}    
+	    	else {	    		
+	    		return "redirect:"+paydomain+"/pay/error?type=0&msg=" + new String(map.get("err_code_des").getBytes(),"ISO8859-1");
+			}
+    	}else {
+    		return "redirect:"+paydomain+"/pay/error?type=0&msg=" + new String(map.get("return_msg").getBytes(),"ISO8859-1");
+		}
+    	model.addAttribute("orderNo",orderNo);
+    	model.addAttribute("totalAmout",payResult.getMessage());    	
+    	
+		return "pay/wxPay";
+	}
+
+ 
+	
+	@ResponseBody
+    @RequestMapping(value = "/CreateQRcode",method ={RequestMethod.POST,RequestMethod.GET})
+    public void CreateQRcode(HttpServletRequest request,HttpServletResponse response,
+    		@RequestParam(required = false,defaultValue = "") String qrcodeUrl) throws IOException
+    {
+
+		if(!"".equals(qrcodeUrl))
+
+		{
+            BufferedImage bufImg =QRCodeUtil.qRCodeCommon(qrcodeUrl, 21); //this.qRCodeCommon(content,  size);  
+            // 生成二维码QRCode图片  
+            ImageIO.write(bufImg, "jpg", response.getOutputStream());  
+
+		}
+    }
+	
+	@ResponseBody
+    @RequestMapping(value = "/QueryOrderState",method ={RequestMethod.POST,RequestMethod.GET})
+    public String QueryOrderState(@RequestParam(required = false,defaultValue = "") String orderNo) throws IOException
+    {
+		if(orderNo ==null || "".equals(orderNo))
+		{
+			return "fail";
+		}
+		
+		OPayOrder order = service.getPayOrder(orderNo);
+		if(order !=null && order.getState() ==Short.valueOf(OrderStatusEnum.Payed.toString()))
+		{
+			return "success";
+		}
+		
+		return "fail";
+    }
+}

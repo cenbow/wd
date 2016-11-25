@@ -1,0 +1,62 @@
+package com.okwei.supplyportal.service.impl;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.okwei.bean.domain.UBatchSupplyer;
+import com.okwei.bean.domain.USupplyer;
+import com.okwei.bean.domain.UVerifier;
+import com.okwei.bean.domain.UYunSupplier;
+import com.okwei.service.impl.BaseService;
+import com.okwei.supplyportal.bean.vo.ProductManageVO;
+import com.okwei.supplyportal.bean.vo.SupplyOrderCount;
+import com.okwei.supplyportal.bean.vo.SupplyerMsg;
+import com.okwei.supplyportal.dao.IProductManageDao;
+import com.okwei.supplyportal.service.IProductListService;
+
+@Service
+public class ProductListService extends BaseService implements
+		IProductListService {
+
+	@Autowired
+    private	IProductManageDao productManageDao;
+	
+	@Override
+	public ProductManageVO getManageMsg() {
+		// TODO 自动生成的方法存根
+		ProductManageVO manageMsg = new ProductManageVO();
+		SupplyerMsg supMsg = new SupplyerMsg();
+		
+		Long weiid = 116170L;
+		USupplyer baseSupplyer = productManageDao.getBaseSupplyerMsg(weiid);
+		
+		if(baseSupplyer!=null)
+		{
+			supMsg.setImage(baseSupplyer.getSupplierLogo());
+			supMsg.setWeiname(baseSupplyer.getCompanyName());
+            
+		}
+		
+		UBatchSupplyer supplyer = productManageDao.getSupplyerMsg(weiid);
+		if(supplyer!=null)
+		{
+			supMsg.setImage(supplyer.getShopPic());
+			supMsg.setWeiname(supplyer.getShopName());
+			supMsg.setBuscontent(supplyer.getBusContent());
+			if(supplyer.getStatus()!=null && supplyer.getStatus().equals(4))
+				supMsg.setIsbatch(1);
+		}
+		
+		UVerifier verifier = productManageDao.getBaseVerifierMsg(weiid);
+		if(verifier!=null)
+		{
+			supMsg.setIsport(1);
+		}
+		
+		SupplyOrderCount orderCount = new SupplyOrderCount();
+		int needpay = productManageDao.getOrderCountByState(weiid, (short) 0);
+		return null;
+	}
+
+	
+}

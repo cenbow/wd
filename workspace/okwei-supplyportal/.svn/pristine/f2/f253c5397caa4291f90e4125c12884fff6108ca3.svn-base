@@ -1,0 +1,87 @@
+package com.okwei.supplyportal.dao.impl;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import org.springframework.stereotype.Repository;
+
+import com.okwei.bean.domain.PParamModel;
+import com.okwei.bean.domain.PProductClass;
+import com.okwei.bean.domain.PProducts;
+import com.okwei.bean.domain.PShopClass;
+import com.okwei.bean.enums.CatagoryStepEnum;
+import com.okwei.common.Limit;
+import com.okwei.common.PageResult;
+import com.okwei.dao.impl.BaseDAO;
+import com.okwei.supplyportal.bean.dto.ProductDTO;
+import com.okwei.supplyportal.dao.IProductPublishDAO;
+import com.okwei.util.ObjectUtils;
+
+@Repository
+public class ProductPublishDAO extends BaseDAO implements IProductPublishDAO {
+
+	@Override
+	public List<PProductClass> getCatagoryByStep(CatagoryStepEnum step) {
+		String hql = "from PProductClass where step = ? order by sort";
+		return super.find(hql, (short) step.getStep());
+	}
+
+	@Override
+	public List<PProductClass> getCatagoryByParentId(Integer parentId) {
+		String hql = "from PProductClass where parentId = ? order by sort";
+		return super.find(hql, parentId);
+	}
+
+	@Override
+	public List<PProductClass> getCatagoryByKeyword(String keyword) {
+		String hql = "from PProductClass where step = ? and className like ? order by sort";
+		return super.find(hql, Short.parseShort(String.valueOf(CatagoryStepEnum.LEVEL3.getStep())), "%" + keyword + "%");
+	}
+
+	@Override
+	public List<PProductClass> getSiblingsById(Integer id) {
+		String hql = "from PProductClass where parentId = (select parentId from PProductClass where classId = ? ) order by sort";
+		return super.find(hql, id);
+	}
+
+	@Override
+	public List<PParamModel> getTemplateByClassId(Integer id) {
+		String hql = "from PParamModel where state = 1 and classId = ? ";
+		return super.find(hql, id);
+	}
+
+	@Override
+	public PageResult<PProducts> getPProducts(ProductDTO param, Limit limit) {
+		StringBuilder sb = new StringBuilder("from PProducts where 1=1");
+		List<Object> params = new ArrayList<Object>();
+		if (null != param) {
+			if (ObjectUtils.isNotEmpty(param.getProductName())) {
+				sb.append(" and productTitle like ?");
+				params.add("%" + param.getProductName() + "%");
+			}
+			if (ObjectUtils.isNotEmpty(param.getProductCode())) {
+				sb.append(" and productId = ?");
+				params.add(param.getProductCode());
+			}
+			if (ObjectUtils.isNotEmpty(param.getSupplier())) {
+				sb.append(" and supplierWeiId = ?");
+				params.add(param.getSupplier());
+			}
+			if (ObjectUtils.isNotEmpty(param.getClassID())) {
+				sb.append(" and classId = ?");
+				params.add(param.getClassID());
+			}
+			if (ObjectUtils.isNotEmpty(param.getShopClassId())) {
+				sb.append(" and sid = ?");
+				params.add(param.getShopClassId());
+			}
+		}
+		return super.findPageResult(sb.toString(), limit, params.toArray());
+	}
+
+	@Override
+	public List<PShopClass> getShopClassByWeiID(Long id) {
+		String hql = "from PShopClass where state=1 and weiid = ? ";
+		return super.find(hql, id);
+	}
+}

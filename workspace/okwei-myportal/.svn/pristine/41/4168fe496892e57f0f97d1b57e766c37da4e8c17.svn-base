@@ -1,0 +1,116 @@
+<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c"%>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/fmt" prefix="fmt"%>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/functions" prefix="fn"%>
+<%@ taglib prefix="pg" uri="http://www.okwei.com/pagination"%>
+
+<%@page import="com.okwei.util.DateUtils"%>
+<%@ page import="java.util.ResourceBundle"%>
+<%
+	String paydomain = ResourceBundle.getBundle("domain").getString(
+			"paydomain");
+%>
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<body style="background: #f3f3f3;">
+	<div class="outermost">
+		<form id="searcherForm" name="searcherForm" action="actdetail">
+			<input type="hidden" name="actid" value="${actid}">
+			<div class="fl mzh_100 bor_si mt_10 mb_20">
+				<h4 class="mzh_100 bg_white line_42">【${actModel.title }】活动详情：</h4>
+				<div class="fl bg_f3 p10 line_42">
+					<div class="fl ml_20 mr_20">
+						报名产品： <span>${pageRes.totalCount }</span>
+					</div>
+					<div class="fl ml_20 mr_20">
+						入选产品数量： <span>${passCount}</span>
+					</div>
+				</div>
+			</div>
+			<table class="conter_right fl bg_white bor_si f14 line_42 tc">
+				<tr class="bg_f3" style="border-bottom:1px solid #e7e7e7;">
+					<th width="8%">产品图片</th>
+					<th width="20%">产品标题</th>
+					<th width="10%">价格</th>
+					<th width="10%">数量/剩余数量</th>
+					<th width="10%">成交个数</th>
+					<th width="10%">成交金额(￥)</th>
+					<th width="10%">审核状态</th>
+					<th>展示时间段</th>
+					<th>参展状态</th>
+				</tr>
+				<c:forEach var="proModel" items="${pageRes.list}" varStatus="index">
+					<tr style="border-bottom:1px solid #e7e7e7;">
+						<td><img src="${ proModel.productImg}" width="50" height="50"></td>
+						<td  style="line-height: 26px;">${proModel.productTitle }</td>
+						<td>
+							<p>现价：${proModel.priceBf }</p>
+							<p>活动价：${proModel.price }</p>
+							<p>佣金：${proModel.commission }</p>
+						</td>
+						<td>${proModel.totalCount }/${proModel.stockCount }</td>
+						<td>${proModel.selledCount }</td>
+						<td>${proModel.selledAmount }</td>
+						<td><c:choose>
+								<c:when test="${proModel.state==1 }">
+									已通过
+								</c:when>
+								<c:when test="${proModel.state==2 }">
+									<p>不通过</p>
+									<p>(${proModel.reason })</p>
+								</c:when>
+								<c:otherwise>
+									未审核
+								</c:otherwise>
+							</c:choose>
+						</td>
+						<td colspan="2">
+							<div class="mzh_100">
+								
+								<c:forEach var="expMode" items="${proModel.productExtends}" varStatus="index" >
+								<div class="mzh_100">
+									<div style="width: 50%;" class="fl">
+										${DateUtils.format(expMode.beginTimeDate ,"yyyy/MM/dd HH:mm" )}-${DateUtils.format(expMode.endtimeDate ,"HH:mm")}
+									</div>
+										<div style="width: 49%;" class="fl">
+											<c:choose>
+												<c:when test="${expMode.state==1 }">
+													进行中
+												</c:when>
+												<c:when test="${expMode.state==2 }">
+													已结束
+												</c:when>
+												<c:otherwise>
+													未开始
+												</c:otherwise>
+											</c:choose>
+										</div>
+									</div>
+								</c:forEach>
+							</div>
+						</td>
+					</tr>
+				</c:forEach>
+			</table>
+			<!-- 分页 -->
+			<div class="pull-right">
+				<pg:page pageResult="${pageRes}" />
+			</div>
+		</form>
+	</div>
+	<script language="javascript" type="text/javascript">
+		$(function() {
+			var page = new Pagination({
+				formId : "searcherForm",
+				isAjax : false,
+				targetId : "navTab",
+				submitId : "searchBtn",
+				validateFn : false
+			});
+			page.init();
+
+		});
+	</script>
+</body>
+</html>

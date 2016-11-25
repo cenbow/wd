@@ -1,0 +1,324 @@
+package com.okwei.supplyportal.service.impl;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.okwei.bean.domain.PProducts;
+import com.okwei.bean.domain.UBatchSupplyer;
+import com.okwei.bean.domain.USupplyer;
+import com.okwei.bean.domain.UVerifier;
+import com.okwei.bean.domain.UYunSupplier;
+import com.okwei.service.impl.BaseService;
+import com.okwei.supplyportal.bean.enums.ProductStatus;
+import com.okwei.supplyportal.bean.vo.ProductManageVO;
+import com.okwei.supplyportal.bean.vo.SupplyOrderCount;
+import com.okwei.supplyportal.bean.vo.SupplyerMsg;
+import com.okwei.supplyportal.bean.vo.SupplyerProductCollect;
+import com.okwei.supplyportal.bean.vo.SupplyerProductCount;
+import com.okwei.supplyportal.bean.vo.SupplyerProductMsg;
+import com.okwei.supplyportal.cons.Constants;
+import com.okwei.supplyportal.dao.IProductManageDao;
+import com.okwei.supplyportal.service.IProductListService;
+import com.okwei.util.DateUtils;
+import com.okwei.util.ImgDomain;
+
+@Service
+public class ProductListService extends BaseService implements
+		IProductListService {
+
+	@Autowired
+    private	IProductManageDao productManageDao;
+	
+	@Override
+	public ProductManageVO getManageMsg(Short productstate,int pagesize,int pageindex,String content) {
+		// TODO 自动生成的方法存根
+		ProductManageVO manageMsg = new ProductManageVO();
+		
+		Long weiid = 116170L;
+		
+		if(pagesize<=0)
+			pagesize=10;
+		if(pageindex<=0)
+			pageindex=1;
+		
+		/**
+		 * 获取供应商信息
+		 * 展示信息。先批发商，后....
+		 */
+		SupplyerMsg supMsg = new SupplyerMsg();
+		USupplyer baseSupplyer = productManageDao.getBaseSupplyerMsg(weiid);
+		if(baseSupplyer!=null)
+		{
+ 			supMsg.setImage(baseSupplyer.getSupplierLogo());
+			supMsg.setWeiname(baseSupplyer.getCompanyName());
+		}
+		
+		UBatchSupplyer supplyer = productManageDao.getSupplyerMsg(weiid);
+		if(supplyer!=null)
+		{
+			supMsg.setImage(supplyer.getShopPic());
+			supMsg.setWeiname(supplyer.getShopName());
+			supMsg.setBuscontent(supplyer.getBusContent());
+			if(supplyer.getStatus()!=null && supplyer.getStatus().equals(4))
+				supMsg.setIsbatch(1);
+		}
+		
+		UVerifier verifier = productManageDao.getBaseVerifierMsg(weiid);
+		if(verifier!=null)
+		{
+			supMsg.setIsport(1);
+		}
+		
+		/**
+		 * 获取订单个数
+		 */
+		SupplyOrderCount orderCount = new SupplyOrderCount();
+		List<Object[]> orderObs = productManageDao.getOrderCount(weiid);
+		Long needpay = 0l;
+		Long needsend = 0l;
+		Long needreseive = 0l;
+		if(orderObs!=null && orderObs.size()>0);
+		{
+			for(Object[] ob:orderObs)
+			{
+				Long count = Long.parseLong(ob[0]==null?"0":ob[0].toString());
+				Short state = Short.parseShort(ob[1]==null?"0":ob[1].toString());
+				switch(state)
+				{
+				case 0:needpay=count;break;
+				case 1:needsend=count;break;
+				case 2:needreseive=count;break;
+				default:break;
+				}
+			}
+		}
+		orderCount.setNeedpay(Integer.parseInt(needpay.toString()));
+		orderCount.setNeedsend(Integer.parseInt(needsend.toString()));
+		orderCount.setNeedreseive(Integer.parseInt(needreseive.toString()));
+		
+		/**
+		 * 获取产品个数
+		 */
+		SupplyerProductCount productCount = new SupplyerProductCount();
+		List<Object[]> productObs = productManageDao.getProductsCount(weiid);
+		Long saleing = 0l;
+		Long saveing = 0l;
+		Long verifying = 0l;
+		Long fail = 0l;
+		Long drafting = 0l;
+		if(productObs!=null && productObs.size()>0);
+		{
+			for(Object[] ob:productObs)
+			{
+				Long count = Long.parseLong(ob[0]==null?"0":ob[0].toString());
+				Short state = Short.parseShort(ob[1]==null?"0":ob[1].toString());
+				if(state==-1)
+					state=0;
+				ProductStatus pstatu = ProductStatus.values()[state];
+				switch(pstatu)
+				{
+				case Showing:saleing=count;break;
+				case Drop:saveing=count;break;
+				case Submitting:verifying=count;break;
+				case Fail:fail=count;break;
+				case OutLine:drafting=count;break;
+				default:break;
+				}
+			}
+		}
+		productCount.setSaleing(Integer.parseInt(saleing.toString()));
+		productCount.setSaveing(Integer.parseInt(saveing.toString()));
+		productCount.setVerifying(Integer.parseInt(verifying.toString()));
+		productCount.setFail(Integer.parseInt(fail.toString()));
+		productCount.setDrafting(Integer.parseInt(drafting.toString()));
+		
+		/**
+		 * 获取产品列表信息
+		 */
+		SupplyerProductCollect productCollect = new SupplyerProductCollect();
+		Long totalCount = productManageDao.getProductCountyByState(weiid, productstate);
+		productCollect.setPagesize(pagesize);
+		productCollect.setPageindex(pageindex);
+		Long pagecount = totalCount/pagesize +(totalCount%pagesize==0?0:1);
+		productCollect.setPagecount(Integer.parseInt(pagecount.toString()) );
+		productCollect.setType(productstate);
+		
+		List<SupplyerProductMsg> productlist = new ArrayList<SupplyerProductMsg>();
+		List<Object[]> objects = productManageDao.getProductsBySupID(weiid, productstate, pagesize, pageindex,content);
+		int maxsort = productManageDao.getmaxSort(weiid);
+		int minsort = productManageDao.getminSort(weiid);
+		
+		int temp = pagesize;//实际查询的的数据量
+        if(pageindex==1)
+        	temp+=1;
+        else
+        	temp+=2;
+		//中间页面比普通页面多两个元素
+		if(objects!=null && objects.size()>0)
+		{
+			for(int i=0;i<objects.size();i++)
+			{
+				SupplyerProductMsg pmsg = new SupplyerProductMsg();
+				Long productid = Long.parseLong(objects.get(i)[0]==null?"0":objects.get(i)[0].toString());
+				Double price = Double.parseDouble(objects.get(i)[1]==null?"0.0":objects.get(i)[1].toString());
+				String image = objects.get(i)[2]==null?"":objects.get(i)[2].toString();
+				String producttitle = objects.get(i)[3]==null?"":objects.get(i)[3].toString();
+				Short sort = Short.parseShort(objects.get(i)[4]==null?"0":objects.get(i)[4].toString());
+				String realsetime = DateUtils.formatDateTime(objects.get(i)[5]==null?new Date():(Date) objects.get(i)[5]);
+				Integer shelvecount = Integer.parseInt(objects.get(i)[6]==null?"0":objects.get(i)[6].toString());
+				Integer evaluatecount = Integer.parseInt(objects.get(i)[7]==null?"0": objects.get(i)[7].toString());
+				
+            
+		        pmsg.setProductid(productid);
+		        pmsg.setPrice(price);
+		       // pmsg.setProductimage(ImgDomain.GetFullImgUrl(image));
+		        pmsg.setProductimage(image);
+		        pmsg.setProducttitle(producttitle);
+		        pmsg.setRealsetime(realsetime);
+		        pmsg.setSharedcount(evaluatecount);
+		        pmsg.setShevlecount(shelvecount);
+		        
+		        /**
+		         * 一下两位的赋值是判断前端是否显示已推荐、上移、下移
+		         */
+		        //标记是否为置顶
+		        pmsg.setIstop(0);
+		        //上下移都不要为0；只要下移为1；上下移动都要为2；只要上移动为3
+		        pmsg.setPosition(-1);
+		        //是否显示
+		        pmsg.setIsshow(1);
+		        //置顶的sort是大于0的
+		        if(sort>0)
+		        {
+		        	pmsg.setIstop(1);
+		        	
+		        	if(i==0 && pageindex==1) //第一页的第一个
+		        	{
+		        		if(maxsort==minsort || objects.size()==1) //这个判断表达了两个意思：1、只有一个产品；2、只有一个置顶的产品
+		        		    pmsg.setPosition(0);//只有一个置顶的产品
+		        		else
+		        			pmsg.setPosition(1);//如果只有一个就不要上下移动了
+		        	}
+		        	else
+		        	{
+		        		//中间的设置为2
+		        		pmsg.setPosition(2);
+		        		//最后一个置顶的产品
+		        		if(sort==minsort) //最后一个就不要上移了
+		        			pmsg.setPosition(3);
+		        	}
+		        	
+		        }
+		        
+		        //中间页的第一个
+		        if(pageindex>1 && i==0)
+		        	 pmsg.setIsshow(0);
+		        //中间页的最后一个
+		        if(i==temp-1)
+		        	pmsg.setIsshow(0);
+		        
+		        productlist.add(pmsg);  
+			}
+		}
+		productCollect.setProductlist(productlist);
+		
+		manageMsg.setContent(content);
+		manageMsg.setIssearch(1);
+		if(content==null || content.equals(""))
+			manageMsg.setIssearch(0);
+		manageMsg.setPtype(productstate);
+		manageMsg.setSupmsg(supMsg);
+		manageMsg.setOrdercount(orderCount);
+		manageMsg.setProductcount(productCount);
+		manageMsg.setProductcollect(productCollect);
+		return manageMsg;
+	}
+
+	@Override
+	public int offTop(Long productid,Long supweiid) {
+		// TODO 自动生成的方法存根
+		try
+		{
+			productManageDao.updateProductSort(productid, (short) 0,supweiid);
+		}
+		catch(Exception e)
+		{
+			return 0;
+		}
+		return 1; 
+	}
+
+	@Override
+	public int onTop(Long productid,Long supweiid) {
+		// TODO 自动生成的方法存根
+		try
+		{
+			productManageDao.updateProductSort(productid,supweiid);
+		}
+		catch(Exception e)
+		{
+			return 0;
+		}
+		return 1; 
+	}
+
+	@Override
+	public int moveposition(Long productid, Short updown,Long supweiid) {
+		// TODO 自动生成的方法存根
+		try
+		{
+			productManageDao.moveposition(productid,updown,supweiid);
+		}
+		catch(Exception e)
+		{
+			return 0;
+		}
+		return 1; 
+	}
+
+	@Override
+	public int batchontop(String[] products, Long supweiid) {
+		// TODO 自动生成的方法存根
+		try
+		{
+			productManageDao.batchontop(products,supweiid);
+		}
+		catch(Exception e)
+		{
+			return 0;
+		}
+		return 1; 
+	}
+
+	@Override
+	public int batchoffshow(String[] products, Long supweiid) {
+		// TODO 自动生成的方法存根
+		try
+		{
+			productManageDao.batchoffshow(products,supweiid);
+		}
+		catch(Exception e)
+		{
+			return 0;
+		}
+		return 1; 
+	}
+
+	@Override
+	public int batchoperate(String[] products, Long supweiid, Short optype) {
+		// TODO 自动生成的方法存根
+		try
+		{
+			productManageDao.batchoperate(products,supweiid,optype);
+		}
+		catch(Exception e)
+		{
+			return 0;
+		}
+		return 1; 
+	}
+}

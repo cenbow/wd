@@ -1,0 +1,116 @@
+package com.okwei.supplyportal.dao.impl;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import com.okwei.bean.domain.OProductOrder;
+import com.okwei.bean.domain.OSupplyerOrder;
+import com.okwei.bean.domain.UWeiSeller;
+import com.okwei.bean.enums.OrderTypeEnum;
+import com.okwei.common.Limit;
+import com.okwei.common.PageResult;
+import com.okwei.dao.impl.BaseDAO;
+import com.okwei.supplyportal.bean.vo.ParamOrderSearch;
+import com.okwei.supplyportal.dao.IOrderManageDAO;
+import com.okwei.util.ObjectUtils;
+
+public class OrderManageDAO extends BaseDAO implements IOrderManageDAO {
+	
+	@Override
+	public PageResult<OSupplyerOrder> getSupplyOrderlistResult(ParamOrderSearch param, Long supperWeiid, Limit limit)
+	{
+		Map<String, Object> map=new HashMap<String, Object>();
+		String hql=" from OSupplyerOrder o where o.supplierOrderId>0 ";
+		if(supperWeiid>0)
+		{
+			hql+=" and o.supplyerId=:supweiid";
+			map.put("supweiid", supperWeiid);
+		}
+		if(param!=null)
+		{
+			//订单类型
+			if(param.getOrderType()!=null)
+			{
+				hql+=" and o.orderType in(:ordertype)";
+				Short[] orderTypes=null;
+				switch (param.getOrderType()) {
+				case 1://零售订单
+					orderTypes=new Short[]{
+						Short.parseShort(OrderTypeEnum.Pt.toString()),
+						Short.parseShort(OrderTypeEnum.BatchOrder.toString()),
+					};
+					break;
+				case 2://批发订单
+					orderTypes=new Short[]{
+							Short.parseShort(OrderTypeEnum.BatchWholesale.toString()),
+						};
+						break;
+				case 3://预定订单
+					orderTypes=new Short[]{
+							Short.parseShort(OrderTypeEnum.BookOrder.toString()),
+						};
+					break;
+				default:
+					orderTypes=new Short[]{
+							Short.parseShort(OrderTypeEnum.Pt.toString()),
+							Short.parseShort(OrderTypeEnum.BatchOrder.toString()),
+						};
+					break;
+				}
+				map.put("ordertype", orderTypes);
+			}
+			//订单状态
+			if(null!=param.getState())
+			{
+				hql+=" and o.state=:state";
+				map.put("state", param.getState());
+			}else{
+				hql+=" and o.state!=14";
+			}
+			//订单号
+			if(param.getOrderNo()!=null&&!"".equals(param.getOrderNo()))
+			{
+				hql+=" and o.supplierOrderId=:supplierOrderId";
+				map.put("supplierOrderId", param.getOrderNo());
+			}
+			//买家微店号
+			if(param.getBuyerid()!=null)
+			{
+				hql+=" and o.buyerID=:buyerID";
+				map.put("buyerID", param.getBuyerid());
+			}
+			hql+=" order by o.orderTime desc ";
+		}
+		//TODO map查询方式
+		PageResult<OSupplyerOrder> result=super.findPageResultByMap(hql, limit, map);
+		return result;
+	}
+	
+	@Override
+	public List<OProductOrder> getProductOrderListBySupplyOrderIds(String[] supplyOrderIds)
+	{
+		if(!ObjectUtils.isEmpty(supplyOrderIds))
+		{
+			String hql=" from OProductOrder o where o.supplierOrderId in(:sids)";
+			Map<String, Object> map=new HashMap<String, Object>();
+			map.put("sids", supplyOrderIds);
+			//TODO map查询方式 需要更改
+			return super.findByMap(hql, map);
+		}
+		return null;
+	}
+	
+	public List<UWeiSeller> getUsersByWeiids(Long[] weiids)
+	{
+		if(!ObjectUtils.isEmpty(weiids))
+		{
+			String hql=" from UWeiSeller o where o.weiId in(:sids)";
+			Map<String, Object> map=new HashMap<String, Object>();
+			map.put("sids", weiids);
+			//TODO map查询方式 需要更改
+			return super.findByMap(hql, map);
+		}
+		return null;
+	}
+}

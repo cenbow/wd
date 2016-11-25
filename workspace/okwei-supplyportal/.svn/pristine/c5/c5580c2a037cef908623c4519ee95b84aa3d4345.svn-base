@@ -1,0 +1,1078 @@
+var isPostting = false;
+$(function(){
+	//防止被缓存
+	$("#cboxIsShowParam").prop("checked",false);
+	$("#box_1").prop("checked",false);
+	$("#box_2").prop("checked",false);
+	$("#box_3").prop("checked",false);
+	//初始化百度编辑器
+	EditorInit();
+	
+	//显示隐藏商品属性
+	$("#cboxIsShowParam").click(function(){
+		if($(this).prop("checked")==true){
+			$("#divSetParam").slideDown();
+		}
+		else{
+			$("#divSetParam").slideUp();
+		}
+	});
+	$("#imgHideParamDiv").click(function(){
+		$("#divSetParam").slideUp();
+		$("#cboxIsShowParam").prop("checked",false);
+	});
+	
+	//添加自定义属性
+	$("#Fice_inp").on("click","[name='Add_imgs'] img",function(){
+		if($("#Fice_inp .self_one").length>=10){
+			alert("最多只能添加10个自定义属性！");
+			return;
+		}
+				
+		var paramDIV = $(this).closest(".self_one").clone();
+		$(paramDIV).find("input").val("");
+		$(paramDIV).appendTo($("#Fice_inp"));
+		$(this).closest(".xiao_icon").append("<a name='Del_img' href='javascript:;'>" +
+				"<img src='/statics/pic/delete_icon.png'></a>");
+		$(this).parent().remove();
+	});
+	//删除自定义属性
+	$("#Fice_inp").on("click","[name='Del_img'] img",function(){
+		$(this).closest(".self_one").remove();
+		PreviewParam();
+	});
+	
+	//动态生成属性预览
+	$("#divSetParam").on("blur","input[type='text']",function(){
+		PreviewParam();
+	}).on("change","select",function(){
+		PreviewParam();
+	}).on("click","input:checkbox",function(){
+		PreviewParam();
+	});
+	
+	
+	//保存属性模板
+	$("#btnSaveParamTemp").click(function(){
+		var paramData = getParamData();
+		if(paramData != false){			
+			ShowWin("保存模板","NefMban",$(this),function(_this,index){
+				var mname = $("#txtName").val();
+				var classId = $("#txtClassID").val();
+				if(mname ==""){
+					alert("请输入名称！");
+					return;
+				}				
+				if(isPostting){
+					return;
+				}
+				var josn = obj2Str({mname:mname,classId:classId,keyList:paramData});	
+				var loadIndex = layer.load('正在努力的提交...');
+				return;
+				isPostting = true;
+		        $.ajax({
+		            url: "/Product/saveParamModel",
+		            type: "post",
+		            data: { josn:josn },
+		            success: function (data) {
+		                data = eval(data);
+		                if(data.state =="Success"){
+		                	layer.close(index);
+		                	alert("保存成功！",true);	  
+		                	$("#txtMID").val(data.message);
+		                	$("#classModelName").val(mname);
+		                }else{
+		                	alert(data.message);
+		                }
+		            },
+		            error: function () {
+		                alert("数据提交失败！请稍后重试！");
+		            }
+		        });
+		        isPostting = false;
+		        layer.close(loadIndex);				
+			});
+		}	
+	});
+	
+	//商品价格输入限制 失去焦点事件
+	txtWritefloat("txtProductPrice");
+	txtWritefloat("txtProductComminss");
+	$("#txtProductPrice,#txtProductComminss").bind("blur",function(){
+		var price = $("#txtProductPrice").val();
+		var comminss = $("#txtProductComminss").val();
+		
+		if(price !="" && (isNaN(price)|| price <=0)){
+			alert("请正确输入商品单价！");
+			$("#txtProductPrice").val("");
+			$("#txtTotal").val("");
+			return;
+		}	
+		
+		if(comminss !="" && (isNaN(comminss) || comminss<=0)){
+			alert("请正确输入商品佣金！");
+			$("#txtProductComminss").val("");
+			$("#txtTotal").val("");
+			return;
+		}
+		
+		if(price =="" || comminss==""){
+			$("#txtTotal").val("");
+			return;
+		}
+		
+		$("#txtTotal").val(parseFloat(price)+parseFloat(comminss));		
+	});
+	//商品数量输入限制 失去焦点事件
+	txtWriteint("txtProductNum");
+	
+	//改变规格名称
+	$(".pinpaixze_is select").change(function(){
+		getStyleList(false);
+	});
+	
+	//自定义规格
+	$(".pinpaixze_is select>option[value='-1']").click(function(){
+		ShowWin("自定义规格","NefMban",$(this),function(_this,index){
+			var txtName = $("#NefMban input").val();
+			if(txtName ==""){
+				alert("请输入名称！");
+				return;
+			}
+			//是否重复
+			var options = [];
+			$(".pinpaixze_is select>option").each(function(index,item){
+				options.push($(item).html());
+			});
+			if ($.inArray(txtName, options) > -1){
+				alert("该规格已存在！");
+				return;
+			}
+			
+			$(_this).before("<option>"+txtName+"</option>");
+			$(_this).prev("option").attr("selected",true);
+			layer.close(index);
+			getStyleList();
+		});
+	});
+	
+	//添加商品规格值
+	$(".pinpaixze_pf").on("click",".add_heistimg",function(){
+		
+		var len = $(this).closest(".pincrig").find(".input_cols").length;
+		if(len>=10){
+			alert("每个规格最多只能添加10个！");
+			return;
+		}
+		
+		var value = $(this).closest(".add_heistimg").prev("input").val();
+		if(value==""){
+			alert("请输入规格值！");
+			return;
+		}
+		
+		if($(this).closest(".pinpaixze_is").index()==0){
+			var valueID = "valueImg" + len;
+			var html ="<div class='col_scimgs fl'>";
+				html +="	<div class='scimg_col fl'>";
+				html +=" 		<span class='dis_b ml_10 dis_bgnews fl'></span>";
+				html +="		<span class='fl ml_10 lh_40 ft_c3 dis_b'>"+value+"</span>";
+				html +="	</div>";
+				html +="	<div class='scimg_del fl'>";
+				html +="	    <div class='btn_wear30_pre shou ml_10 mt_5 fl w150'><span id='"+valueID+"'>上传图片</span></div>";
+				html +="	</div>"; 
+				html +="</div>";	     			
+			$("#Cofic").append(html);
+			UpLoadOneImgInit(valueID,"valueImg");
+		}
+		
+		var paramDIV =$(this).closest(".input_cols").clone();
+		$(paramDIV).find("input").val("");
+		$(paramDIV).appendTo($(this).closest(".pincrig"));
+		$(this).parent().append("<div class='fl del_inputimg'>" +
+				"<img src='/statics/images/delimg_hua.png'></div>");
+		$(this).remove();
+		getStyleList();
+	});
+	
+	
+	//规格值失去焦点
+	$(".pinpaixze_pf").on("blur",".pincrig input",function(){
+		var tempValues = [];
+		$(".pinpaixze_pf .pincrig input").each(function(index,item){
+			if($(this).val()==""){
+				return;
+			}		
+			if ($.inArray($(this).val(), tempValues) > -1) {
+				alert("存在相同的规格值！"+$(this).val());
+				$(this).val("");
+				return;
+			}
+			tempValues.push($(item).val());	 
+		});
+	});
+	
+	//删除商品规格值
+	$(".pinpaixze_pf").on("click",".del_inputimg",function(){
+		//如果是第一种规格 需要移除对应的上传图片
+		if($(this).closest(".pinpaixze_is").index()==0){
+			var index = $(this).closest(".input_cols").index();
+			$("#Cofic .col_scimgs").eq(index).remove();
+		}
+
+		$(this).closest(".input_cols").remove();
+		getStyleList();
+	});
+	
+	//规格值的价格 数量 输入限制
+	$("#Ute_inp").on("blur","input[name='sellPrice'],input[name='sellComminss']",function(){
+		var txtPrice = $(this).parent().find("input[name='sellPrice']");
+		var txtComminss=$(this).parent().find("input[name='sellComminss']");
+		var txtTotal =$(this).parent().find("input[name='sellTotal']");
+		
+		var price = $(txtPrice).val();
+		var comminss = $(txtComminss).val();
+		
+		if(price !="" && (isNaN(price)|| price <=0)){
+			alert("请正确输入商品价格！");
+			$(txtPrice).val("");
+			$(txtTotal).val("");
+			return;
+		}	
+		
+		if(comminss !="" && (isNaN(comminss) || comminss<=0)){
+			alert("请正确输入商品佣金！");
+			$(txtComminss).val("");
+			$(txtTotal).val("");
+			return;
+		}
+		
+		if(price =="" || comminss==""){
+			$(txtTotal).val("");
+			return;
+		}
+		
+		$(txtTotal).val(parseFloat(price)+parseFloat(comminss));	
+		
+	}).on("keyup","input[name='sellPrice'],input[name='sellComminss']",function(){   
+		$(this).val($(this).val().replace(/[^0-9.]/g,''));    
+	}).on("paste","input[name='sellPrice'],input[name='sellComminss']",function(){  //CTR+V事件处理     
+		$(this).val($(this).val().replace(/[^0-9.]/g,''));     
+	}).css("ime-mode", "disabled"); //CSS设置输入法不可用  
+	
+	//每种规格数量 输入限制
+	$("#Ute_inp").on("keyup","input[name='txtSellNum']",function(){    
+		$(this).val($(this).val().replace(/\D|^0/g,''));  
+	}).on("paste",function(){  //CTR+V事件处理     
+		$(this).val($(this).val().replace(/\D|^0/g,''));     
+	}).css("ime-mode", "disabled"); //CSS设置输入法不可用  
+	
+	//显示隐藏商品规格设置
+	$("#box_1").bind("click",function(){
+		if($(this).prop("checked")==true){
+			$("#Ute_inp").slideDown();
+		}
+		else{
+			$("#Ute_inp").slideUp();
+		}
+	});
+	//删除某项商品规格
+	$("#Foct_Shop").on("click",".inp_col6 img",function(){
+		$(this).closest("ul").remove();
+	});
+	//显示隐藏批发价格
+	$("#box_2").click(function(){
+		if($(this).prop("checked")==true){
+			$("#Ute_inpFic").slideDown();
+		}
+		else{
+			$("#Ute_inpFic").slideUp();
+		}
+	});
+	
+	//添加区间价格
+	$('#AddPrice').click(function(){	
+		var isTrue =true;
+		$("#PriceTjia").find(".title_shuru").each(function(){
+			var count = $(this).find(".shuru_price input").val();
+			var price = $(this).find(".shuru_priceon input").val();			
+			if(count =="" || count< 2 || isNaN(count)){
+				alert("请正确填写区间数量！");
+				 $(this).find(".shuru_price input").val("");
+				 isTrue = false;
+				 return false;
+			}
+			count = parseInt(count);	
+			price = parseFloat(price);	
+			
+			if( price=="" || price<=0 || isNaN(price)){
+				alert("请正确填写区间价格！");
+				$(this).find(".shuru_priceon input").val("");
+				isTrue = false;
+				return false;
+			}
+							
+			if($(this).index()>0){
+				var prevCount =parseInt($(this).prev().find(".shuru_price input").val());
+				var prevPrice =parseFloat($(this).prev().find(".shuru_priceon input").val());
+				if( count <= prevCount){
+					alert("请正确填写批发数量!必须大于上一区间！");
+					isTrue = false;
+					return false;
+				}
+				if(price >= prevPrice){
+					alert("请正确填写批发价格!必须小于上一区间！");
+					isTrue = false;
+					return false;
+				}
+			}
+		});
+		if(!isTrue){
+			return;
+		}
+		
+		if($("#PriceTjia").find(".title_shuru").length>=5){
+			alert("阶梯价格不能大于5个！");
+			return;
+		}
+		$('#PriceTjia').append('<div class="h40 title_shuru"><div class="shuru_price fl">'
+				+'<input type="text" class="btn_h30 w98" />&nbsp;件及以上： </div><div class="shuru_priceon fl">'
+				+'<input type="text" class="btn_h30 w98" /> &nbsp;元/件<a href="javascript:;" name="DelPrice">'
+				+'<img src="/statics/pic/delete_icon.png" /></a> </div></div>');
+		PreviewBatchPrice();
+	});
+	//删除区间价格
+	$("#PriceTjia").on("click","[name='DelPrice']",function(){
+		$(this).closest(".title_shuru").remove();
+		PreviewBatchPrice();
+	});
+	
+	//显示隐藏预定价格
+	$("#box_3").click(function(){
+		if($(this).prop("checked")==true){
+			$("#YuDing").slideDown();
+		}
+		else{
+			$("#YuDing").slideUp();
+		}
+	});
+	//预定价格输入限制 失去焦点
+	txtWritefloat("txtPreOrderPrice");
+	$("#txtPreOrderPrice").bind("blur",function(){
+		if($(this).val() !="" && isNaN($(this).val())){
+			alert("请正确填写预定价格");			
+			$(this).val("");
+		}
+	});
+	
+	//删除图片
+	$(".she_img").on("click",".img_dele ",function(){
+		var upbtnID ="upimgbtn" +($(".she_img  li>div.own_img_one").length + 1);
+		$(this).closest("li").append("<div class='own_img_one'>" 
+				+"<img src='/statics/pic/xin_inselimg.png'>" 
+				+"<div class='transparentDiv'><span id='"+upbtnID+"'></span></div></div>");
+		$(this).closest(".own_img").remove();
+		UpLoadOneImgInit(upbtnID,"productImg");
+	});
+	
+	//保存店铺分类
+	$("#btnSaveShopClass").click(function(){
+		ShowWin("保存分类","NefMban",$(this),function(_this,index){
+			var scName = $("#NefMban input").val();
+			if(scName ==""){
+				alert("请输入分类名称！");
+				return;
+			}
+			var isHave = false;
+			$("#selShopClass option").each(function(index,item){
+				if($(item).text() ==scName){
+					alert("该分类名称已存在！");
+					isHave = true;
+					return;
+				}
+			});
+			if(isHave || isPostting){
+				return;
+			}
+			var loadIndex = layer.load('正在努力的提交...');
+			isPostting = true;
+	        $.ajax({
+	            url: "/Product/saveShopClass",
+	            type: "post",
+	            data: { scName:scName },
+	            success: function (data) {
+	                data = eval(data);
+	                if(data.state =="Success"){
+	                	alert("保存成功！",true);
+	                	layer.close(index);
+	                	$("#selShopClass").append("<option selected='selected' value='"+data.message+"'>"+scName+"</option>");
+	                	
+	                }else{
+	                	alert(data.message);
+	                }
+	            },
+	            error: function () {
+	                alert("数据提交失败！请稍后重试！");
+	            }
+	        });
+	        isPostting = false;
+	        layer.close(loadIndex);
+		});
+	});
+	
+	//批发价数量文本框限制
+	$("#PriceTjia").on("keyup",".shuru_price input",function(){    
+		$(this).val($(this).val().replace(/\D|^0/g,''));  
+	}).on("paste",".shuru_price input",function(){  //CTR+V事件处理     
+		$(this).val($(this).val().replace(/\D|^0/g,''));     
+	}).on("blur",".shuru_price input",function(){
+		var count = $(this).val();		
+		PreviewBatchPrice();
+	}).css("ime-mode", "disabled"); //CSS设置输入法不可用  
+
+	//批发价 价格文本框限制
+	$("#PriceTjia").on("keyup",".shuru_priceon input",function(){   
+		$(this).val($(this).val().replace(/[^0-9.]/g,''));    
+	}).on("paste",".shuru_priceon input",function(){  //CTR+V事件处理     
+		$(this).val($(this).val().replace(/[^0-9.]/g,''));     
+	}).on("blur",".shuru_price input",function(){
+		var count = $(this).val();		
+		PreviewBatchPrice();
+	}).css("ime-mode", "disabled"); //CSS设置输入法不可用  
+
+	//删除销售属性图片
+	$("#Cofic").on("click",".imgsew a",function(){
+		$(this).closest(".imgsew").remove();				
+	});
+	
+	//PC Wap 详情切换
+	$(".news_tabq a").click(function(){
+		$(this).siblings().attr("class","tba_onefic");
+		$(this).attr("class","tba_twofic");
+		var index = $(this).index();
+		if(index ==0){
+			$("#PcNew_1").show();
+			$("#PcNew_2").hide();
+		}
+		else{
+			$("#PcNew_2").show();
+			$("#PcNew_1").hide();
+		}
+	});
+	
+	//初始化批量上传控件
+	UpLoadImgInit();
+	//初始化单个商品图片上传控件
+	$(".she_img .transparentDiv span").each(function(index,item){
+		UpLoadOneImgInit($(this).attr("id"),"productImg");
+	});
+	$(".num_col .scimg_del .btn_wear30_pre span").each(function(index,item){
+		UpLoadOneImgInit($(this).attr("id"),"valueImg");
+	});
+		
+	//生成wapDes
+	$("#btnCreateWapDes").click(function(){		
+		var WAPDes = Filter(pcEditor.getContent());
+		wapEditor.setContent(WAPDes);
+		$(".news_tabq a").eq(1).click();
+	});
+	
+	//保存草稿
+	$("#btnSaveDraft").bind("click",function(){
+		
+	});
+	//发布商品
+	$("#btnSaveProduct").bind("click",function(){
+		
+	});
+	
+});
+
+//获取参数模板数据
+function getParamData(){
+
+	var isSuccess =true;	
+	var classid = $("#txtClassID").val();
+	var keyList =[];
+	$(".type_selec .selec_once").each(function(index,item){
+		//key
+		var keySpan = $(this).find(".clao_le span");
+		var attributeName = $(keySpan).html();
+		var attributeId = $(keySpan).attr("attributeid");
+		var showtype = $(keySpan).attr("showtype");
+		var isMust = $(keySpan).attr("ismust");
+		//value
+		var valueList =[];
+		//如果是文本框
+		if(showtype ==1){
+			var valInput = $(this).find(".clao_rg  input");
+			
+			var value = $(valInput).val();
+			var isDefault = 1;//文本框只能是默认的
+			var avid =$(valInput).attr("avid");
+			if(avid ==""){
+				avid =0;
+			}
+			
+			if(isMust ==1 && value==""){				
+				alert("属性"+attributeName+"为必填参数！");
+				$(this).find(".clao_rg  input")[0].focus();
+				isSuccess = false;
+				return false;
+			}
+			
+			valueList.push({
+				value:value,
+				isDefault:isDefault,
+				avid:avid
+				});
+		}else if(showtype ==2){ //如果是下拉框
+			var selected = $(this).find(".clao_rg  select").val();
+			if(isMust==1 && (selected == -1 || selected =="")){
+				alert("属性"+attributeName+"为必选参数！");
+				$(this).find(".clao_rg  select")[0].focus();
+				isSuccess = false;
+				return false;
+			}
+			$(this).find(".clao_rg  select option").each(function(){
+				var value = $(this).val();				
+				//var sysAVID = $(this).attr("sysavid");
+				var avid =$(this).attr("avid");
+				var isDefault = 0;//文本框只能是默认的
+				if(value == selected){
+					isDefault =1
+				}	
+				
+				valueList.push({
+					value:value,
+					isDefault:isDefault,
+					avid:avid
+					});
+			});
+						
+		}else{//复选
+			var checkedNum = $(this).find(".clao_rg  input:checkbox:checked").length;
+			if(isMust==1 && checkedNum<1){
+				alert("属性"+attributeName+"为必选参数！");
+				isSuccess = false;
+				return false;
+			}
+			$(this).find(".clao_rg  input:checkbox").each(function(){
+				var value = $(this).val();	
+				var avid = $(this).attr("avid");
+				//var sysAVID = $(this).attr("sysavid");
+				var isDefault = 0;//文本框只能是默认的
+				if($(this).attr("checked")=="checked"){
+					isDefault =1
+				}
+				valueList.push({
+					value:value,
+					isDefault:isDefault,
+					avid:avid
+					});
+			});			
+		}
+		//内层循环返回
+		if(!isSuccess){
+			return false;
+		}
+		
+		keyList.push({
+			attributeId:attributeId,
+			classid:classid,
+			attributeName:attributeName,
+			valueList:valueList
+			});		
+	});
+	//外层循环返回
+	if(!isSuccess){
+		return false;
+	}
+	
+	$("#Fice_inp .self_one").each(function(){
+		var attributeName = $(this).find("input[name='attributeName']").val();
+		var value =$(this).find("input[name='valueName']").val(); 
+		//结束本次循环 下一次
+		if(attributeName =="" && value==""){
+			return;
+		}
+		if(attributeName =="" || value==""){
+			alert("请正确填写自定义属性名称与值！");
+			if(attributeName ==""){
+				$(this).find("input[name='attributeName']")[0].focus();
+			}else{
+				$(this).find("input[name='valueName']")[0].focus();
+			}
+			isSuccess = false;
+			return false;
+		}
+		keyList.push({
+			//sysAttributeID:0,
+			classid:classid,
+			attributeName:attributeName,
+			showtype:1,
+			isMust:1,
+			valueList:[{
+				attributeId:0,
+				value:value,
+				isDefault:1,
+				//sysAVID:0
+			}]
+			});	
+		
+	});
+	//外层循环返回
+	if(!isSuccess){
+		return false;
+	}
+	
+	return keyList;
+}
+
+//批发价格 预览效果
+function PreviewBatchPrice(){
+	$("#Ute_inpFic .yunln_bor .title_shuru").remove();
+	$("#PriceTjia").find(".title_shuru").each(function(index,item){	
+		var count = $(this).find(".shuru_price input").val();
+		var price = $(this).find(".shuru_priceon input").val();
+		if(count !="" && price !=""){		
+			$("#Ute_inpFic .yunln_bor .blank2").before("<div class='h40 title_shuru'>" +
+					"<div class='shuru_price fl f14'>"+count+"件及其以上："+price+"/件</div></div>");      
+		}
+	});
+}
+
+function alert(msg,bool){
+	if(bool){
+		layer.msg(msg, 1, 1);//绿色的钩钩
+	}else{
+		layer.msg(msg, 1, 8);//不高兴的脸
+	}	
+}
+//弹出层
+function ShowWin(title,win_id,_this,callBack){
+	$("#NefMban input").val("");
+	var pagei = $.layer({
+	   type: 1,   //0-4的选择,0：信息框（默认），1：页面层，2：iframe层，3：加载层，4：tips层。 
+	   btns: 2,
+	   btn: ['确定','取消'],
+	   yes: function(index){
+	        //按钮【按钮一】的回调
+		   if(callBack !=null){			   
+			   callBack(_this,index);			   
+		   }else{
+			   layer.close(index);
+		   }
+	    },
+	   title: title,
+	   border: [0],
+	   closeBtn: [0],
+	   closeBtn: [0, true],
+	   shadeClose: true,
+	   area: ['450px','280px'],
+	   page: {dom : '#'+ win_id}
+   });
+}
+//提示
+function tips(node){    
+    layer.tips($(node).attr('name'), node, {
+       guide:1,
+       time: 1,
+       maxWidth:240
+   });
+ }
+
+//编辑器初始化
+var pcEditor;
+var wapEditor;
+function EditorInit() {
+    pcEditor = new baidu.editor.ui.Editor({
+        toolbars: [[ 'source', '|', 'undo', 'redo', '|',
+        'bold', 'italic', 'underline', 'fontborder', 'strikethrough', 'superscript', 'subscript',
+        'removeformat', '|', 'forecolor', 'backcolor', 'insertorderedlist', 'insertunorderedlist', 'selectall', 'cleardoc', '|',
+         'paragraph', 'fontfamily', 'fontsize', '|',
+        'justifyleft', 'justifycenter', 'justifyright', 'justifyjustify', '|',
+        'link', 'unlink', 'anchor', '|',
+        'insertimage', 'emotion', 'map', 'pagebreak', 'background', '|',
+        'horizontal', 'spechars', '|', 'preview', 'help']],
+        //initialFrameWidth :800,//设置编辑器宽度
+		initialFrameHeight:320,//设置编辑器高度
+		scaleEnabled:true
+    });
+    pcEditor.render("pcEditor");
+    pcEditor.ready(function () {
+        //设置编辑器的内容
+        //pcEditor.setContent("hello");
+        //获取html内容，返回: <p>hello</p>
+        //var html = myEditor.getContent();
+        //获取纯文本内容，返回: hello
+        //var txt = myEditor.getContentTxt();
+    });
+    
+    wapEditor = new baidu.editor.ui.Editor({
+        toolbars: [[ 'insertimage']],
+        contextMenu:[],
+        //initialFrameWidth :800,//设置编辑器宽度
+		initialFrameHeight:350,//设置编辑器高度
+		scaleEnabled:true
+    });
+    wapEditor.render("wapEditor");
+    wapEditor.ready(function () {
+        //设置编辑器的内容
+        //myEditor.setContent("hello");
+        //获取html内容，返回: <p>hello</p>
+        //var html = myEditor.getContent();
+        //获取纯文本内容，返回: hello
+        //var txt = myEditor.getContentTxt();
+    });
+}
+
+/*==================属性上传图片控件初始化==========================*/
+function UpLoadImgInit() {
+    var upImg = $("#btnUpImg").uploadify({
+        'buttonText': '选择图片',
+        'buttonClass': 'browser',
+        'dataType': 'html',
+        'removeCompleted': false,
+        'swf': '/statics/js/lib/uploadify/uploadify.swf',//flash文件路径
+        'debug': false,
+        'width': '75',//按钮宽度
+        'height': '21',//按钮高度
+        'auto': true,
+        'multi': true,
+        'queueSizeLimit': 6,//图片最大上传数量
+        'timeoutuploadLimit':6,//能同时上传的文件数目
+        'fileTypeExts': '*.jpg;*.gif;*.png;*.jpeg',//文件类型
+        'fileTypeDesc': '图片类型(*.jpg;*.jpeg;*.gif;*.png)',
+        'formData':{FileUpload:"proimage",cate:1,type:1},//参数
+        'uploader': 'http://fdfsservice.okwei.com/handle/UploadImg.ashx',
+        'fileSizeLimit': '1024',//文件最大大小
+        'progressData': 'speed',
+        'removeCompleted': true,
+        'removeTimeout': 0,
+        'requestErrors': true,
+        'onFallback': function () {
+            alert("您的浏览器没有安装Flash");
+        },
+        'onUploadStart': function (file) {
+        	return;
+        	alert('id: ' + file.id
+        			+ ' - 索引: ' + file.index 
+        			+ ' - 文件名: ' + file.name 
+        			+ ' - 文件大小: ' + file.size 
+        			+ ' - 类型: ' + file.type
+        			+ ' - 创建日期: ' + file.creationdate
+        			+ ' - 修改日期: ' + file.modificationdate
+        			+ ' - 文件状态: ' + file.filestatus );
+        },
+        'onProgress ': function () {
+
+        },
+        'onUploadSuccess': function (file, data, response) {
+            if (response == true) {
+                data = eval("("+data+")");
+                if(data !=null && data.Status ==1)
+                {
+                	var li = $(".she_img  li>div.own_img_one").eq(0).parent();
+                	repliceProductImg(li,data.ImgUrl);
+                }
+            }
+        },
+        'onDialogClose': function (swfuploadifyQueue) {
+        	var len = $(".she_img  li>div.own_img_one").length;
+            if (swfuploadifyQueue.filesSelected<= 6 && swfuploadifyQueue.filesSelected > len) {
+                alert("最多只能选择"+len+"张图片!");
+                upImg.uploadify('cancel', '*')
+                return;               
+            }
+        }
+    });
+}
+
+function UpLoadOneImgInit(objID,btnType) {
+	var width =95;
+	var height =28;
+	var buttonText ="上传图片";
+	if(btnType =="productImg"){
+		width=121;
+		height =121;
+		buttonText ="";
+	}
+	
+    $("#" + objID).uploadify({
+        'buttonText': buttonText,
+        'buttonClass': 'browser',
+        'dataType': 'html',
+        'removeCompleted': false,
+        'swf': '/statics/js/lib/uploadify/uploadify.swf',//flash文件路径
+        'debug': false,
+        'width': width,//按钮宽度
+        'height': height,//按钮高度
+        'auto': true,
+        'multi': false,//是否多文件上传
+        'queueSizeLimit': 1,//图片最大上传数量
+        'timeoutuploadLimit':1,//能同时上传的文件数目
+        'fileTypeExts': '*.jpg;*.gif;*.png;*.jpeg',//文件类型
+        'fileTypeDesc': '图片类型(*.jpg;*.jpeg;*.gif;*.png)',
+        'formData':{FileUpload:"proimage",cate:1,type:1},//参数
+        'uploader': 'http://fdfsservice.okwei.com/handle/UploadImg.ashx',
+        'fileSizeLimit': '1024',//文件最大大小
+        'progressData': 'speed',
+        'removeCompleted': true,
+        'removeTimeout': 0,
+        'requestErrors': true,
+        'onFallback': function () {
+            alert("您的浏览器没有安装Flash");
+        },
+        'onUploadStart': function (file) {
+
+        },
+        'onProgress ': function () {
+
+        },
+        'onUploadSuccess': function (file, data, response) {
+            if (response == true) {
+                data = eval("("+data+")");
+                if(data !=null && data.Status ==1)
+                {
+                	if(btnType =="productImg"){
+                		var li = $("#" + objID).closest("li");
+                		repliceProductImg(li,data.ImgUrl);
+                	}
+                	else{
+                		var html ='<div class="fr imgsew">'
+                			+'			<img width="30" height="30" src="http://img1.okimgs.com/'+data.ImgUrl+'">'
+                			+'			<a href="javascript:;" name="delColor" class="ml_10 mr_20">删除</a>'
+                			+'		</div>';
+                		$("#" + objID).closest(".scimg_del").append(html);
+                	}
+                }
+            }
+        },
+        'onDialogClose': function (swfuploadifyQueue) {
+
+        }
+    });   
+}
+//上传成功后替换商品图片
+function repliceProductImg(li,imgUrl){
+    //获取图片的名称
+    var tempID = imgUrl.substring(imgUrl.lastIndexOf("/") + 1, imgUrl.length);
+    tempID = tempID.substring(0, tempID.lastIndexOf("."));
+	var html='<div class="own_img">';
+	html +='	<div class="img_dele"><img src="/statics/pic/delete_imgs.png"></div>';
+	html +='	<div class="own_yis"><img src="http://img1.okimgs.com/'+imgUrl+'"></div>';
+	html +=' 	<div class="she_ci"><input type="radio" id='+tempID+' name="productImg"><label for='+tempID+'>设为主图</label></div>';
+    html +='  </div>';  
+    $(li).children("div.own_img_one").remove();
+	$(li).append(html);
+}
+
+// 文本框只能输入浮点型
+function txtWritefloat(objID){
+	//商品价格输入限制 失去焦点事件
+	$("#"+objID).bind("keyup",function(){   
+		$(this).val($(this).val().replace(/[^0-9.]/g,''));    
+	}).bind("paste",function(){  //CTR+V事件处理     
+		$(this).val($(this).val().replace(/[^0-9.]/g,''));     
+	}).css("ime-mode", "disabled"); //CSS设置输入法不可用  	
+}
+//文本框只能输入整数
+function txtWriteint(objID){
+	$("#"+objID).bind("keyup",function(){    
+		$(this).val($(this).val().replace(/\D|^0/g,''));  
+	}).bind("paste",function(){  //CTR+V事件处理     
+		$(this).val($(this).val().replace(/\D|^0/g,''));     
+	}).css("ime-mode", "disabled"); //CSS设置输入法不可用  
+}
+
+function removeHTMLTag(str) {
+    str = str.replace(/<\/?[^>]*>/g,''); //去除HTML tag  
+    str = str.replace(/[ | ]* /g,' '); //去除行尾空白  
+    //str = str.replace(/ [\s| | ]* /g,' '); //去除多余空行  
+    str=str.replace(/ /ig,'');//去掉   
+    return str;
+}
+
+function Filter(str) {
+	str = str.replace(/<\s*script[^>]*>(.|[\r\n])*?<\s*\/script[^>]*>/gi, '');
+	str = str.replace(/<\s*style[^>]*>(.|[\r\n])*?<\s*\/style[^>]*>/gi, '');
+	str = str.replace(/<\/?[^>]+>/g, '');
+	str = str.replace(/\&[a-z]+;/gi, '');
+    return str;
+}
+
+//动态生成属性预览
+function PreviewParam(){
+	$(".leimu_msg ul li").remove();
+	$(".type_selec .selec_once").each(function(index,item){
+		
+		var attributeName =  $(this).find(".clao_le span").html();
+		var showtype =  $(this).find(".clao_le span").attr("showtype");
+		var value = "";
+		if(showtype==1){
+			value =$(this).find(".clao_rg  input").val();;
+		}
+		else if(showtype==2){
+			value =$(this).find(".clao_rg  select").val();
+		}else{
+			$(this).find(".clao_rg  input:checkbox:checked").each(function(){
+				value +=" "+ $(this).val();
+			});
+		}
+		
+		$(".leimu_msg ul").append("<li>"+attributeName+"：<span>"+value+"</span></li>");
+	});
+	
+	$("#Fice_inp .self_one").each(function(){
+		var attributeName = $(this).find("input[name='attributeName']").val();
+		var value =$(this).find("input[name='valueName']").val(); 
+		//结束本次循环 下一次
+		if(attributeName ==""){
+			return;
+		}
+		
+		$(".leimu_msg ul").append("<li>"+attributeName+"：<span>"+value+"</span></li>");
+	});
+}
+
+//动态创建款式列表
+function getStyleList(isTitle){
+	var keyValues=[];
+	var keyNames=[];
+	$(".pinpaixze_is").each(function(index,parentItem){		
+		var valus=[];
+		$(this).find(".pincrig input").each(function(index,item){
+			if($(this).val() !=""){
+				valus.push($(this).val());
+			}
+		});
+		if(valus.length>0){
+			keyNames.push($(this).find(".pincmas select option:selected").text());		
+			keyValues.push(valus);
+		}
+	});	
+	//设置好标题
+	$(".size_titles").find(".coput_1,.coput_2,.coput_7").remove();
+	$.each(keyNames,function(index,item){	
+		if(index==0){
+			$(".size_titles .coput_3").before("<li class='coput_1'>"+item+"</li>");
+		}else if(index==1){
+			$(".size_titles .coput_3").before("<li class='coput_2'>"+item+"</li>");
+		}else{
+			$(".size_titles .coput_3").before("<li class='coput_7'>"+item+"</li>");
+		}
+	});
+	//是否只修改标题
+	if(isTitle == false){
+		return;
+	}
+	
+	var styleList = getStyleAssembleList([],keyValues);
+	//设置款式
+	if(styleList.length==0){
+		return;
+	}
+	
+	$("#Foct_Shop ul").remove();
+	$.each(styleList,function(index,item){		
+		var html ="<ul> ";
+		var values = item.split("&");
+		$.each(values,function(vindex,vitem){
+			if(vindex==0){
+				html +="<li class='inp_col1'><div class='color_yase'>"+vitem+"</div></li>";
+			}else if(vindex==1){
+				html +="<li class='inp_col2'><div class='color_yase'>"+vitem+"</div></li>";
+			}else{
+				html +="<li class='inp_col7'><div class='color_yase'>"+vitem+"</div></li>";
+			}
+		});
+		html +="<li class='inp_col3'>";
+		html +="	<div class='inps_san fl'>";
+		html +="		<input type='text' placeholder='商品价格' class='w66 btn_h30 fl dis_b' value='92.0' name='sellPrice'>";
+		html +='		<span class="dis_b f14 fm_aria fw_b fl ft_c6">+</span>';
+		html +='		<input type="text" placeholder="佣金" class="w66 btn_h30 fl dis_b" value="1.0" name="sellComminss">';
+		html +='		<span class="dis_b f14 fm_aria fw_b fl ft_c6">=</span>';
+		html +='		<input type="text" placeholder="微店价" class="w66 btn_h30 fl dis_b" disabled="disabled" value="93.0" name="sellTotal">';
+		html +='	</div>';
+		html +='</li>';
+		html +='<li class="inp_col4">';
+		html +='	<div class="inps_san_ones fl">';
+		html +='		<input type="text" placeholder="数量" class="w80 btn_h30 ml_30" name="txtSellNum" value="111">';
+		html +='	</div>';
+		html +='</li>';
+		html +='<li class="inp_col5">';
+		html +='	<div class="inps_san_ones fl">';
+		html +='		<input type="text" placeholder="商家编码" class="w80 btn_h30" value="">';
+		html +='	</div>';
+		html +='</li>';
+		html +='<li class="inp_col6"> <a href="javascript:void(0);"><img src="/statics/pic/delete_icon.png"></a> </li>';
+		html +='</ul>';
+		
+		$("#Foct_Shop .blank2").before(html);
+	});
+
+}
+
+//获取组装的库存列表
+function getStyleAssembleList(first, baseData) {
+    //最终返回结果
+    var result = [];
+    //每次接收递归的返回值
+    var two = [];
+    if (baseData.length > 1) {
+        //将要被组合的
+        first = baseData[0];
+        baseData.splice(0, 1);
+        //返回的结果
+        two = getStyleAssembleList(first, baseData);
+    }
+    else {
+        //最后一个 直接返回
+        result = baseData[0];
+    }
+
+    if (first.length > 0 && two.length > 0) {
+        $.each(first, function (firstIndex, firstItem) {
+            $.each(two, function (twoIndex, twoItem) {
+                result.push(firstItem + "&" + twoItem);
+            });
+        });
+    }
+
+    return result;
+}
+
+
+//js对象 转换json 串
+function obj2Str(obj) {
+    switch (typeof (obj)) {
+        case 'object':
+            var ret = [];
+            if (obj instanceof Array) {
+                for (var i = 0, len = obj.length; i < len; i++) {
+                    ret.push(obj2Str(obj[i]));
+                }
+                return '[' + ret.join(',') + ']';
+            }
+            else if (obj instanceof RegExp) {
+                return obj.toString();
+            }
+            else {
+                for (var a in obj) {
+                    ret.push(a + ':' + obj2Str(obj[a]));
+                }
+                return '{' + ret.join(',') + '}';
+            }
+        case 'function':
+            return 'function() {}';
+        case 'number':
+            return obj.toString();
+        case 'string':
+            return "\"" + obj.replace(/(\\|\")/g, "\\$1").replace(/\n|\r|\t/g, function (a) { return ("\n" == a) ? "\\n" : ("\r" == a) ? "\\r" : ("\t" == a) ? "\\t" : ""; }) + "\"";
+        case 'boolean':
+            return obj.toString();
+        default:
+            return obj.toString();
+    }
+}

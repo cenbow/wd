@@ -1,0 +1,33 @@
+package com.okwei.supplyportal.bean.vo;
+
+public class SupplyOrderStateCountVO {
+
+	private int noPayCount;
+	private int noFaHuoCount;
+	private int noShouHuoCount;
+	private int noPingjiaCount;
+	public int getNoPayCount() {
+		return noPayCount;
+	}
+	public void setNoPayCount(int noPayCount) {
+		this.noPayCount = noPayCount;
+	}
+	public int getNoFaHuoCount() {
+		return noFaHuoCount;
+	}
+	public void setNoFaHuoCount(int noFaHuoCount) {
+		this.noFaHuoCount = noFaHuoCount;
+	}
+	public int getNoShouHuoCount() {
+		return noShouHuoCount;
+	}
+	public void setNoShouHuoCount(int noShouHuoCount) {
+		this.noShouHuoCount = noShouHuoCount;
+	}
+	public int getNoPingjiaCount() {
+		return noPingjiaCount;
+	}
+	public void setNoPingjiaCount(int noPingjiaCount) {
+		this.noPingjiaCount = noPingjiaCount;
+	}
+}

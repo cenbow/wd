@@ -1,0 +1,47 @@
+<%@ page language="java" contentType="text/html; charset=UTF-8"%>
+
+<div class="outermost">
+<div class="head_top">
+	<div class="head_marin">
+		<div class="head_left fl">
+			<a href="#">收藏微店网</a>
+		</div>
+		<div class="head_right fr ft_sixc">
+			<a href="#">欢迎您，<span>夏天</span></a> <a href="#">手机微店</a>
+		</div>
+	</div>
+</div>
+<div class="head_two">
+	<div class="mar_au">
+		<div class="head_logo fl">
+			<a href="#"><img src="http://base3.okimgs.com/images/xh_logo.gif"></a>
+		</div>
+		<div class="head_weid fl">
+			<a href="#"><img
+				src="http://base2.okimgs.com/images/xh_gaiban_cctv.png"></a>
+			<h6 class="ft_8c hfont">微店概念发起者、领导者</h6>
+		</div>
+		<div class="fl navs">
+			<ul class="fl">
+				<li class="li_img"><a href="1-1（首页）-首页.html">微店中心</a></li>
+				<li><a href="3-1（首页）供应管理.html">供应管理</a></li>
+				<li><a href="认证管理/1-1（首页）-首页.html">认证管理</a></li>
+				<li><a href="11-1我的钱包.html">钱包</a></li>
+				<li><a href="2-1 基本资料.html">个人设置</a></li>
+			</ul>
+			<div class="mail fl">
+				<a href="#">信息（<span>5</span>）
+				</a>
+			</div>
+		</div>
+		<div class="fl bottom bg_89 bg_ico_one">
+			<a href="#">云端产品库</a>
+		</div>
+		<div class="fr bottom bg_75 bg_ico_two">
+			<a href="#">供应商进驻</a>
+		</div>
+	</div>
+</div>
+</div>
+
+

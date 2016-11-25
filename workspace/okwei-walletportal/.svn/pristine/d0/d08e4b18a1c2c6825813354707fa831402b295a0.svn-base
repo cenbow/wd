@@ -1,0 +1,190 @@
+﻿@charset "utf-8";
+/********* 以下都是产品发布样式  请勿调用index.css样式  ***********/
+.leimu_msg{ width:163px; height:26px; }
+.title_type{ width:163px; margin-left:10px; margin-top:10px;}
+.bg-w{ background:#fff;}
+.inp_suoyou{ width:990px; margin-left:20px;} 
+.mzh_width_100{width: 100%;}
+.inp_suoyou{ width:990px; }
+.fic_kuan{ width:990px;margin-top:20px;}
+.fic_biaot{ width:100px; line-height:40px; height:40px;}
+.fic_select{ width:874px;}
+.error_font{ line-height:40px; margin-left:20px;}
+.error_font img{ margin-right:8px; position:relative; top:4px;}
+.selyes_font{ margin-left:20px; line-height:40px;}
+.selyes_font img{ position:relative; top:10px;}
+.value_shez{ width:874px; height:40px; line-height:40px; border-bottom:1px solid #e5e5e5;}
+.value_shez span img{ margin-left:6px; top:4px; cursor:pointer; position:relative;}
+
+.type_selec{ width:874px; border-bottom:1px solid #e5e5e5;}
+.selec_once{ width:874px; margin-top:20px;}
+.clao_le{ width:114px; height:40px; line-height:40px;}
+.clao_rg{ width:760px;}
+.self{ width:864px; padding-left:20px;}
+.self_one{ width:854px; margin-top:20px;}
+.xiao_icon a{ margin-left:10px; position:relative; top:12px;}
+.xua_imgs{ width:874px; height:40px;}
+.xua_imgs>a{ margin-top:10px;}
+.she_img{ width:874px; }
+.she_img ul li{ width:131px; height:131px; float:left; margin-right:10px; margin-top:10px;}
+.own_img{ width:119px; height:119px; border:1px solid #cdcdcd; position:relative;}
+.own_yis{ width:119px; height:94px; border-bottom:1px solid #cdcdcd;}
+.own_yis img{ width:119px; height:94px;}
+.she_ci{ width:119px; height:24px; text-indent:6px; line-height:24px;}
+.she_ci input{ position:relative; top:2px; margin-right:4px;}
+.img_dele{ width:26px; height:26px; position:absolute; right:-13px; cursor:pointer; top:-13px;}
+.own_img_one{ width:121px; height:121px; cursor:pointer;}
+.jia_zai{ padding-left:10px; padding-right:10px; line-height:40px; color:#666;}
+.img_weiz{ position:relative; top:3px; cursor:pointer;}
+.color_count{ width:849px; margin-top:10px; padding-left:25px; border-bottom:1px solid #cdcdcd; }
+.color_count ul li{ float:left; width:120px; margin-right:17px; height:24px; margin-top:10px; }
+.kouzi_red{ width:120px; height:24px;}
+.ziko_one{ width:16px; height:24px;}
+.ziko_one input{ position:relative; top:5px;}
+.ziko_two{ width:14px; height:14px; background:#1eddff; border:1px solid #e4e4e4; margin-top:4px;}
+.ziko_thr{ margin-left:4px;}
+
+.ziko_for{ margin-left:4px; line-height:24px; color:#3a3a3a;}
+.kouzi_red a{ margin-right:10px; position:relative; top:4px;}
+.xind{ width:auto !important; margin-right:0px !important;}
+.kouzi_fex{ height:24px;}
+.kouzi_fex a{ margin-right:6px; position:relative; top:4px;}
+.add_mos{ width:874px;}
+.selec_san{ width:864px; margin-left:20px; margin-top:10px;}
+.selec_san ul{ width:864px; float:left; margin-top:10px;}
+.selec_san ul li{ float:left; height:24px; line-height:24px;}
+.gantan{ padding-left:4px; padding-right:4px; font-size:14px; color:#3a3a3a;}
+.topas a{ top:4px;}
+.add_fuc{ line-height:24px;}
+.add_fuc a span{ margin-right:10px;}
+.weicon img{ position:relative; margin-right:6px; top:4px; cursor:pointer;} 
+.wulai_fle{ width:874px;}
+.fle_cai{ width:303px; border:1px solid #ddd; margin-top:20px;}
+.cai_one{ width:303px; height:36px;}
+.one_biaoti{ width:102px; height:36px; line-height:36px; text-indent:20px; color:#3a3a3a; }
+.two_biaoti{ width:200px; height:36px; line-height:36px; color:#3a3a3a;}
+.cai_mes{ width:303px; height:36px; margin-top:10px;}
+.img_posre{ width:32px; height:32px; position:relative;}
+.img_posre img{ width:32px; height:32px;}
+.delimgs{ position:absolute; width:15px; top:-7px; right:-7px; cursor:pointer; height:15px;}
+.delimgs img{ width:15px; height:15px;}
+.up_coz{ width:874px; height:30px; line-height:30px;}
+.up_coz input{ position:relative; margin-right:4px; top:2px;}
+.testing_bat{ width:874px;}
+.size_color{ width:872px;}
+.size_color table{ width:100%; border:1px solid #e7e7e7;}
+.size_color table tr{ min-height:30px; line-height:30px; border-bottom:1px solid #e7e7e7;}
+.size_color table tr th{ text-align:center; border-right:1px solid #e7e7e7}
+.size_color table tr td{  border-right:1px solid #e7e7e7; min-height:30px;}
+.tabors{ border:none !important;}
+.tabors tr{ border-bottom:none !important;}
+.tabors tr td{ border-right:none !important; min-height:50px !important;}
+.num_col{ width:545px; border:1px solid #ddd;}
+.numcol_left{ width:84px; min-height:62px;}
+.fg_color{ width:84px; height:62px; border-bottom:1px solid #ddd; text-indent:20px; line-height:62px; font-size:14px; font-family:"微软雅黑"; color:#3a3a3a;}
+.title_lefts ul li{color: #333;
+    float: left;
+    text-align: center;}
+.ift_lefcolor{border-right: 1px solid #ddd;
+    width: 120px;}
+.img_rigcolor{width: 424px;}
+.title_lefts{background: #ededed ;
+    border-bottom: 1px solid #ddd;
+    height: 30px;
+    line-height: 30px;
+    width: 100%;}
+.scimg_col {
+border-right: 1px solid #ddd;
+height: 40px;
+width: 120px;
+}
+.scimg_del {
+height: 40px;
+overflow: hidden;
+width: 420px;
+}
+
+.btn_wear30_pre {
+width: 95px;
+height: 28px;
+border: 1px solid #ccc;
+background: url(../pic/bg_jbh30_pre.png) repeat-x;
+text-align: center;
+line-height: 28px;
+color: #3a3a3a;
+border-radius: 3px;
+}
+.imgsew img {
+position: relative;
+top: 5px;
+} 
+.handle_imgs{ padding-left:18px; background:url(../pic/shezhi_icons.png) no-repeat; background-position:0% 50%; margin-left:6px;} 
+.up_cozfies{ width:874px; height:40px; line-height:40px;}
+.up_cozfies input{ position:relative; margin-right:4px; top:2px;}
+.section_pric{ width:874px;}
+.sect_bor{ width:467px; margin-right:20px;}
+.title_fons{ width:467px; height:40px; line-height:40px; text-indent:20px;}
+.title_fons30{ width:467px; height:30px; line-height:30px;}
+.fons_one{ text-indent:20px; width:200px;}
+.fons_two{ width:266px;}
+.title_shuru{ width:467px; height:32px; margin-top:10px;}
+.shuru_price{ width:180px; color:#3a3a3a; line-height:32px; margin-left:20px;}
+.shuru_priceon{ width:260px; color:#3a3a3a; line-height:32px; }
+.shuru_priceon img{ margin-left:6px; position:relative; top:3px;} 
+.yunln_bor{ width:383px;}
+.add_srus{ width:467px; height:40px; text-indent:20px; line-height:40px;}
+.rese_pric{ width:874px;}
+.pric_bar{ width:122px; height:42px; line-height:42px;}
+.datais_box{ width:872px; height:400px;}
+.sub_btns{ width:977px; height:86px; border-top:1px dashed #e7e7e7;}
+.bc_draft{ width:250px; height:46px; margin-left:220px; margin-top:20px;}
+.bc_draft a{ width:248px; height:40px; line-height:40px; text-align:center; border:1px solid #a7a7a7; border-radius:4px; font-weight:bold; font-size:14px; color:#666;}
+.bc_submit{ width:250px; height:46px; margin-left:40px;margin-top:20px;}
+.bc_submit input{ width:250px !important;} 
+.color_yi{ text-indent:20px;}
+.pinpaixze_pf{ width:100%; float:left;}
+.pinpaixze_is{ width:100%; float:left;}
+.pincmas{ width:100px; height:40px; float:left; margin-top:10px;}
+.pincmas select{ width:100px; height:30px; font-size:14px;}
+.pincrig{ float:left; width:760px; margin-left:10px;} 
+.input_cols{ width:120px; height:30px; border:1px solid #ebebeb; margin-top:10px; margin-right:10px;}
+.input_cols:hover{ border:1px solid #75be00;}
+.input_cols input{ text-indent:10px; color:#333; font-size:14px; line-height:30px; display:block; float:left; width:90px; height:30px; float:left; border:none;}
+.del_inputimg{ width:30px; height:30px; cursor:pointer;}
+.del_inputimg img{ position:relative; left:10px; top:10px;}
+.add_heistimg{ width:30px; height:30px; cursor:pointer;}
+.add_heistimg img{ position:relative; left:10px; top:10px;}
+
+
+.news_tabq {
+border: 1px solid #ddd;
+float: left;
+height: 40px;
+width: 200px;
+}
+.tba_onefic {
+background: #dfdfdf none repeat scroll 0 0;
+color: #666;
+display: block;
+float: left;
+font-size: 14px;
+height: 40px;
+line-height: 40px;
+text-align: center;
+width: 100px;
+}
+.tba_twofic {
+background: #fff none repeat scroll 0 0;
+color: #0000ff;
+display: block;
+float: left;
+font-size: 14px;
+height: 40px;
+line-height: 40px;
+text-align: center;
+width: 100px;
+}
+.datais_boxwap {
+height: 400px;
+width: 320px;
+}

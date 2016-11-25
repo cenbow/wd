@@ -1,0 +1,93 @@
+package com.okwei.myportal.dao;
+
+import java.util.List;
+
+import com.okwei.bean.domain.PPostAgeDetails;
+import com.okwei.bean.domain.PPostAgeModel;
+import com.okwei.common.Limit;
+import com.okwei.common.PageResult;
+
+public interface IFreightDAO
+{
+    /**
+     * (分页)获取运费模板分页
+     * 
+     * @param weiid
+     *            微店号
+     * @param limit
+     *            分页条件
+     * @return
+     */
+    public PageResult<PPostAgeModel> getPPostAgeModelList(long weiid,Limit limit);
+
+    /**
+     * 根据微店号和运费模板ID获取运费模板
+     * 
+     * @param weiid
+     *            微店号
+     * @param fid
+     *            运费模板ID
+     * @return
+     */
+    public PPostAgeModel getPostAgeModel(long weiid,int fid);
+
+    /**
+     * 根据微店喝运费模板ID获取运费详情
+     * 
+     * @param weiid
+     *            微店号
+     * @param fid
+     *            运费详情
+     * @return
+     */
+    public List<PPostAgeDetails> getpPostAgeDetails(long weiid,int fid);
+
+    /**
+     * 删除运费模板
+     * 
+     * @param weiid
+     *            微店号
+     * @param fid
+     *            运费模板ID
+     * @return
+     */
+    public boolean deletePPostAgeModel(long weiid,int fid);
+
+    /**
+     * 删除运费模板详情
+     * 
+     * @param postDetailsId
+     *            运费模板ID
+     * @return
+     */
+    public boolean deletePPostAgeDetails(PPostAgeDetails pd);
+    
+    /**
+     * 添加运费模板
+     * @param ppam 添加的对象
+     * @return
+     */
+    public int insertPPostAgeModel(PPostAgeModel ppam);
+    
+    /**
+     * 添加运费详情
+     * @param ppad 运费详情对象
+     * @return
+     */
+    public boolean insertPPostAgeDetails(PPostAgeDetails ppad);
+    
+    /**
+     * 修改运费模板
+     * @param ppam 修改的对象
+     * @return
+     */
+    public boolean updatePPostAgeModel(PPostAgeModel ppam);
+    
+    /**
+     * 已经用了这个运费模板的产品数量
+     * @param weiid 微店号
+     * @param fid 运费模板ID
+     * @return
+     */
+    public int getProductCountByFid(long weiid,int fid);
+}

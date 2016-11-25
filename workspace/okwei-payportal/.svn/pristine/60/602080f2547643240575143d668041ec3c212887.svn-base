@@ -1,0 +1,6 @@
+package com.chinapay.util.connection;
+
+public class ChinaPaySetting {
+
+	
+}

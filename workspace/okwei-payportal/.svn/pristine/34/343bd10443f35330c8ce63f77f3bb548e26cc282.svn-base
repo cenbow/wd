@@ -1,0 +1,423 @@
+package com.okwei.pay.dao.impl;
+
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.stereotype.Repository;
+
+import com.okwei.bean.domain.OPayOrder;
+import com.okwei.bean.domain.OPayOrderLog;
+import com.okwei.bean.domain.OPayRecords;
+import com.okwei.bean.domain.OProductOrder;
+import com.okwei.bean.domain.OSupplyerOrder;
+import com.okwei.bean.domain.PProductAssist;
+import com.okwei.bean.domain.PProductStyles;
+import com.okwei.bean.domain.PProducts;
+import com.okwei.bean.domain.TBatchMarket;
+import com.okwei.bean.domain.TSmsverification;
+import com.okwei.bean.domain.TVerificationId;
+import com.okwei.bean.domain.UBankCard;
+import com.okwei.bean.domain.UBatchPort;
+import com.okwei.bean.domain.UBatchSupplyer;
+import com.okwei.bean.domain.UBatchVerifier;
+import com.okwei.bean.domain.UPushMessage;
+import com.okwei.bean.domain.USupplyer;
+import com.okwei.bean.domain.UTradingDetails;
+import com.okwei.bean.domain.UVerifier;
+import com.okwei.bean.domain.UVerifierFollowMsg;
+import com.okwei.bean.domain.UWallet;
+import com.okwei.bean.domain.UWalletDetails;
+import com.okwei.bean.domain.UWeiSeller;
+import com.okwei.bean.domain.UYunSupplier;
+import com.okwei.bean.domain.UYunVerifier;
+import com.okwei.bean.enums.WalletMainTypeEnum;
+import com.okwei.dao.impl.BaseDAO;
+import com.okwei.pay.bean.enums.ClassProductTypeEnum;
+import com.okwei.pay.bean.util.SendPushMessage;
+import com.okwei.pay.dao.IPayOrderDAO;
+
+@Repository
+public class PayOrderDAO extends BaseDAO implements IPayOrderDAO {
+
+    @Override
+    public OPayOrder getOPayOrder(String orderNo) {
+	OPayOrder order = get(OPayOrder.class, orderNo);
+	return order;
+    }
+
+    @Override
+    public double getUserAmountAvailable(long weiid) {
+	if (weiid < 1) {
+	    return 0D;
+	}
+	UWallet wallet = get(UWallet.class, weiid);
+	if (wallet != null) {
+	    return wallet.getBalance() == null ? 0 : wallet.getBalance();
+	}
+	return 0;
+    }
+
+    @Override
+    public boolean insertOPayRecords(OPayRecords rec) {
+	if (rec == null)
+	    return false;
+	save(rec);
+	return true;
+    }
+
+    @Override
+    public boolean insertUWalletDetails(UWalletDetails details) {
+	if (details == null)
+	    return false;
+	save(details);
+	return true;
+    }
+
+    @Override
+    public UWallet getUWallet(long weiid) {
+	if (weiid < 1) {
+	    return null;
+	}
+	UWallet wallet = get(UWallet.class, weiid);
+	return wallet;
+    }
+
+    @Override
+    public boolean insertUWallet(UWallet wallet) {
+	if (wallet == null)
+	    return false;
+	save(wallet);
+	return true;
+    }
+
+    @Override
+    public boolean updateOPayOrder(OPayOrder order) {
+	if (order == null)
+	    return false;
+	update(order);
+	return true;
+
+    }
+
+    @Override
+    public List<OSupplyerOrder> getListBySupplyOrderID(String supplierOrderId) {
+	String hql = "from OSupplyerOrder o where o.supplierOrderId=?";
+	List<OSupplyerOrder> list = find(hql, supplierOrderId);
+	return list;
+    }
+
+    @Override
+    public List<OSupplyerOrder> getListByPayOrderID(String payOrderID) {
+	String hql = "from OSupplyerOrder o where o.payOrderId=?";
+	List<OSupplyerOrder> list = find(hql, payOrderID);
+	return list;
+    }
+
+    @Override
+    public boolean updateOSupplyerOrder(OSupplyerOrder order) {
+	if (order == null)
+	    return false;
+	update(order);
+	return true;
+    }
+
+    @Override
+    public List<OProductOrder> getProductList(List<String> supNoList) {
+	if (supNoList == null || supNoList.size() < 1) {
+	    return null;
+	}
+	String hql = "from OProductOrder o where o.supplierOrderId in (:supno)";
+	Map<String, Object> map = new HashMap<String, Object>();
+	map.put("supno", supNoList);
+	List<OProductOrder> list = findByMap(hql, map);
+	return list;
+    }
+
+    @Override
+    public UBatchSupplyer getUBatchSupplyer(long weiid) {
+	UBatchSupplyer ubs = get(UBatchSupplyer.class, weiid);
+	return ubs;
+    }
+
+    @Override
+    public String GetUserBindMobile(long weiid) {
+	if (weiid < 1) {
+	    return null;
+	}
+	String hql = "from UWeiSeller u where u.weiId=? and u.mobileIsBind=2";
+	UWeiSeller seller = get(UWeiSeller.class, weiid);
+	if (seller != null) {
+	    return seller.getMobilePhone();
+	}
+	return null;
+    }
+
+    @Override
+    public TBatchMarket getBatchMarket(int bmid) {
+	if (bmid < 1) {
+	    return null;
+	}
+	TBatchMarket tBatchMarket = get(TBatchMarket.class, bmid);
+	return tBatchMarket;
+    }
+
+    @Override
+    public boolean updateProductStyleCount(long styleID, int count) {
+	if (styleID <= 0 || count <= 0) {
+	    return false;
+	}
+	PProductStyles ps = get(PProductStyles.class, styleID);
+	if (ps != null) {
+	    ps.setCount(ps.getCount() - count);
+	    update(ps);
+	    return true;
+	}
+	// TODO Auto-generated method stub
+	return false;
+    }
+
+    @Override
+    public boolean insertSendPushMsg(UPushMessage msg) {
+	// 加载发送规则
+	// 发送push
+	boolean b = new SendPushMessage().SendMessage(msg);
+	if (!b)
+	    return false;
+	// 回写数据库
+	save(msg);
+	return true;
+    }
+
+    @Override
+    public UBatchVerifier getBatchVerifier(long weiid) {
+	UBatchVerifier bv = get(UBatchVerifier.class, weiid);
+	return bv;
+    }
+
+    @Override
+    public boolean insertUTradingDatails(UTradingDetails td) {
+	if (td == null || td.getWeiId() <= 0) {
+	    return false;
+	}
+	save(td);
+	return true;
+    }
+
+    @Override
+    public boolean updateUWallet(UWallet model) {
+	if (model == null || model.getWeiId() <= 0) {
+	    return false;
+	}
+	return true;
+    }
+
+    @Override
+    public UBatchPort getBatchPort(long weiid) {
+	if (weiid < 1) {
+	    return null;
+	}
+	UBatchPort port = get(UBatchPort.class, weiid);
+	return port;
+    }
+
+    @Override
+    public boolean insertUVerifierFollowMsg(UVerifierFollowMsg msg) {
+	if (msg == null) {
+	    return false;
+	}
+	save(msg);
+	return true;
+    }
+
+    @Override
+    public UVerifier getUVerifier(long weiid) {
+	if (weiid < 1)
+	    return null;
+	UVerifier uv = get(UVerifier.class, weiid);
+	return uv;
+    }
+
+    @Override
+    public USupplyer getSupplyer(long weiid) {
+	if (weiid < 1)
+	    return null;
+	USupplyer uSupplyer = get(USupplyer.class, weiid);
+	return uSupplyer;
+    }
+
+    @Override
+    public List<PProducts> getListByProducts(long weiid) {
+	String hql = "from PProducts p where p.supplierWeiId=?";
+	List<PProducts> list = find(hql, weiid);
+	return list;
+    }
+
+    @Override
+    public boolean updateProducts(PProducts pp) {
+	if (pp == null || pp.getProductId() == null) {
+	    return false;
+	}
+	update(pp);
+	return true;
+    }
+
+    @Override
+    public boolean updateClassProduct(long weiid) {
+	if (weiid < 1) {
+	    return false;
+	}
+	String hql = "update PClassProducts p set p.type=? where p.supplierweiId=?";
+	executeHql(hql, Short.parseShort(ClassProductTypeEnum.MySelf.toString()), weiid);
+	return true;
+    }
+
+    @Override
+    public UYunSupplier getYunSupplier(long weiid) {
+	if (weiid < 1)
+	    return null;
+	UYunSupplier yun = get(UYunSupplier.class, weiid);
+	return yun;
+    }
+
+    @Override
+    public boolean updatePayedEditType(long supplyerWeiID, short identity) {
+	if (supplyerWeiID < 1)
+	    return false;
+	String hql = "update PProducts p set p.supperType=p.supperType+? where p.supplierWeiId=?";
+	executeHql(hql, identity, supplyerWeiID);
+	return true;
+
+    }
+
+    @Override
+    public boolean updatePayedEditType(long weiid) {
+	if (weiid < 1)
+	    return false;
+	String hqlString = "update PClassProducts p set p.type=? where p.supplierweiId=? and p.weiId=?";
+	executeHql(hqlString, Short.parseShort(ClassProductTypeEnum.MySelf.toString()), weiid, weiid);
+	return true;
+    }
+
+    @Override
+    public UYunVerifier getYunVerifier(long weiid) {
+	if (weiid < 1)
+	    return null;
+	UYunVerifier model = get(UYunVerifier.class, weiid);
+	return model;
+    }
+
+    @Override
+    public UYunVerifier getYunVerifierByCount() {
+	String hql = "from UYunVerifier u where u.isActive=1 order by u.verAllotCount asc,supAllotCount asc";
+	List<UYunVerifier> list = find(hql);
+	if (list != null && list.size() > 0) {
+	    return list.get(0);
+	}
+	return null;
+    }
+
+    @Override
+    public PProductAssist getPProductAssist(long productId) {
+	if (productId < 1) {
+	    return null;
+	}
+	PProductAssist model = get(PProductAssist.class, productId);
+	return model;
+    }
+
+    @Override
+    public boolean insertPProductAssist(PProductAssist model) {
+	if (model == null)
+	    return false;
+	save(model);
+	return true;
+    }
+
+    @Override
+    public PProducts getProducts(long productId) {
+	if (productId < 1)
+	    return null;
+	PProducts pp = get(PProducts.class, productId);
+	return pp;
+    }
+
+    @Override
+    public UWeiSeller getWeiSeller(long weiid) {
+	if (weiid < 1)
+	    return null;
+	UWeiSeller seller = get(UWeiSeller.class, weiid);
+	return seller;
+    }
+
+    @Override
+    public boolean insertTSmsverification(TSmsverification sms) {
+	if (sms == null)
+	    return false;
+	save(sms);
+	return true;
+    }
+
+    @Override
+    public boolean insertTVerificationId(TVerificationId tv) {
+	if (tv == null)
+	    return false;
+	save(tv);
+	return true;
+    }
+
+    @Override
+    public List<UBankCard> getBankCardList(long weiid) {
+	if (weiid < 1)
+	    return null;// 数据有误
+	UWallet wallet = get(UWallet.class, weiid);
+	if (wallet == null || wallet.getStatus() ==null || wallet.getStatus() != Short.parseShort("1"))
+	    return null;// 未实名认证
+	String hql = "from UBankCard u where u.weiId=? and u.name=?";// 银行卡名字是实名认证的名字
+	List<UBankCard> list = find(hql, weiid, wallet.getRealName());
+	return list;
+    }
+
+    @Override
+    public UBankCard getBankCard(long cardId) {
+	if (cardId < 1)
+	    return null;
+	UBankCard card = get(UBankCard.class, cardId);
+	return card;
+    }
+
+    @Override
+    public boolean insertPayOrder(OPayOrder order) {
+	if (order == null)
+	    return false; 
+	save(order);
+	return true; 
+    }
+
+	@Override
+	public void editPayOrderLog(String payOrderID,double payAmout) {
+		if(payOrderID ==null ||"".equals(payOrderID)){
+			return;
+		}
+		
+		String hql ="update OPayOrderLog p set p.payAmout =?,p.state=?,p.payTime=? where p.payOrderId=?";
+		
+		super.update(hql, payAmout,(short)1,new Date(),payOrderID);		
+	}
+
+	@Override
+	public OPayOrderLog getLastLog(String supplyOrderIDs) {
+		if(supplyOrderIDs ==null || "".equals(supplyOrderIDs)){
+			return null;
+		}
+		
+		String hql ="from OPayOrderLog p where p.supplyOrderIds=? order by p.createTime desc";
+		List<OPayOrderLog> logList = super.find(hql, supplyOrderIDs);
+		if(logList !=null && logList.size() >0){
+			return logList.get(0);
+		}
+		
+		return null;
+	}
+}

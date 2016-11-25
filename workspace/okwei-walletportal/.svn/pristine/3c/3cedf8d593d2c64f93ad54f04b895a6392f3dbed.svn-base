@@ -1,0 +1,242 @@
+package com.okwei.walletportal.bean.vo;
+
+import com.okwei.web.base.SSOController;
+
+public class BaseSSOController extends SSOController 
+{
+//    @Autowired
+//    HttpServletRequest request; // 这里可以获取到request
+//    @Autowired
+//    HttpServletResponse response;
+//
+//    @Autowired
+//    private IBaseDAO baseDAO;
+//    private LoginUser loginUser;
+//
+//    public LoginUser getLoginUser()
+//    {
+//        return getUser();
+//    }
+//
+//    public LoginUser getUser()
+//    {
+//        /* 测试用 */
+//
+//         LoginUser testLoginUser = new LoginUser();
+//         testLoginUser.setWeiID(1036799);
+//         testLoginUser.setyHrz(Short.parseShort("0"));
+//         testLoginUser.setYrz(Short.parseShort("0"));
+//         testLoginUser.setRzFwd(Short.parseShort("1"));
+//         if(testLoginUser != null)
+//         {
+//         return testLoginUser;
+//         }
+//
+//        /* 用的时候删除上面代码 */
+//
+//        // 从上下文中获取cookie
+//        Cookie[] cookies = request.getCookies();
+//        String cookie_tiket = "";
+//        if(cookies != null)
+//        {
+//            for(Cookie cookie : cookies)
+//            {
+//                if("tiket".equals(cookie.getName()))
+//                {
+//                    cookie_tiket = cookie.getValue();
+//                    break;
+//                }
+//            }
+//        }
+//        LoginUser user = new LoginUser();
+//        user.setbHrz((short) 0);
+//        user.setBrz((short) 0);
+//        user.setyHrz((short) 0);
+//        user.setYrz((short) 0);
+//        user.setBatchS((short) 0);
+//        user.setYunS((short) 0);
+//        user.setRzFwd((short) 0);// 认证服务点
+//        user.setAgent((short) 0);// 代理商
+//        if(!ObjectUtil.isEmpty(cookie_tiket) && !"notiket".equals(cookie_tiket))
+//        {
+//            // 先判断又没有ibs的tiket
+//            Object userObject = RedisUtil.getObject(cookie_tiket + "_IBS");
+//            if(userObject != null)// 如果存在
+//            {
+//                RedisUtil.setExpire(cookie_tiket + "_IBS",1800);// 延长时间
+//                user = (LoginUser) userObject;
+//                return user;
+//            }
+//            else
+//            {
+//                String userWeiIdObject = RedisUtil.getString(cookie_tiket + "_java");
+//                if(userWeiIdObject != null)
+//                {
+//                    userWeiIdObject = userWeiIdObject.replaceAll("\"","");
+//                    long weiId = Long.parseLong(userWeiIdObject);
+//                    UWeiSeller userSeller = baseDAO.get(UWeiSeller.class,weiId);
+//                    USupplyer userSupplyer = baseDAO.get(USupplyer.class,weiId);
+//                    UVerifier verinfo = baseDAO.get(UVerifier.class,weiId);
+//                    UShopInfo shopInfo = baseDAO.get(UShopInfo.class,weiId);
+//                    UBatchPort batchPort = baseDAO.get(UBatchPort.class,weiId);// 认证服务点
+//                    UYunVerifier yun = baseDAO.get(UYunVerifier.class,weiId);// 云商通
+//                    user.setWeiID(weiId);
+//                    if(userSeller != null)
+//                    {
+//                        user.setWeiImg(ImgDomain.GetFullImgUrl(userSeller.getImages()));
+//                        user.setWeiName(userSeller.getWeiName());
+//                    }
+//
+//                    short type = 1;
+//
+//                    if(userSupplyer != null && userSupplyer.getType() != null && userSupplyer.getType() != 0)
+//                    {
+//                        type += userSupplyer.getType();
+//                        if(userSupplyer.getCompanyName() != null)
+//                            user.setWeiName(userSupplyer.getCompanyName());
+//                        if(userSupplyer.getSupplierLogo() != null)
+//                            user.setWeiImg(ImgDomain.GetFullImgUrl(userSupplyer.getSupplierLogo()));
+//
+//                        // 6.17 阿甘新增 标识登陆的供应商身份
+//                        short tempType = userSupplyer.getType();
+//                        if(BitOperation.getIntegerSomeBit(tempType,1) == 1)
+//                            user.setYunS((short) 1);
+//                        if(BitOperation.getIntegerSomeBit(tempType,2) == 1)
+//                            user.setBatchS((short) 1);
+//                        // user.setWeiType(userSupplyer.getType());
+//                    }
+//                    if(shopInfo != null)
+//                    {
+//                        if(shopInfo.getShopImg() != null)
+//                            user.setWeiImg(ImgDomain.GetFullImgUrl(shopInfo.getShopImg()));
+//                        if(shopInfo.getShopName() != null)
+//                            user.setWeiName(shopInfo.getShopName());
+//                    }
+//
+//                    if(verinfo != null && verinfo.getType() != null)
+//                    {
+//                        type += 16 * verinfo.getType();
+//
+//                        // 6.17 阿甘新增 标识登陆的认证员身份
+//                        short rtempType = verinfo.getType();
+//                        if(BitOperation.getIntegerSomeBit(rtempType,0) == 1)
+//                            user.setYrz((short) 1);
+//                        if(BitOperation.getIntegerSomeBit(rtempType,1) == 1)
+//                            user.setyHrz((short) 1);
+//                        if(BitOperation.getIntegerSomeBit(rtempType,2) == 1)
+//                            user.setbHrz((short) 1);
+//                        if(BitOperation.getIntegerSomeBit(rtempType,3) == 1)
+//                            user.setBrz((short) 1);
+//                    }
+//                    user.setWeiType(type);
+//                    if(user.getyHrz() == 1)
+//                    {
+//                        user.setbHrz((short) 1);
+//                    }
+//                    if(user.getyHrz() == 1)
+//                    {
+//                        user.setBrz((short) 1);
+//                    }
+//                    // 判断是否认证服务点
+//                    if(batchPort != null && batchPort.getStatus() == 3 && batchPort.getType() == 2)
+//                    {
+//                        user.setRzFwd((short) 1);
+//                    }
+//                    // 代理商
+//                    if(yun != null && yun.getType() == 3)
+//                    {
+//                        user.setAgent((short) 1);
+//                    }
+//                    RedisUtil.setObject(cookie_tiket + "_IBS",user,1800);
+//                    // 添加redis缓存的时间
+//                    return user;
+//                }
+//            }
+//        }
+//        return user;
+//    }
+//
+//    public LoginUser getNowUser()
+//    {
+//        LoginUser tempuser = getLoginUser();
+//        long weiId = tempuser.getWeiID();
+//        LoginUser user = new LoginUser();
+//        UWeiSeller userSeller = baseDAO.get(UWeiSeller.class,weiId);
+//        USupplyer userSupplyer = baseDAO.get(USupplyer.class,weiId);
+//        UVerifier verinfo = baseDAO.get(UVerifier.class,weiId);
+//        UShopInfo shopInfo = baseDAO.get(UShopInfo.class,weiId);
+//        UBatchPort batchPort = baseDAO.get(UBatchPort.class,weiId);// 认证服务点
+//        UYunVerifier yun = baseDAO.get(UYunVerifier.class,weiId);// 云商通
+//        user.setWeiID(weiId);
+//        user.setbHrz((short) 0);
+//        user.setBrz((short) 0);
+//        user.setyHrz((short) 0);
+//        user.setYrz((short) 0);
+//        user.setBatchS((short) 0);
+//        user.setYunS((short) 0);
+//        if(userSeller != null)
+//        {
+//            user.setWeiImg(ImgDomain.GetFullImgUrl(userSeller.getImages()));
+//            user.setWeiName(userSeller.getWeiName());
+//        }
+//        short type = 1;
+//        if(userSupplyer != null && userSupplyer.getType() != null && userSupplyer.getType() != 0)
+//        {
+//            type += userSupplyer.getType();
+//            if(userSupplyer.getCompanyName() != null)
+//                user.setWeiName(userSupplyer.getCompanyName());
+//            if(userSupplyer.getSupplierLogo() != null)
+//                user.setWeiImg(ImgDomain.GetFullImgUrl(userSupplyer.getSupplierLogo()));
+//
+//            // 6.17 阿甘新增 标识登陆的供应商身份
+//            short tempType = userSupplyer.getType();
+//            if(BitOperation.getIntegerSomeBit(tempType,1) == 1)
+//                user.setYunS((short) 1);
+//            if(BitOperation.getIntegerSomeBit(tempType,2) == 1)
+//                user.setBatchS((short) 1);
+//            // user.setWeiType(userSupplyer.getType());
+//        }
+//        if(shopInfo != null)
+//        {
+//            if(shopInfo.getShopImg() != null)
+//                user.setWeiImg(ImgDomain.GetFullImgUrl(shopInfo.getShopImg()));
+//            if(shopInfo.getShopName() != null)
+//                user.setWeiName(shopInfo.getShopName());
+//        }
+//        if(verinfo != null && verinfo.getType() != null)
+//        {
+//            type += 16 * verinfo.getType();
+//            // 6.17 阿甘新增 标识登陆的认证员身份
+//            short rtempType = verinfo.getType();
+//            if(BitOperation.getIntegerSomeBit(rtempType,0) == 1)
+//                user.setYrz((short) 1);
+//            if(BitOperation.getIntegerSomeBit(rtempType,1) == 1)
+//                user.setyHrz((short) 1);
+//            if(BitOperation.getIntegerSomeBit(rtempType,2) == 1)
+//                user.setbHrz((short) 1);
+//            if(BitOperation.getIntegerSomeBit(rtempType,3) == 1)
+//                user.setBrz((short) 1);
+//        }
+//        user.setWeiType(type);
+//        if(user.getyHrz() == 1)
+//        {
+//            user.setbHrz((short) 1);
+//        }
+//        if(user.getyHrz() == 1)
+//        {
+//            user.setBrz((short) 1);
+//        }
+//        // 判断是否认证服务点
+//        if(batchPort != null && batchPort.getStatus() == 3 && batchPort.getType() == 2)
+//        {
+//            user.setRzFwd((short) 1);
+//        }
+//        // 代理商
+//        if(yun != null && yun.getType() == 3)
+//        {
+//            user.setAgent((short) 1);
+//        }
+//        // 添加redis缓存的时间
+//        return user;
+//    }
+}

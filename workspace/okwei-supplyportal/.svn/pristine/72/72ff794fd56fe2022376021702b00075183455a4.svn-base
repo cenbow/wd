@@ -1,0 +1,129 @@
+package com.okwei.supplyportal.service;
+
+
+import java.util.List;
+import java.util.Map;
+
+import com.okwei.common.Limit;
+import com.okwei.common.PageResult;
+import com.okwei.service.IBaseService;
+import com.okwei.supplyportal.bean.vo.MsgResult;
+import com.okwei.supplyportal.bean.vo.ParamOrderSearch;
+import com.okwei.supplyportal.bean.vo.ProductPriceEditParam;
+import com.okwei.supplyportal.bean.vo.RefundVO;
+import com.okwei.supplyportal.bean.vo.SupplyBookOrderParam;
+import com.okwei.supplyportal.bean.vo.SupplyBookOrderStateCountVO;
+import com.okwei.supplyportal.bean.vo.SupplyBookOrderVO;
+import com.okwei.supplyportal.bean.vo.SupplyOrderCountSumVO;
+import com.okwei.supplyportal.bean.vo.SupplyOrderDetailsVO;
+import com.okwei.supplyportal.bean.vo.SupplyOrderStateCountVO;
+import com.okwei.supplyportal.bean.vo.SupplyOrderVO;
+
+public interface IOrderManageService  extends IBaseService 
+{
+	/**
+	 * 获取零售订单列表（供应商 零售订单）
+	 * @param param
+	 * @param limit
+	 * @return
+	 */
+	public PageResult<SupplyOrderVO> getOrderListPageResult(ParamOrderSearch param,Long supplyWeiid,Limit limit);
+	/**
+	 * 获取供应商预定单列表（供应商 预定单 列表）
+	 * @param param
+	 * @param supplyWeiid
+	 * @param limit
+	 * @return
+	 */
+	public PageResult<SupplyBookOrderVO> getBookOrderListPageResult(ParamOrderSearch param,Long supplyWeiid, Limit limit);
+	
+	/**
+	 * 获取定数类型数量( 供应商  订单数量统计  )
+	 * @param supplyerWeiid 供应商weiid
+	 * @return
+	 */
+	public SupplyOrderCountSumVO getSupplyOrderCountSumVO(Long supplyerWeiid);
+	
+	/**
+	 * 获取订单状态 数量（针对 零售、批发）
+	 * @param supplyerWeiid
+	 * @param itype(1:零售、批发，2：预定)
+	 * @return
+	 */
+	public SupplyOrderStateCountVO getSupplyOrderStateCountVO(Long supplyerWeiid,int itype);
+	/**
+	 * 获取订单状态 数量（针对 预定）
+	 * @param supplyerWeiid
+	 * @return
+	 */
+	public SupplyBookOrderStateCountVO getSupplyBookOrderStateCountVO(Long supplyerWeiid);
+	
+	/**
+	 * 获取订单详情（供应商订单详情）
+	 * @param supplyOrderid
+	 * @return
+	 */
+	public SupplyOrderDetailsVO getOrderDetails(String supplyOrderid);
+	
+	/**
+	 * 确认、 拒绝 预订单 、
+	 * @param param
+	 * @return
+	 */
+	public MsgResult insertBookOrder(SupplyBookOrderParam param);
+	/**
+	 * 获取物流公司
+	 * @return
+	 */
+	public List<Map<String, String>> getLogistics();
+	
+	/**
+	 * 发货（供应商发货）
+	 * @param supplyOrderid
+	 * @param supplyWeiid
+	 * @param dcomanpyNo
+	 * @param deliveryCompany
+	 * @param deliveryOrderNo
+	 * @return
+	 */
+	public MsgResult sendGoods(String supplyOrderid,long supplyWeiid,String dcomanpyNo,String deliveryCompany,String deliveryOrderNo);
+	/**
+	 * 修改价格
+	 * @param param
+	 * @return
+	 */
+	public MsgResult editProductPrice(ProductPriceEditParam param);
+	/**
+	 * 获取退款详情
+	 * @param refundId
+	 * @param weiid
+	 * @return
+	 */
+	public RefundVO getRefundVO(long refundId,long weiid);
+	
+	/**
+	 * 退款（卖家同意、不同意）
+	 * @param supplyweiid
+	 * @param refundid
+	 * @param isAgree
+	 * @param content
+	 * @return
+	 */
+	public boolean editRefundState(long supplyweiid,long refundid, boolean isAgree,String content);
+	/**
+	 * 供应商删除订单
+	 * @param supplyweiid
+	 * @param supplyOrderid
+	 * @return
+	 */
+	public MsgResult deleteSupplyOrder(long supplyweiid,String supplyOrderid);
+	/**
+	 * 确认收货地址（退款）
+	 * @param refundid
+	 * @param weiid
+	 * @param addrid
+	 * @return
+	 */
+	 public MsgResult saveRefundOrderAddr(long refundid,long weiid,long addrid);
+	
+}

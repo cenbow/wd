@@ -1,0 +1,44 @@
+package com.okwei.supplyportal.web;
+
+import javax.servlet.http.Cookie;
+import javax.servlet.http.HttpServletRequest;
+
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+import com.okwei.supplyportal.bean.vo.BaseSSOController;
+import com.okwei.util.ObjectUtils;
+
+@Controller
+@RequestMapping(value = "/commons")
+public class CommonsController extends BaseSSOController
+{
+
+    @ResponseBody
+    @RequestMapping(value = "/outLogin",method =
+    {RequestMethod.GET})
+    public String outLogin(HttpServletRequest request,Model model)
+    {
+        Cookie[] cookies = request.getCookies();
+        String cookie_tiket = "";
+        for(Cookie cookie : cookies)
+        {
+            if("tiket".equals(cookie.getName()))
+            {
+                cookie_tiket = cookie.getValue();
+            }
+        }
+        // 判断cookie不为空
+        if(!ObjectUtils.isEmpty(cookie_tiket))
+        {
+            // RedisUtil
+            /*
+             * LoginUser user = (LoginUser) RedisUtil.getObject(cookie_tiket); if(user != null) { }
+             */
+        }
+        return "1";
+    }
+}

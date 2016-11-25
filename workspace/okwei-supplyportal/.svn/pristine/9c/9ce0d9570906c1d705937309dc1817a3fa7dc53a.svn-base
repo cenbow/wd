@@ -1,0 +1,86 @@
+package com.okwei.supplyportal.service;
+
+import java.util.List;
+
+import com.okwei.supplyportal.bean.vo.BaseProduct;
+import com.okwei.supplyportal.bean.vo.BaseResultVO;
+import com.okwei.supplyportal.bean.vo.EditProductVO;
+import com.okwei.supplyportal.bean.vo.PostAgeModelVO;
+import com.okwei.supplyportal.bean.vo.ProductClassVO;
+import com.okwei.supplyportal.bean.vo.ProductParamModelVO;
+import com.okwei.supplyportal.bean.vo.ProductParamVO;
+import com.okwei.supplyportal.bean.vo.ShopClassVO;
+
+
+public interface IEditProductInfoService {
+	
+	/**
+	 * 获取用户发布产品的权限
+	 * @param weiID
+	 * @return
+	 */
+	public boolean getPower(long weiID);
+	
+	/**
+	 * 编辑产品信息
+	 * @return
+	 */
+	public BaseResultVO editProductInfo(BaseProduct product);
+	
+	/**
+	 * 获取产品详细信息
+	 * @param productID
+	 * @return
+	 */
+	public EditProductVO getProductInfo(long productID);
+	
+	/**
+	 * 获取商品分类信息
+	 * @return
+	 */
+	public ProductClassVO getClassInfo(int classID);
+	
+	/**
+	 * 获取参数模板
+	 * @param tempID 参数模板ID
+	 * @return
+	 */
+	public ProductParamModelVO getParamModel(int tempID);
+	
+	/**
+	 * 获取商品的参数模板与参数数据
+	 * @param mid
+	 * @param productID
+	 * @return
+	 */
+	public ProductParamModelVO getProductParamModel(int mid,long productID);
+	
+	/**
+	 * 保存店铺分类
+	 * @param sc
+	 * @return
+	 */
+	public int saveShopClass(ShopClassVO sc);
+	
+	/**
+	 * 获取邮费模板列表
+	 * @param weiID
+	 * @return
+	 */
+	public List<PostAgeModelVO> getPostAgeList(long weiID);
+	
+	/**
+	 * 获取店铺分类列表
+	 * @param weiID
+	 * @return
+	 */
+	public List<ShopClassVO> getShopClassList(long weiID);
+	
+	/**
+	 * 保存参数模板
+	 * @param weiID
+	 * @param classID
+	 * @return
+	 */
+	public int saveProductParam(long weiID,int classID);
+}
