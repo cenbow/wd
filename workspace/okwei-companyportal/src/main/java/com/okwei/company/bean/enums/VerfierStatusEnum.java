@@ -9,7 +9,7 @@ public enum VerfierStatusEnum {
 	Applying(0),
 	//审核不通过
 	Pass(1),
-	//审核不通过
+	//审核不通过 shenm
 	Fail(2),
 	//缴费进驻
 	PayIn(3);
