@@ -54,7 +54,7 @@ public class TesterController {
 		try {
 			try {
 				Class.forName(DRIVER);
-			} catch (ClassNotFoundException e1) {
+			} catch (ClassNotFoundException e1) { 
 				// TODO Auto-generated catch block
 				e1.printStackTrace();
 			}
