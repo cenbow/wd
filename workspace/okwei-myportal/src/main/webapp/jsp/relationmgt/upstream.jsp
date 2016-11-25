@@ -1,0 +1,148 @@
+<%@ page language="java" contentType="text/html; charset=UTF-8"
+	pageEncoding="UTF-8"%>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c"%>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/fmt" prefix="fmt"%>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/functions" prefix="fn"%>
+<%@ taglib prefix="pg" uri="http://www.okwei.com/pagination"%>
+<%@ page import="java.util.ResourceBundle"%>
+
+<%
+	String path = request.getContextPath();
+	String basePath = request.getScheme() + "://"
+			+ request.getServerName() + ":" + request.getServerPort()
+			+ path + "/";
+
+	String okweidomain = ResourceBundle.getBundle("domain").getString("okweidomain"); 
+%>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>我的上游供应</title>
+<script type="text/javascript" src="/statics/js/district.js"></script>
+</head>
+
+<body class="bg_f3">
+	<form id="searcherForm" action="<%=basePath%>relationMgt/upstream" onsubmit="return false;">
+		<input type="hidden" id="province" value="${dto.province}"/>
+		<input type="hidden" id="city" value="${dto.city}"/>
+		<input type="hidden" id="district" value="${dto.district}"/>
+		<div class="conter_right_xx">
+			<div style="margin-top: 0; height: auto;" class="xh-shurk">
+				<ul>
+					<li><span>微店号：</span> <input type="text" class="btn_h24 w164" id="weiId"
+						name="weiId" value="${dto.weiId}"></li>
+					<li><span>店铺：</span> <input type="text" class="btn_h24 w164"
+						name="weiName" value="${dto.weiName}"></li>
+					<!-- <li><span>地区：</span> <select class="btn_h30 w104 mr_10" id="selProvince" name="province">
+							<option>省</option>
+					</select> <select class="btn_h30 w104 mr_10" id="selCity" name="city">
+							<option>市</option>
+					</select> <select class="btn_h30 w104 mr_10" id="selDistrict" name="district">
+							<option>区</option>
+					</select></li> -->
+
+					<li><span>批发市场：</span> <input type="text" class="btn_h24 w164"
+						name="bmName" value="${dto.bmName}"></li>
+					<li><input type="submit" style="width: 80px;" class="btn_submit_two" value="查询" id="searchBtn"></li>
+				</ul>
+			</div>
+		</div>
+
+		<div class="outermost bg_white mt13 fl tabnes">
+			<table>
+				<tbody>
+					<tr>
+						<td>序号</td>
+						<td>微店号</td>
+						<td width="220">店铺</td>
+						<td>所在省市</td>
+						<td>所在批发市场</td>
+						<td>QQ</td>
+						<td>操作</td>
+					</tr>
+					<c:if test="${fn:length(pageResult.list) < 1 }">
+						<tr>
+							<td colspan="7" style="vertical-align: middle; text-align: center; height: 200px;">暂无相关数据</td>
+						<tr>
+					</c:if>
+					<c:forEach items="${pageResult.list}" var="supplier" varStatus="status">
+						<tr>
+							<td>${status.index+1}</td>
+							<td>${supplier.weiId}</td>
+							<td>
+								<div class="txiangs">
+									<div class="lliuimg fl">
+										<img src="${supplier.images}">
+									</div>
+									<div class="fl ml_10 mt_10">
+										<p style="width:100px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;">
+											<span class="c3" title="${supplier.weiName}">${supplier.weiName}</span>
+										</p>
+										<div style="margin-top: 4px; margin-left: 6px;"
+											class="gygl_top_l_xx_ypr">
+											<c:if test="${supplier.isBatchSupplier==1}">
+												<span class="gygl_top_l_xx_hong mr_5 fw_b">批</span>
+											</c:if>
+									 		<c:if test="${supplier.isYunSupplier==1}">
+												<span class="gygl_top_l_xx_huang mr_5 fw_b">厂</span>
+											</c:if>
+										</div>
+									</div>
+								</div>
+							</td>
+							<td>${supplier.regionDesc}</td>
+							<td>${supplier.bmName}</td>
+							<td>
+							<c:if test='${supplier.qq!=null && supplier.qq!=""}'>
+							<a target="_blank" href="http://wpa.qq.com/msgrd?v=3&uin=${supplier.qq}&site=qq&menu=yes"><img border="0" src="http://wpa.qq.com/pa?p=2:${supplier.qq}:51" alt="点击这里给我发消息" title="点击这里给我发消息"/></a>
+							</c:if>
+							</td>
+							<td><a class="ft_lan" href="http://www.${supplier.weiId}.<%=okweidomain%>" target="_blank">进入店铺</a></td>
+						</tr>
+					</c:forEach>
+				</tbody>
+			</table>
+			<div class="pull-right">
+				<pg:page pageResult="${pageResult}" />
+			</div>
+		</div>
+	</form>
+
+	<script>
+		$(function(){
+			InitCity();
+			
+			var page = new Pagination( {
+				formId: "searcherForm",
+				isAjax : true,
+				targetId : "navTab",
+				submitId:"searchBtn",
+				validateFn:checkInfo
+			});
+			page.init();
+		})
+		
+		
+		/* ========城市选择下拉（地址管理）=================== */
+		function InitCity() {
+			// 初始化省市区列表
+			var province = $("#province").val();
+			var city = $("#city").val();
+			var area = $("#district").val();
+			var dis = new district();
+			dis.init('#selProvince', '#selCity', '#selDistrict');
+			dis.bdbycode(province, city, area);
+		}
+		
+		function checkInfo(){
+			var code = $("#weiId").val();
+			var re = /^[1-9]+[0-9]*]*$/;
+			if (code && !re.test(code)) {
+				alert("请输入数字格式的微店号");
+				return false;
+			}
+			return true;
+		}
+	</script>
+</body>

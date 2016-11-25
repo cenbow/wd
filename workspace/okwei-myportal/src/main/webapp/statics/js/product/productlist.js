@@ -1,0 +1,521 @@
+﻿$(document).ready(function(){
+	// 获取当前访问路径，设置form的action;如果是草稿箱页面，则隐藏类型选择框,
+	var url = window.location.pathname;
+	var isOutLinePage = 0; //默认非草稿箱页面
+	$("#searcherForm").attr("action",url);
+	if(url.indexOf("OutLine") > -1){
+		isOutLinePage = 1;
+		$("#select_Type").attr("disabled",true); 
+		$(".li_Type").hide();
+	}
+	
+	// 点击 "销售中","已下架","草稿箱" 触发查询
+	$("li[name=status_li]").click(function(){
+		//var shopclassid = $("#shopclass_ul").children(".yes_bgs").attr("value");//店铺分类id
+		var supshopclassid = 0;//一级店铺分类id
+		var shopclassid = 0;//二级店铺分类id
+		var url = $(this).attr("url")+supshopclassid+"/"+shopclassid;//状态+店铺分类 构造完整的url
+		//清空所有表单数据
+		$(':input','#searcherForm').not(':button, :submit, :reset, :hidden').val('').removeAttr('checked').removeAttr('selected');
+		//标志为点击直接访问后台动作
+		$("#isClick").val("1");
+		$("#searcherForm").attr("action",url).submit();
+	});
+	
+	// 点击"店铺一级分类" 触发查询
+	$("li[name=supshopclass_li]").click(function(){
+		var supshopclassid = $(this).attr("value");
+		var shopclassid = 0;
+		var url = $("#status_ul").children(".yes_bgs").attr("url")+supshopclassid+"/"+shopclassid;
+		//清空所有表单数据
+		$(':input','#searcherForm').not(':button, :submit, :reset, :hidden').val('').removeAttr('checked').removeAttr('selected');
+		//标志为点击直接访问后台动作
+		$("#isClick").val("1");
+		$("#searcherForm").attr("action",url).submit();
+	});
+	
+	// 点击"店铺二级分类" 触发查询
+	$("li[name=shopclass_li]").click(function(){
+		var supshopclassid = $("#supshopclass_ul").children(".yes_bgs").attr("value");//获取yes_bgs yes_bgs的supshopclass_li的value
+		var shopclassid = $(this).attr("value");
+		var url = $("#status_ul").children(".yes_bgs").attr("url")+supshopclassid+"/"+shopclassid;
+		//清空所有表单数据
+		$(':input','#searcherForm').not(':button, :submit, :reset, :hidden').val('').removeAttr('checked').removeAttr('selected');
+		//标志为点击直接访问后台动作
+		$("#isClick").val("1");
+		$("#searcherForm").attr("action",url).submit();
+	});
+	
+	// 初始化分页组件
+	var page = new Pagination({
+		formId : "searcherForm",
+		isAjax : false,
+		targetId : "navTab",
+		submitId : "searchBtn"
+	});
+	page.init();
+	
+	
+	// 全选多选框
+	$('.checkall').click(function() {
+		var parentDiv = $("#div_conter");
+		var ch = parentDiv.find('input[type=checkbox]');
+		if ($(this).is(':checked')) {
+			ch.each(function() {
+				$(this).attr('checked', true);
+			});
+		} else {
+			ch.each(function() {
+				$(this).attr('checked', false);
+			});
+		}
+	});
+	
+	// 置顶
+	$("a[name=top_single]").click(function(){
+		var productId = $(this).parent().parent().find("input:checkbox").val();
+		var shopClassId = $("#supshopclass_ul").children(".yes_bgs").attr("value");//在一级店铺分类范围内置顶
+		$.post("/myProduct/top",{productId:productId,shopClassId:shopClassId},function(data){
+			if(!data.error){
+				$(':input','#searcherForm').not(':button, :submit, :reset, :hidden').val('').removeAttr('checked').removeAttr('selected');
+				$("#searcherForm").submit();
+			}
+		},"json");
+	});
+	
+	// 删除所选项
+	$("#delete_selected").click(function(){
+		if($("input:checkbox").is(':checked')){
+			if(confirm("确定要删除所选的产品")){
+				var ids="";
+				$("input[name='productId']:checkbox").each(function(){ 
+	                if($(this).attr("checked")){
+	                	ids += $(this).val()+","
+	                }
+	            });
+				deleteProduct(ids);
+			}
+		}else{
+			alert("请至少选择一项");
+		}
+	});
+	
+	// 删除当前行产品
+	$("a[name=delete_single]").bind("click",function(){
+		if(confirm("确定要删除该产品")){
+			var id = $(this).parent().parent().find("input:checkbox").val();
+			deleteProduct(id);
+		}
+	});
+	
+	// 删除产品方法
+	function deleteProduct(productIds){
+		if(productIds){
+			$.post("/myProduct/deleteProduct",{productIds:productIds,state:$("#status_ul").find(".yes_bgs").attr("value")},function(data){
+				if(!data.error){
+					alert("删除成功！",true);
+					$(':input','#searcherForm').not(':button, :submit, :reset, :hidden').val('').removeAttr('checked').removeAttr('selected');
+					$("#isClick").val("1");
+					$("#searcherForm").submit();
+				}
+			},"json");
+		}
+	}
+	
+	
+	// 下架所选项
+	$("#drop_selected").click(function(){
+		if($("input:checkbox").is(':checked')){
+			if(confirm("确定要下架所选的产品")){
+				var ids="";
+				$("input[name='productId']:checkbox").each(function(){ 
+	                if($(this).attr("checked")){
+	                	ids += $(this).val()+","
+	                }
+	            });
+				dropProduct(ids);
+			}
+		}else{
+			alert("请至少选择一项");
+		}
+	});
+	
+	// 下架当前行产品
+	$("a[name=drop_single]").bind("click",function(){
+		if(confirm("确定要下架该产品")){
+			var id = $(this).parent().parent().find("input:checkbox").val();
+			dropProduct(id);
+		}
+	});
+	
+	// 下架产品方法
+	function dropProduct(productIds){
+		if(productIds){
+			$.post("/myProduct/dropProduct",{productIds:productIds,state:$("#status_ul").find(".yes_bgs").attr("value")},function(data){
+				if(!data.error){
+					alert("下架成功！",true);
+					$(':input','#searcherForm').not(':button, :submit, :reset, :hidden').val('').removeAttr('checked').removeAttr('selected');
+					$("#isClick").val("1");
+					$("#searcherForm").submit();
+				}
+			},"json");
+		}
+	}
+	
+	// 移动到...
+	//一级店铺分类
+	$("#move_select_1").change(function(){
+		var t = $(this);
+		var shopClassId = t.val();
+		var shopClassName = $(this).children('option:selected').html();
+		var selectObj = $("#move_select");
+		selectObj.empty();
+		if($("input:checkbox").is(':checked')){
+			$.get("/myProduct/getSecondClass",{shopClassId:shopClassId},function(data){
+				if(data.length>0){
+					selectObj.show();
+					selectObj.append("<option>请选择</option>");
+					for ( var i = 0; i < data.length; i++) {
+						option = $("<option>").text(data[i].className).val(data[i].classId);
+						selectObj.append(option);
+					}
+				}else{
+					selectObj.hide();
+					if(confirm('确定移动以上产品"'+shopClassName+'"?')){
+						var ids="";
+						$("input[name='productId']:checkbox").each(function(){ 
+			                if($(this).attr("checked")){
+			                	ids += $(this).val()+","
+			                }
+			            });
+						
+						$.post("/myProduct/moveProduct",{productIds:ids,shopClassId:shopClassId},function(data){
+							if(!data.error){
+								alert("移动成功！",true);
+								$(':input','#searcherForm').not(':button, :submit, :reset, :hidden').val('').removeAttr('checked').removeAttr('selected');
+								$("#searcherForm").submit();
+							}
+						},"json");
+					}
+					$(this).val(0);
+				}
+			});
+		}else{
+			alert("请至少选择一项");
+			$(this).val(0);
+		}
+	});
+	//二级店铺分类
+	$("#move_select").change(function(){
+		if($("input:checkbox").is(':checked')){
+			var value=$(this).children('option:selected').val();
+			var name=$(this).children('option:selected').html();
+			if(confirm('确定移动以上产品"'+name+'"?')){
+				var ids="";
+				$("input[name='productId']:checkbox").each(function(){ 
+	                if($(this).attr("checked")){
+	                	ids += $(this).val()+","
+	                }
+	            });
+				
+				$.post("/myProduct/moveProduct",{productIds:ids,shopClassId:value},function(data){
+					if(!data.error){
+						alert("移动成功！",true);
+						$(':input','#searcherForm').not(':button, :submit, :reset, :hidden').val('').removeAttr('checked').removeAttr('selected');
+						$("#searcherForm").submit();
+					}
+				},"json");
+			}
+			$(this).val(0);
+		}else{
+			alert("请至少选择一项");
+			$(this).val(0);
+		}
+	});
+	
+	// 关联品牌...
+	$("#link_select").change(function(){
+		if($("input:checkbox").is(':checked')){
+			var value=$(this).children('option:selected').val();
+			var name=$(this).children('option:selected').html();
+			if(confirm('确定关联"'+name+'"品牌?')){
+				var ids="";
+				$("input[name='productId']:checkbox").each(function(){ 
+	                if($(this).attr("checked")){
+	                	ids += $(this).val()+","
+	                }
+	            });
+				
+				$.post("/myProduct/connectProduct",{productIds:ids,brandId:value},function(data){
+					if(!data.error){
+						alert("关联成功！",true);
+						$(':input','#searcherForm').not(':button, :submit, :reset, :hidden').val('').removeAttr('checked').removeAttr('selected');
+						$("#searcherForm").submit();
+					}
+				},"json");
+			}
+			$(this).val(0);
+		}else{
+			alert("请至少选择一项");
+			$(this).val(0);
+		}
+		
+	});
+	
+	// 编辑当前行产品
+	$("[name=edit_single]").click(function(){
+		var type = $(this).attr("type");
+		var productId = $(this).parent().parent().find("input:checkbox").val();
+		if(type==1){//自营：跳转至发布产品页面
+			window.location.href="/Product/editProductInfo?operation=4&productId="+productId;
+		}else if(type==0){//分销：弹出上架边栏
+			var $ul = $(this).parents("ul");
+			upProduct(productId,$ul);
+		}
+	});
+	
+	// 审核当前行产品
+	$("[name=audit_single]").click(function(){
+		var productId = $(this).parent().parent().find("input:checkbox").val();
+		window.location.href="/Product/editProductInfo?operation=5&productId="+productId; //1代表发布产品;2表示导入产品;3表示xx;4表示编辑;5表示审核
+	});
+	
+	// 上架当前行产品
+	$("[name=upput_single]").click(function(){
+		var type = $(this).attr("type");
+		var productId = $(this).parent().parent().find("input:checkbox").val();
+		if(type==1){//自营：上传成功，即时刷新页面
+			$.post("/myProduct/upputProduct",{productIds:productId},function(data){
+				data = eval(data);
+				if(data.Statu == "Success"){
+					alert("上架成功！",true);
+					$(':input','#searcherForm').not(':button, :submit, :reset, :hidden').val('').removeAttr('checked').removeAttr('selected');
+					$("#searcherForm").submit();
+				} else {
+					alert(data.StatusReson);
+				}
+			},"json");
+		}else if(type==0){//分销：弹出上架边栏
+			var $ul = $(this).parents("ul");
+			upProduct(productId,$ul);
+		}
+	});
+	
+	// 上架弹层的店铺分类联动
+	$("#popup_select_1").change(function(){
+		var t = $(this);
+		var shopClassId = t.val();
+		var shopClassName = $(this).children('option:selected').html();
+		var selectObj = $("#popup_select");
+		selectObj.empty();
+		$.get("/myProduct/getSecondClass",{shopClassId:shopClassId},function(data){
+			if(data.length>0){
+				selectObj.show();
+				for ( var i = 0; i < data.length; i++) {
+					option = $("<option>").text(data[i].className).val(data[i].classId);
+					selectObj.append(option);
+				}
+			}else{
+				selectObj.hide();
+			}
+		});
+	});
+	
+	// 上架产品方法
+	function upProduct(productId,$ul){
+		//初始化弹出框的值
+		$("#popup_img").attr("src",$ul.attr("prodimg"));
+		$("#popup_title").html($ul.attr("prodtitle"));
+		$("#popup_price").html("￥"+$ul.attr("prodprice"));//零售价
+		$("#popup_conmision").html("￥"+$ul.attr("prodconmision"));//佣金
+		$("#popupForm").attr("prodId",$ul.attr("prodid"));//产品id
+		$("#popupForm").attr("prodSupplierId",$ul.attr("prodSupplierId"));//供应商id
+		$("#popupForm").attr("sjId",$ul.attr("sjId"));//上架id
+		var sjId = $ul.attr("sjId");
+		
+		$.post("/myProduct/getBatchPrices",{productId:productId,isOutLinePage:isOutLinePage,sjId:sjId},function(data){
+			var newprice = '<li class="news_title">新批发价</li>';
+			var price1 = 0;
+			var price2 = 0;
+			if(data.length>0){
+				price1 = data[0].price;
+				price2 = data[data.length-1].price;
+				
+				//因为批发价的数据根据不同的状态来自不同的表，返回的数据结构不同
+				for(var i = 0; i < data.length; i++){
+					newprice = newprice + '<li><span>' + data[i].count + '件起批</span> <input type="text" class="btn_h28" count="'+data[i].count+'" name="'+data[i].sbid+'" initvalue="'+data[i].price+'"/> 元</li>';
+				};
+				$("#popup_newprice").html(newprice);
+				$("#popup_batchprice").html('￥'+price1+'~￥'+price2);
+			}else{//没有批发价,remove掉批发价区间显示内容
+				$("#newpricediv").remove();
+			}
+			
+			//默认选中原来的店铺类型
+			if($('#popup_shopclass li[value='+$ul.attr("prodsid")+']').length>0){
+				$('#popup_shopclass li[value='+$ul.attr("prodsid")+']').addClass("red_borup");
+			}
+			
+			// 弹出右侧框
+			var posTop = ($(window).height() -  $('.pos_rabls').height())/2;
+			if(posTop<0){
+				$('.bgzao').css('height',$(window).height()).show();
+				$('.pos_rabls').css('top','30px');
+				$('.pos_rabls').show().animate({right:'0px'});
+			}else{
+				$('.bgzao').css('height',$(window).height()).show();
+				$('.pos_rabls').css('top',posTop);
+				$('.pos_rabls').show().animate({right:'0px'});
+			}
+		},'json');
+	}
+	
+	// 鼠标放入"批发"图片弹出批发价区间
+	var ajax = true; 
+	$("span[name=batchPriceSpan]").mousemove(function(e){
+		var _this = $(this);
+		var synchrodata = _this.attr("synchrodata");
+		if(synchrodata==0 && ajax){//第一次访问
+			ajax = false;
+			var productId = $(this).attr("productId");
+			var sjId = $(this).attr("sjId");
+			var temp = '';
+			$.post("/myProduct/getBatchPrices",{productId:productId,isOutLinePage:isOutLinePage,sjId:sjId},function(data){
+				if(data.length>0){
+					for(var i = 0; i < data.length; i++){
+						var price = 0;
+						if(isOutLinePage==1){
+							price = data[i].pirce;
+						}else{
+							price = data[i].price;
+						}
+						temp = temp + '<p class="pl20 pt5">' + data[i].count + '件起批，￥' + price + '</p>';
+					};
+					var popupDiv = '<div class="abput" name="abput">'+temp+'</div>';
+					_this.parent().append(popupDiv);
+				}
+				_this.attr("synchrodata","1");
+				ajax = true;
+			},'json');
+		}else{//已经有数据
+			_this.next().show();
+		}
+	});
+	//鼠标移开事件
+	$("span[name=batchPriceSpan]").mouseout(function(e){
+		var _this = $(this);
+		_this.next().hide();
+	});
+	
+	$('span[name=bookPriceSpan]').each(function(i) {
+		$(this).mouseover(function() {
+			$(this).next().show();
+		})
+		$(this).mouseout(function() {
+			$(this).next().hide();;
+		})
+	})
+	
+	
+	
+	// 点击"确定"上架
+	$("#confirm").click(function(){
+		var productId = $("#popupForm").attr("prodId");//产品id
+		var sjId = $("#popupForm").attr("sjId");//产品id
+		var supplierId = $("#popupForm").attr("prodSupplierId");
+		var sid;
+		/*if($("#popupForm li[name=popup_shopclass_li][class=red_borup]").length < 1){
+			alert("请选择店铺分类");
+			return false;
+		}
+		var sid = $("#popupForm li[name=popup_shopclass_li][class=red_borup]").attr("value");*/
+		
+		if($("#popup_select_1").val()==0){
+			alert("请选择店铺分类");
+			return false;
+		}
+		
+		if($("#popup_select").val()>0){
+			sid=$("#popup_select").val();
+		}else{
+			sid=$("#popup_select_1").val();
+		}
+		
+		// 批发价区间由一个字符串拼成，格式：count_price,count_price,
+		var priceStr = '';
+		var hasError = false;
+		var errorMgs = '';
+		if($("#popup_newprice input").length>0){
+			$("#popup_newprice input").each(function(){
+				var value = $(this).val();
+				if(!value){
+					hasError = true;
+					errorMgs = $(this).attr("count") + "件的批发价不能为空";
+					return false;
+				}
+				if(!checkPrice(value)){
+					hasError = true;
+					errorMgs = $(this).attr("count") + "件的批发价数据格式不对";
+					return false;
+				}
+				if(value<$(this).attr("initvalue")){
+					hasError = true;
+					errorMgs = $(this).attr("count") + "件的批发价不能低于原来的" + $(this).attr("initvalue");
+					return false;
+				}
+				priceStr += $(this).attr("name") + '_'+ $(this).val()+',';
+			});
+		}
+		
+		if(hasError){
+			alert(errorMgs);
+			return false;
+		}
+		
+		// 1为自己发货;
+		var byMyself = $("#deliverSelect input:checked").val();
+		$.post("/myProduct/uploadProduct",{
+				productId:productId,
+				sjId:sjId,
+				sid:sid,
+				prices:priceStr,
+				type:byMyself,
+				supplierId:supplierId
+			},function(data){
+				if(!data.error){
+					alert("上架成功",true);
+					$('.bgzao').hide(); 
+					$('.pos_rabls').animate({right:'-352px'});
+					//刷新当前页面
+					$(':input','#searcherForm').not(':button, :submit, :reset, :hidden').val('').removeAttr('checked').removeAttr('selected');
+					$("#isClick").val("1");
+					$("#searcherForm").submit();
+				}
+			},'json');
+	});
+	
+	
+	$('#ImgClose').click(function(){
+		$("#popupForm li[name=popup_shopclass_li][class=red_borup]").removeClass("red_borup");
+		$('.bgzao').hide(); 
+		$('.pos_rabls').animate({right:'-352px'});
+	});
+	
+	$('.zhuang_delssic ul li').each(function(){
+		$(this).click(function(){
+			$('.zhuang_delssic ul li').attr('class','');
+			$(this).attr('class','red_borup');
+		})
+	});
+	
+	$('#Tpyeof').focus(function(){
+		$('#Fcount').show();
+	});
+	
+	$('#YesterBot').click(function(){
+		$('#Fcount').hide();
+	});
+	
+	function checkPrice(price){return (/^(([1-9]\d*)|\d)(\.\d{1,2})?$/).test(price.toString());}
+	
+});

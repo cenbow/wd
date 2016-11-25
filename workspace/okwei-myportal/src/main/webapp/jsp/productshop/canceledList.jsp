@@ -1,0 +1,262 @@
+<%@ page language="java" contentType="text/html; charset=UTF-8"
+    pageEncoding="UTF-8"%>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c"%>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/fmt" prefix="fmt"%>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/functions" prefix="fn"%> 
+<%@ taglib prefix="pg" uri="http://www.okwei.com/pagination"%>
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>已取消的落地店列表</title>
+<link rel="stylesheet" type="text/css" href="/statics/css/jumei_usercenter.min.css" />
+<style>
+        .gygl_xxk_table_cz_td{border-right: 1px solid #e7e7e7;vertical-align: inherit;}
+        .gygl_xxk_table td { padding: 20px;}
+        .tab_pc li{ list-style:none; display:block; float:left;position:relative; }
+		.tab_pc li a{ display:block; height:50px; line-height:50px; margin:0 20px;}
+		.tab_pc li.now a{color:red;}
+		.tab_pc li.now  i{background: url("/statics/pic/xxk_3_19.jpg") center no-repeat;position: absolute;left:35%;bottom: -1px;height: 10px; display:block; width:19px;}
+		.tab_pc ul{clear:both;}
+		.left_xuanzs ul li.yes_bgs a{color:#fff;}
+</style>
+<link href="<%=request.getContextPath()%>/statics/js/layer/skin/layer.css" rel="stylesheet" type="text/css" />
+<script type = "text/javascript" src = "<%=request.getContextPath()%>/statics/js/layer/layer.min.js"></script>
+</head>
+<body style="background: #f3f3f3;">
+ <c:if test="${Inload_Query==false }">
+    <jsp:include page="/jsp/common/notpermit.jsp"/>
+</c:if>
+<c:if test="${Inload_Query==true }">
+<form id="searcherForm" name="searcherForm" action="/productShop/getDownstreamStoreList/2" onsubmit="return false;">
+<div class="fr conter_right">
+    <div class="zhuag_suv bor_si fl bg_white">
+        <div class="wdqb_xxk ndfxs_1-2_border">
+            <div class="tab_pc f16">
+                <li class="now" name="name_xxk">
+                    <a href="#">我的落地店</a><i style="left:43%;"></i>
+                </li>
+            </div>
+        </div>
+        <div class="oneci_ztai fl">
+            <div class="left_font tr fl f12 ft_c9">状态：</div>
+            <div class="left_xuanzs fl f12">
+                <ul>
+                    <li  name="mzh_4_7_yes"><a href="/productShop/getDownstreamStoreList/1">已审核（<b class="left_xuanzs_b">${auditedAmount}</b>）</a></li>
+                    <li class="yes_bgs" name="mzh_4_7_yes"><a href="/productShop/getDownstreamStoreList/2">已取消（<b class="left_xuanzs_b">${canceledAmount}</b>）</a></li>
+                   <li><input type="submit" value="添加落地店" class="dis_b ml_20 fl btn_sel28_pre bor_cls shou" onclick="addProductShopDivLayer('添加落地店','addProductShopDiv')"></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 已取消 -->
+    <div class="gygl_xxk mt_20 bor_le bor_ri" id="id_luodidian_1">
+        <table class="gygl_xxk_table bor_cls" style="">
+            <tr class="ndfxs_1-2_color ndfxs_1-2_border lh_40 fw_b td_no">
+                <td>落地店</td>
+                <td>联系电话</td>
+                <td>地区</td>
+                <td>取消时间</td>
+                <td>取消原因</td>
+                <td>操作</td>
+            </tr>
+             <c:if test="${fn:length(pageResult.list)<1}">
+          		<tr style="height:200px;">
+					<td colspan="5" style="text-align:center">暂无相关数据</td>
+				<tr>
+             </c:if>
+             <c:forEach items="${pageResult.list}" var="res">
+	            <tr class="ndfxs_1-2_border">
+	                <td class="gygl_xxk_table_cz_td">
+	                <div class="fl mt_30 mr_10"><input type="checkbox" onclick="singleCheck()" name="idArr" value="${res.shopId}"/></div>
+	                    <div class="gygl_xxk_table_cz_qx ">
+	                        <img src="${res.weiPicture}"/>
+	                    </div>
+	                    <div class="fl tl ft_c3">
+	                        <p>店铺名称：${res.shopName}</p>
+	                        <p>姓名：${res.linkname}</p>
+	                        <p>微店号：${res.weiId}</p>
+	                        <p>招商需求名称：${res.demandName}</p>
+	                    </div>
+	                </td>
+	                <td class="gygl_xxk_table_cz_td">
+	                    <span class="tc ft_c3 f14">${res.phone}</span>
+	                </td>
+	                <td class="gygl_xxk_table_cz_td tc">
+	                    <span class="tc ft_c3 f14">${res.locationStr}</span>
+	                </td>
+	                  <td class="gygl_xxk_table_cz_td">
+		                    <span class="tc ft_c3 f14"><fmt:formatDate value="${res.cancelTime}" pattern="yyyy-MM-dd"/></span>
+		              </td>
+		              <td class="gygl_xxk_table_cz_td">
+		                    <p class="ft_c9">${res.cancelReason}</p>
+		              </td>
+	                <td class="gygl_xxk_table_cz_td p10">
+		         		 <a href="javascript:;" class="ft_lan" onclick="editSingleProductShopState(${res.shopId},1,this)">恢复</a>
+	                     <a href="javascript:;" class="ft_lan" onclick="editSingleProductShopState(${res.shopId},3,this)">删除</a>
+	                </td>
+	            </tr>
+          </c:forEach>
+            <tr class="ndfxs_1-2_border td_no">
+                <td colspan="8">
+                    <div class="fiex_sel">
+                        <input type="checkbox" class="dis_b fl ml_20 mt13" id="allCheck" onclick="$('[name=idArr]').prop('checked',this.checked)" >
+                        <label class="dis_b fl ml_5 mt13 ft_c6" style="margin-top: 13px;" for="allCheck">全选</label>
+                        <a class="dis_b ml_20 fl mt_5 btn_hui28_pre shou" href="javascript:;" onclick="editBatchProductShopState(1)">恢复</a>
+                        <a class="dis_b ml_10 fl mt_5 btn_hui28_pre shou" href="javascript:;" onclick="editBatchProductShopState(3)">删除</a>
+                    </div>
+                </td>
+            </tr>
+        </table>
+</div>
+</div>
+
+<!-- 分页 -->
+	<div class="pull-right">
+		<pg:page pageResult="${pageResult}" />
+	</div>
+	
+</form>
+
+ <!-- 添加落地店 -->
+<div class="updata_tixian" style="display:none;" id="addProductShopDiv">
+<form method="post" id="addProductShopForm">
+    <div class="mzh_100 f14">
+        <span class="fl" style="line-height: 26px;">微店号：</span>
+        <input type="text" class="fl w130 xzgys_input" placeholder="请输入要添加为代理商的微店号" name="weiId"/>
+    </div>
+    <div class="mzh_100 f14" style="line-height: 26px;">
+        <span class="fl">店铺名称：</span>
+        <span class="fl" id="shopNameID"></span>
+        <br>
+        <span id="promptID" style="color:red"></span>
+    </div>
+    <div class="blank1 bor_bo"></div>
+    <div class="mzh_100 f14 mt_10">
+        <span class="fl" style="line-height: 26px;">选择代理招商需求：<span class="ft_c9">（多选）</span>
+        <input type="checkbox" id="checkAllDemand" onclick="$('[name=demandIdArr]').prop('checked',this.checked)"/>
+        <label for="checkAllDemand">全选</label></span>
+        <div class="mzh_100">
+        <c:if test="${fn:length(demandList)<1}">
+        	<div class="fl ml_20 mt_5">该平台号暂无招商需求</div>
+        </c:if>
+        <c:forEach items="${demandList}" var="demand">
+            <div class="fl ml_20 mt_5">
+                <input type="checkbox" value="${demand.demandId}" name="demandIdArr" onclick="singleCheck()"/>
+                <label>${demand.title}</label>
+            </div>
+        </c:forEach>
+        </div>
+    </div>
+     <div class="blank1 bor_bo"></div>
+    <div class="mzh_100 f14 mt_10">
+        <span class="fl ft_c6" style="line-height: 26px;">注意：添加成功后，该落地店需到收货地址中设置默认落地店地址；</span>
+    </div>
+    
+</form>
+</div>
+
+<script type="text/javascript">
+$(function(){
+	//分页
+   	var page = new Pagination( {
+		formId: "searcherForm",
+		isAjax : true,
+		targetId : "navTab",
+		submitId:"searchBtn",
+		validateFn:function(){
+			return true;
+		}
+	});
+	page.init();
+});
+//单个恢复和删除
+function editSingleProductShopState(shopId,state,_this){
+	if(state==3){
+		if(!confirm("确定删除吗?")){
+			return;		
+		}
+	}
+	$.ajax({
+		type:"post",
+		url:"/productShop/editProductShopState",
+		data:{"shopId":shopId,"status":state},
+		success:function(res){
+			var res = eval(res);
+			if(res!=null){
+				if(res.Statu == "Success")
+	    		{   
+	    			alert("成功!",true);
+	    			location.href='/productShop/getDownstreamStoreList/2';
+	    			$(_this).parent().parent().remove();
+	    		}
+	    		else
+	    		{
+	    			alert(result.StatusReson);
+	    		}
+			}
+		}
+	})
+}
+//批量恢复和删除
+function editBatchProductShopState(state){
+	if($("[name=idArr]:checked").length<=0){
+		alert("请勾选需要操作的数据");
+		return;
+	}
+	if(state==3){
+		if(!confirm("确定删除吗?")){
+			return;		
+		}
+	}
+	var shopIdArray = new Array();
+	$("[name=idArr]:checked").each(function(){
+		shopIdArray.push($(this).val());
+	})
+	$.ajax({
+		type:"post",
+		traditional:true,
+		url:"/productShop/editProductShopStateBatch",
+		data:{"shopIdArr":shopIdArray,"status":state},
+		success:function(res){
+			var res = eval(res);
+			if(res!=null){
+				if(res.Statu == "Success")
+	    		{   
+	    			alert("成功!",true);
+	    			location.href='/productShop/getDownstreamStoreList/2';
+	    			var tempArr = $('input[type=checkbox][checked=checked][id!=allCheck]');
+					tempArr.each(function(){
+						$(this).parent().parent().parent().remove();
+					})
+					$("#allCheck").prop("checked",false);
+	    		}
+	    		else
+	    		{
+	    			alert(res.StatusReson);
+	    		}
+			}
+		}
+	})
+}
+//全选
+function singleCheck(){
+	var flag=true;
+	var arr=$("[name=idArr]");
+	for(var i=0;i<arr.length;i++){
+		if($(arr[i]).prop("checked")==true){
+			flag=true;
+		}else{
+			flag=false;
+			$("#allCheck").prop("checked",flag);
+			return;
+		}
+	}
+	$("#allCheck").prop("checked",flag);
+}
+</script>
+<script type = "text/javascript" src = "<%=request.getContextPath()%>/statics/js/productShop/productshop.js"></script>
+</c:if>
+</body>
+</html>

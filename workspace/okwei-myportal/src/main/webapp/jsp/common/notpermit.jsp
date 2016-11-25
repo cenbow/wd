@@ -1,0 +1,69 @@
+
+<%@ page language="java" contentType="text/html; charset=UTF-8"
+    pageEncoding="UTF-8"%>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+ <style>
+.mar_auto{margin: 0px auto;}
+.w460{width: 460px;}
+.mar_tb100{margin: 100px 0px;}
+.line_42 {
+line-height: 42px;
+}
+.bor_bo {
+border-bottom: 1px solid #e7e7e7;
+}
+.bor_si {
+border: 1px solid #e7e7e7;
+}
+.f18 {
+font-size: 18px;
+}
+.fl {
+float: left;
+}
+.f14 {
+font-size: 14px;
+}
+.f16 {
+font-size: 16px;
+}
+.ml_30 {
+margin-left: 30px;
+}
+.mt_10 {
+margin-top: 10px;
+}
+.mt_20 {
+margin-top: 20px;
+}
+.mr_10 {
+margin-right: 10px;
+}
+.mr_20 {
+margin-right: 20px;
+}
+.ft_lan {
+color: #3366cc;
+}
+.mzh_100 {
+float: left;
+width: 100%;
+text-align: left;
+margin-top: 10px;
+}
+</style>
+<div class="fr conter_right" style="background:#fff;height:544px;border:1px solid #ddd;">
+   <div class="mzh_100" style="font-family: '微软雅黑';">
+    <div class="w460 mar_auto">
+        <div class="fl w460 mar_tb100">
+            <ul style="margin:0px 20px; width: auto;">
+                <li><img src="http://base1.okimgs.com/images/mzh_suo.png" class="fl mr_20 mt_20"></li>
+                <li class=" f18 fl line_42" style="color: #abb9c6;font-family: '微软雅黑';width:200px;">访问受限</li>
+                <li class="mt_10 fl" style="width:200px;"><b class="fl f16">您没有访问权限</b></li>
+                <li class="fl f14 mt_10" style="width:200px;">抱歉，该页面仅对指定角色开放</li>
+                <li class="fl mt_10" style="text-align: left;width:200px;""><a href="http://www.okwei.com/" class="ft_lan">返回首页</a></li>
+            </ul>
+        </div>
+    </div>
+</div>
+</div>

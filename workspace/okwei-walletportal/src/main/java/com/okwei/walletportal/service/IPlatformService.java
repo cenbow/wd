@@ -1,0 +1,51 @@
+package com.okwei.walletportal.service;
+
+import java.util.Map;
+
+import com.okwei.common.Limit;
+import com.okwei.common.PageResult;
+import com.okwei.service.IBaseService;
+import com.okwei.walletportal.bean.vo.platform.PlatformVO;
+
+public interface IPlatformService extends IBaseService {
+	/**
+	 * 统计已支付和未支付的个数
+	 * @param weiId
+	 * @return
+	 */
+	public Map<String, Object> get_countPlatform(Long weiId);
+	/**
+	 * 统计平台号 服务费 的 总服务费
+	 * @param weiId
+	 * @return
+	 */
+	public double get_PlatformMoney(Long weiId,String isPayReward);
+	/**
+	 * 统计平台号 服务费 的订单总金额
+	 * @param weiId
+	 * @return
+	 */
+	public double get_TotalMoney(Long weiId,String isPayReward);
+	/**
+	 *	平台服务费列表
+	 * @param weiId
+	 * @param yearTimeStr   年
+	 * @param monthTimeStr	月
+	 * @param isPayReward	 1已支付   0 未支付
+	 * @param limit
+	 * @return
+	 */
+	public PageResult<PlatformVO>  findServiceFeeList(Long weiId,String yearTimeStr, String monthTimeStr,String isPayReward, Limit limit);
+
+	/**
+	 * 统计该月的服务费
+	 * @param weiId
+	 * @param yearTimeStr
+	 * @param monthTimeStr
+	 * @param isPayReward	 1已支付   0 未支付
+	 * @return
+	 */
+	public double get_monthTotalMoney(Long weiId, String yearTimeStr,
+			String monthTimeStr,String isPayReward);
+
+}

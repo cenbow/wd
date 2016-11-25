@@ -1,0 +1,283 @@
+package com.okwei.myportal.service.impl;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.okwei.bean.domain.PProductAssist;
+import com.okwei.bean.domain.PProducts;
+import com.okwei.bean.domain.SMainData;
+import com.okwei.bean.domain.SProducts;
+import com.okwei.bean.domain.SShareActive;
+import com.okwei.bean.domain.SStatics;
+import com.okwei.bean.dto.share.SMainDataDTO;
+import com.okwei.bean.dto.share.SMainDataDTOs;
+import com.okwei.common.Limit;
+import com.okwei.common.PageResult;
+import com.okwei.dao.product.IBaseProductDao;
+import com.okwei.dao.share.IBasicShareDAO;
+import com.okwei.myportal.bean.vo.CountMainDataVO;
+import com.okwei.myportal.bean.vo.CountShareDetailVO;
+import com.okwei.myportal.bean.vo.CountShareVO;
+import com.okwei.myportal.bean.vo.SMainDataVO;
+import com.okwei.myportal.dao.IShareDAO;
+import com.okwei.myportal.service.IShareService;
+import com.okwei.util.DateUtils;
+import com.okwei.util.ImgDomain;
+
+
+@Service("shareService2")
+public class ShareService implements IShareService{
+	
+	@Autowired
+	private IShareDAO shareDAO;
+	
+	@Autowired
+	private IBasicShareDAO basicShareDAO;
+	
+	@Autowired
+	private IBaseProductDao baseProductDao;
+ 
+	
+	@Override
+	public Map<String, Object> count_Statics(long weiID, SMainDataDTOs dto) {
+		return shareDAO.count_Statics(weiID, dto);
+	}
+	
+	
+
+	 
+	public CountShareDetailVO countSharedetails(long weiId,long shareId, Limit limit){ 
+		CountShareDetailVO csdv=new CountShareDetailVO();
+		//分享标题
+		SMainData sMainData = shareDAO.get(SMainData.class, shareId);
+		if (sMainData==null) {
+			return null;
+		}
+		//分享统计数据
+		SStatics sStatics = shareDAO.get(SStatics.class, shareId);
+		if (sStatics==null) {
+			return null;
+		}
+		csdv.setPcount(sStatics.getPcount());
+		csdv.setPv((sStatics.getWebPv()==null?0:sStatics.getWebPv())+(sStatics.getWapPv()==null?0:sStatics.getWapPv())+(sStatics.getAppPv()==null?0:sStatics.getAppPv()));
+		csdv.setShareId(shareId);
+		csdv.setSv((sStatics.getWebSv()==null?0:sStatics.getWebSv())+(sStatics.getWapSv()==null?0:sStatics.getWapSv())+(sStatics.getAppSv()==null?0:sStatics.getAppSv()));
+		csdv.setTitle(sMainData.getTitle()); 
+		Map<Double, Integer> countOrders = shareDAO.getCountOrders(weiId, shareId);
+		if (countOrders!=null&&countOrders.size()>0) {
+			for (Entry<Double, Integer> map1 : countOrders.entrySet()) {
+				csdv.setTurnover(map1.getKey());
+				csdv.setVol(map1.getValue());
+			}
+		}
+		PageResult<SProducts> findSProductsList = basicShareDAO.findSProductsList(shareId, limit);
+		List<SProducts> list = findSProductsList.getList();
+		PageResult<CountShareVO> productsList=new PageResult<CountShareVO>();
+		//获取排序完成后的商品Id信息
+		List<Long> productIds = new ArrayList<Long>();
+		if (list!=null&&list.size()>0) {
+			for (SProducts sProducts : list) {
+				productIds.add(sProducts.getProductId());
+			}
+		}  
+		List<CountShareVO> countShareVOList=new ArrayList<CountShareVO>();
+		if (productIds!=null&&productIds.size()>0) {
+			//根据商品Id获取商品信息
+			List<PProducts> findProductlistByIds = baseProductDao.findProductlistByIds(productIds, null);
+			if (findProductlistByIds!=null&&findProductlistByIds.size()>0) {
+				for (PProducts pProducts : findProductlistByIds) {
+					CountShareVO spv=new CountShareVO();
+					spv.setDefaultImg(ImgDomain.GetFullImgUrl(pProducts.getDefaultImg()));
+					spv.setTurnover(pProducts.getDefaultPrice()==null?0.0:pProducts.getDefaultConmision());
+					spv.setProductTitle(pProducts.getProductTitle());
+					spv.setProductId(pProducts.getProductId());
+//					spv.setCommission(pProducts.getDefaultConmision()==null?0.0:pProducts.getDefaultConmision());
+					//分享次数
+					spv.setSv((sStatics.getWebSv()==null?0:sStatics.getWebSv())+(sStatics.getWapSv()==null?0:sStatics.getWapSv())+(sStatics.getAppSv()==null?0:sStatics.getAppSv()));
+					countShareVOList.add(spv);
+				}
+			}
+			//成交笔数
+			Map<Integer, Integer> countOrder = shareDAO.getCountOrder(weiId, productIds);
+			if (countOrder!=null&&countOrder.size()>0&&countShareVOList.size()>0) {
+				for (Entry<Integer, Integer> pProductAssist2 : countOrder.entrySet()) {
+					 for (CountShareVO countShareVO : countShareVOList) {
+						 if (pProductAssist2.getKey().longValue()==countShareVO.getProductId()) {
+							 countShareVO.setVol(pProductAssist2.getValue()==null?0:pProductAssist2.getValue());
+							 break;
+						 }
+					 }
+				} 
+			}
+		}  
+		productsList.setList(countShareVOList);
+		productsList.setPageCount(findSProductsList.getPageCount());
+		productsList.setPageIndex(findSProductsList.getPageIndex());
+		productsList.setPageSize(findSProductsList.getPageSize());
+		productsList.setTotalCount(findSProductsList.getTotalCount());
+		productsList.setTotalPage(findSProductsList.getTotalPage());
+		csdv.setProductsList(productsList);
+		return csdv;
+		
+	}
+	
+	public PageResult<CountMainDataVO> findCountMainDataList(long weiID, SMainDataDTOs dto, Limit limit){
+		if (weiID<1) {
+			return null;
+		}	
+		//TODO
+		PageResult<CountMainDataVO> pr=new PageResult<CountMainDataVO>();
+		PageResult<SMainData> findSMainDataLists = shareDAO.findSMainDataLists(weiID, dto, limit);
+		List<SMainData> list2 = findSMainDataLists.getList();
+		List<SStatics> findSStatics =new ArrayList<SStatics>();
+		List<Long> shareIds=new ArrayList<Long>();
+		if (list2!=null&&list2.size()>0) {
+			for (SMainData sMainData : list2) {
+				shareIds.add(sMainData.getShareId());
+			} 
+		}
+		List<CountMainDataVO> list=new ArrayList<CountMainDataVO>();
+		//获取统计表的数据
+		if (shareIds!=null&&shareIds.size()>0) {
+			 findSStatics = shareDAO.findSStatics(shareIds);
+			 if (findSStatics!=null&&findSStatics.size()>0) {
+				 for (SMainData mainData : list2) {
+					 for (SStatics statics : findSStatics) {
+						 if (mainData.getShareId().longValue()==statics.getShareId().longValue()) {
+							 CountMainDataVO cmdv=new CountMainDataVO();
+							 cmdv.setPcount(statics.getPcount());
+							 cmdv.setPv((statics.getWebPv()==null?0:statics.getWebPv())+(statics.getWapPv()==null?0:statics.getWapPv())+(statics.getAppPv()==null?0:statics.getAppPv()));
+							 cmdv.setShareId(mainData.getShareId());
+							 cmdv.setSv((statics.getWebSv()==null?0:statics.getWebSv())+(statics.getWapSv()==null?0:statics.getWapSv())+(statics.getAppSv()==null?0:statics.getAppSv()));
+							 cmdv.setTitle(mainData.getTitle());
+							 cmdv.setTurnover(statics.getTurnover());
+							 cmdv.setVol(statics.getVol());
+							// 总佣金
+//							List<Long> findSProductsByProductIds = basicShareDAO.findSProductsByProductIds(mainData.getShareId().longValue());
+//							if (findSProductsByProductIds!=null&&findSProductsByProductIds.size()>0) { 
+//								cmdv.setCommission(shareDAO.getOrderCommission(weiID,findSProductsByProductIds));
+//							}else{
+//								cmdv.setCommission(0.0);
+//							}
+							 list.add(cmdv);
+						 } 
+					 }
+				 } 
+			}
+		}   
+		pr.setList(list); 
+		pr.setPageCount(findSMainDataLists.getPageCount());
+		pr.setPageIndex(findSMainDataLists.getPageIndex());
+		pr.setPageSize(findSMainDataLists.getPageSize());
+		pr.setTotalCount(findSMainDataLists.getTotalCount());
+		pr.setTotalPage(findSMainDataLists.getTotalPage());
+		return pr;
+	}
+	
+	
+	
+	
+	@Override
+	public PageResult<SMainDataVO> findSMainDataList(long weiID, SMainDataDTO dto, Limit limit) {
+		if (weiID<1) {
+			return null;
+		}
+		PageResult<SMainDataVO> pr=new PageResult<SMainDataVO>();
+		//TODO
+		//1、分析 因为是查自己的分享记录 所以以 S_ShareActive 为主进行分页操作
+		//分享ID集合
+		List<Long> shareIdList=new ArrayList<Long>();
+		//无查询条件时
+		PageResult<SShareActive> findSShareActiveList =null;
+		//有查询条件时
+		PageResult<SMainData> findSMainDataList=null;
+		
+		List<SShareActive> SShareActiveList = null;
+		List<SMainData> list =null;
+		if (dto!=null&&(dto.getOnHomePage()!=-1||!"".equals(dto.getTitle()))) {
+			List<Long>  shareLists = shareDAO.findSShareActiveList(weiID);
+			findSMainDataList = shareDAO.findSMainDataList(weiID, dto, shareLists, limit);
+			pr.setPageCount(findSMainDataList.getPageCount());
+			pr.setPageIndex(findSMainDataList.getPageIndex());
+			pr.setPageSize(findSMainDataList.getPageSize());
+			pr.setTotalCount(findSMainDataList.getTotalCount());
+			pr.setTotalPage(findSMainDataList.getTotalPage());
+			list=findSMainDataList.getList();
+			
+			if (list!=null&&list.size()>0) {
+				for (SMainData mainData : list) {
+					shareIdList.add(mainData.getShareId());
+				}
+			}
+			if (shareIdList!=null&&shareIdList.size()>0) {
+				SShareActiveList= shareDAO.findSShareActiveList(weiID, shareIdList);
+			}
+		}else{
+			findSShareActiveList = shareDAO.findSShareActiveList(weiID, limit);
+			pr.setPageCount(findSShareActiveList.getPageCount());
+			pr.setPageIndex(findSShareActiveList.getPageIndex());
+			pr.setPageSize(findSShareActiveList.getPageSize());
+			pr.setTotalCount(findSShareActiveList.getTotalCount());
+			pr.setTotalPage(findSShareActiveList.getTotalPage());
+			SShareActiveList = findSShareActiveList.getList();
+				if (SShareActiveList!=null&&SShareActiveList.size()>0) { 
+					for (SShareActive sShareActive : SShareActiveList) {
+						//2、从上一步骤中获取分享记录的ID
+						shareIdList.add(sShareActive.getShareId());
+					}
+				//3、然后通过分享记录的ID 从S_MainData 中获取 分享的标题等信息
+				list =shareDAO.findSMainDataList(shareIdList);
+				}
+			} 
+//		PageResult<SMainData> findSMainDataList = shareDAO.findSMainDataList(weiID, dto, limit);
+//		List<SMainData> list =null;
+		if (list!=null&&list.size()>0) {
+		List<SMainDataVO> sainDataList=new ArrayList<SMainDataVO>();
+		List<Long> shareIds=new ArrayList<Long>(); 
+		List<SMainDataVO> sainDataVOList=new ArrayList<SMainDataVO>();
+		for (SMainData sMainData : list) {
+			shareIds.add(sMainData.getShareId());
+			SMainDataVO smd=new SMainDataVO();
+			smd.setCreateTime(DateUtils.format(sMainData.getCreateTime(),""));
+			smd.setDescrible(sMainData.getDescrible());
+			smd.setPcount(sMainData.getPcount());
+			smd.setShareId(sMainData.getShareId());
+			smd.setStatus(sMainData.getStatus());
+			smd.setTitle(sMainData.getTitle()); 
+			smd.setOnHomePage(sMainData.getOnHomePage());
+			sainDataVOList.add(smd);
+		} 
+//		List<SShareActive> findSShareActiveList = shareDAO.findSShareActiveList(weiID, shareIds);
+		//这里对分享排序 以及 添加： 分享人 、是否转发
+		for (SShareActive sShareActive : SShareActiveList) {
+			for (SMainDataVO sMainDataVO : sainDataVOList) {
+				if (sShareActive.getShareId().longValue()==sMainDataVO.getShareId()) {
+					//是否转发
+					if (sShareActive.getMakeWeiId().longValue()==sShareActive.getWeiId().longValue()) {
+						sMainDataVO.setIsForward(0);
+					}else{
+						sMainDataVO.setIsForward(1);
+					}
+					//分享人
+					sMainDataVO.setShareWeiID(sShareActive.getWeiId());
+					//制作人
+					sMainDataVO.setMakeWeiID(sShareActive.getMakeWeiId());
+					sainDataList.add(sMainDataVO);
+					break;
+				}
+			}
+		}
+		pr.setList(sainDataList);
+		}
+		
+		return pr;
+	}
+
+
+
+}

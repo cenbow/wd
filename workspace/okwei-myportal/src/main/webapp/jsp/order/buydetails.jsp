@@ -1,0 +1,713 @@
+<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c"%>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/fmt" prefix="fmt"%>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/functions" prefix="fn"%>
+<%@ taglib prefix="pg" uri="http://www.okwei.com/pagination"%>
+<%@ page import="java.util.ResourceBundle"%>
+<%
+    String path = request.getContextPath();
+			String basePath = request.getScheme() + "://"
+					+ request.getServerName() + ":" + request.getServerPort()
+					+ path + "/";
+			String paydomain = ResourceBundle.getBundle("domain").getString(
+					"paydomain"); 
+			String detaildomain = ResourceBundle.getBundle("domain").getString(
+							"detaildomain");
+%>
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>订单详情</title>
+<link rel="stylesheet" type="text/css" href="/statics/css/mzh_dd_ddxq.css" />
+<script type="text/javascript" src="<%=request.getContextPath()%>/statics/js/order/orderdetails.js"></script>
+<script type="text/javascript" src="<%=request.getContextPath()%>/statics/js/order/orderpublic.js"></script>
+<style>
+.btn_hui28_pre {
+	background: #fff none repeat scroll 0 0;
+	border: 1px solid #dcdcdc;
+	border-radius: 4px;
+	color: #6c6c6c;
+	height: 28px;
+	line-height: 28px;
+	padding: 0 10px;
+	text-align: center;
+	cursor: pointer
+}
+
+.mzh_xiayibu {
+	background: #71b601 none repeat scroll 0 0;
+	border-radius: 5px;
+	color: #fff;
+	cursor: pointer;
+	float: left;
+	line-height: 30px;
+	padding: 0 30px;
+}
+</style>
+
+</head>
+<body>
+<input type="hidden" id="paydomain" value="<%=paydomain%>">
+	<!-- 内容开始 -->
+	<div class="content mar_au">
+		<div class="weiz_iam f12 fm_song">
+			当前位置：<a href="/maininfo/maininfo">微店中心</a>&gt;<a href="/order/buylist">订单列表</a>&gt;<span class="fw_100"><c:choose>
+					<c:when test="${details.orderType==1}">
+						零售订单
+					</c:when>
+					<c:when test="${details.orderType==2}">
+						批发订单
+					</c:when>
+					<c:when test="${details.orderType==3}">
+						预订订单
+					</c:when>
+				</c:choose> ${details.orderNum}</span> &gt;<span>订单详情</span>
+		</div>
+		<div class="ddxq_gg">
+			<!-- 流程 -->
+
+			<c:choose>
+				<c:when test="${details.orderType==1 ||details.orderType==2}">
+					<!-- 零售订单/批发订单 -->
+					<c:choose>
+						<c:when test="${details.orderState != 5 && details.orderState!=6}">
+							<div class="ddxq_gg_flow">
+								<div class="	<c:choose><c:when test="${details.orderState == 0 }">ddxq_gg_flow_red_5_1_yes</c:when>
+								<c:when test="${details.orderState == 1 }">ddxq_gg_flow_red_5_2_yes</c:when>
+								<c:when test="${details.orderState == 2 }">ddxq_gg_flow_red_5_3_yes</c:when>
+								<c:when test="${details.orderState == 3 }">ddxq_gg_flow_red_5_4_yes</c:when>
+								<c:when test="${details.orderState == 4 }">ddxq_gg_flow_red_5_5_yes</c:when>
+								<c:otherwise>ddxq_gg_flow_red_5_1_no</c:otherwise>
+								</c:choose>">
+									<div class="ddxq_gg_flow_red_5_1">
+										<b>1</b> <span>下单成功</span> <font>${details.placeOrderTimeStr =="null" ?'':details.placeOrderTimeStr }</font>
+									</div>
+									<div class="ddxq_gg_flow_red_5_2">
+										<b>2</b> <span>付款到微店网</span> <font>${details.paymentTimeStr =="null" ?'':details.paymentTimeStr }</font>
+									</div>
+									<div class="ddxq_gg_flow_red_5_3">
+										<b>3</b> <span>供应商发货</span> <font>${ details.deliveryTimeStr =="null" ?'':details.deliveryTimeStr }</font>
+									</div>
+									<div class="ddxq_gg_flow_red_5_4">
+										<b>4</b> <span>消费者收货</span> <font>${ details.goodsTimeStr =="null" ?'':details.goodsTimeStr }</font>
+									</div>
+									<div class="ddxq_gg_flow_red_5_5">
+										<b>5</b> <span>微店网付款给供应商</span> <font>${ details.dealTime  =="null" ?'':details.dealTime}</font>
+									</div>
+								</div>
+							</div>
+						</c:when>
+					</c:choose>
+				</c:when>
+				<c:when test="${details.orderType==3}">
+					<!-- 预售订单 -->
+					<div class="ddxq_gg_flow">
+						<div class="<c:choose><c:when test="${details.orderState == 8 }">ddxq_gg_flow_red_5_1_yes</c:when>
+				<c:when test="${details.orderState == 10 }">ddxq_gg_flow_red_5_2_yes</c:when>
+				<c:when test="${details.orderState == 12||details.orderState == 1||details.orderState == 2 }">ddxq_gg_flow_red_5_3_yes</c:when>
+				<c:when test="${details.orderState == 3 }">ddxq_gg_flow_red_5_4_yes</c:when>
+				<c:when test="${details.orderState == 4 }">ddxq_gg_flow_red_5_5_yes</c:when>
+				<c:otherwise>ddxq_gg_flow_red_5_1_no</c:otherwise>
+				</c:choose>">
+							<div class="ddxq_gg_flow_red_5_1">
+								<b>1</b> <span>提交铺货</span> <font>${details.placeOrderTimeStr }</font>
+							</div>
+							<div class="ddxq_gg_flow_red_5_2">
+								<b>2</b> <span>供应商确认订单</span> <font>${details.makeOrderTimeStr }</font>
+							</div>
+							<div class="ddxq_gg_flow_red_5_3">
+								<b>3</b> <span>支付款项</span> <font>${details.paymentTimeStr }</font>
+							</div>
+							<div class="ddxq_gg_flow_red_5_4">
+								<b>4</b> <span>确认收货</span> <font>${details.goodsTimeStr }</font>
+							</div>
+							<div class="ddxq_gg_flow_red_5_5">
+								<b>5</b> <span>订单完成</span> <font>${details.dealTime }</font>
+							</div>
+						</div>
+					</div>
+				</c:when>
+			</c:choose>
+
+
+			<!-- 下单成功 -->
+			<div class="ddxq_gg_ddzt">
+				<c:if test="${details.orderType==1||details.orderType==2 }">
+					<c:choose>
+						<c:when test="${details.orderState==0}">
+							<!-- 未付款 -->
+							<div class="ddxq_gg_ddzt_xx">
+								当前订单状态：<b>下单成功</b>，等待消费者付款；请在 <b class="ddxq_gg_ddzt_xx_time" id="countdown"> <script>
+									countdown('<fmt:formatDate value="${details.expirationTime}" type="both" pattern="yyyy/MM/dd HH:mm:ss" />')
+								</script>
+								</b> 内付款，否则系统将取消订单
+							</div>
+							<c:if test="${sel!=1 }">
+								<div class="ddxq_gg_ddzt_xx_1 mt_10 ml_30">
+									1.点击进行<span class="ddxq_gg_ddzt_xx_fk" onclick="javascript:gotoPay('${details.orderNum}')">付款</span>
+								</div>
+								<div class="ddxq_gg_ddzt_xx_1 ml_30">2.若已和供应商协商价格，请等待供应商修改订单价格</div>
+								<div class="ddxq_gg_ddzt_xx_1 ml_30">
+									3.您如果不想要了，可<a href="javascript:void(0);" onclick="cancelwin('${details.orderNum}');">取消订单</a>
+								</div>
+							</c:if>
+							
+						</c:when>
+						<c:when test="${details.orderState==1}">
+							<!-- 已付款 -->
+							<div class="ddxq_gg_ddzt_xx">
+								当前订单状态：<b>消费者已付款</b>；请等待供应商进行发货
+							</div>
+							<div class="ddxq_gg_ddzt_xx_1 mt_10 ml_30">
+								1.您可以<a href="/order/applyrefund?orderNo=${details.orderNum }">申请退款</a>，但需供应商确认
+							</div>
+							<div class="ddxq_gg_ddzt_xx_1 ml_30">2.直到您确实收到货物前，您的款项将暂存在微店网平台；</div>
+						</c:when>
+						<c:when test="${details.orderState==2}">
+							<!-- 已发货 -->
+							<div class="ddxq_gg_ddzt_xx">
+								当前订单状态：<b>供应商已发货</b>；若您已收到货物，请 <span class="jbzl_dl_qrdz ml_10" style="float: none; display: inline-block;" onclick="confirmcargowin('${details.orderNum}')">确认收货</span>
+							</div>
+							<div class="ddxq_gg_wuliu">
+								<h6 class="mb_10">物流信息</h6>
+								<div class="blank2"></div>
+								<dl class="ddxq_gg_wuliu_dl">
+									<dd>物流名称：</dd>
+									<dt>${details.logistics.longisticsName }</dt>
+								</dl>
+								<dl class="ddxq_gg_wuliu_dl">
+									<dd>物流单号：</dd>
+									<dt>${details.logistics.logisticsNo }</dt>
+								</dl>
+								<dl class="ddxq_gg_wuliu_dl">
+									<dd>物流跟踪：</dd>
+									<dt>
+										<c:forEach var="logstr" items="${details.logistics.tailList }">
+											<span>${logstr }</span>
+										</c:forEach>
+									</dt>
+								</dl>
+							</div>
+						</c:when>
+						<c:when test="${details.orderState==3}">
+							<!-- 已收货 -->
+							<div class="ddxq_gg_ddzt_xx">
+								当前订单状态： <b>已确认收货</b>； <a href="logistics?orderNo=${details.orderNum }">查看物流</a>
+							</div>
+							<div class="ddxq_gg_ddzt_xx_1 mt_10 ml_30">1.您已经确认收货，</div>
+							<div class="ddxq_gg_ddzt_xx_1 ml_30">
+								2.如果您对产品不满意，我们支持7天无理由退货 <a href="/order/applyrefund?orderNo=${details.orderNum }">申请退款</a>
+							</div>
+						</c:when>
+						<c:when test="${details.orderState==4}">
+							<!-- 已完成 -->
+							<div class="ddxq_gg_ddzt_xx">
+								当前订单状态：<b class="ddxq_gg_ddzt_xx_col">交易完成</b>； <a href="logistics?orderNo=${details.orderNum }">查看物流</a>
+							</div>
+							<div class="ddxq_gg_ddzt_xx_1 mt_10 ml_30">您的订单已完成交易，微店网已打款给供应商。</div>
+							<div class="ddxq_gg_ddzt_xx_1 ml_30">感谢您对微店网的支持！</div>
+						</c:when>
+						<c:when test="${details.orderState==13}">
+							<!-- 已过期 -->
+							<div class="ddxq_gg_ddzt">
+								<div class="ddxq_gg_ddzt_xx">
+									当前订单状态：<b>已过期</b>，该订单于
+									<fmt:formatDate value="${details.expirationTime}" type="both"  pattern="yyyy/MM/dd HH:mm:ss" dateStyle="default" />
+									过期
+								</div>
+								<div class="ddxq_gg_ddzt_xx">
+									该订单已过期
+									<!-- 
+									<span class="ddxq_gg_ddzt_xx_fk f12">重新下单</span>
+									 -->
+								</div>
+							</div>
+						</c:when>
+						<c:when test="${details.orderState==7}">
+							<!-- 已取消 -->
+							<div class="ddxq_gg_ddzt_xx">
+								当前订单状态：<b>已取消</b>，该订单于 ${details.cancelTimeStr }取消
+							</div>
+							<div class="ddxq_gg_ddzt_xx">
+								该订单已过期
+								<!-- 
+								<span class="ddxq_gg_ddzt_xx_fk f12">重新下单</span>
+								-->
+							</div>
+						</c:when>
+						<c:when test="${details.orderState == 5 }">
+							<!-- 退款中 -->
+							<div class="ddxq_gg_ddzt_xx">
+								当前订单状态： <b>退款中</b> <a href="javascript:void(0);" onclick="cancelrefundwin('${details.refundId}')" class="jbzl_dl_qrdz f12 ml_10 mr_5" style="float: none; width: 100px; display: inline-block;">取消退款申请</a>
+							</div>
+							<div class="ddxq_gg_ddzt_xx_1 ml_30">
+								查看<a href="refundetail?refundId=${details.refundId }">退款详情</a>
+							</div>
+						</c:when>
+						<c:when test="${details.orderState == 6 }">
+							<!-- 退款完成 -->
+							<div class="ddxq_gg_ddzt_xx">
+								当前订单状态：<b>退款完成，交易结束</b>
+							</div>
+							<div class="ddxq_gg_ddzt_xx_1 ml_30 mt_20">供应商已同意您的退款，微店网预计在15个工作日内将退款金额原路退回，届时请留意查看。</div>
+							<div class="ddxq_gg_ddzt_xx_1 ml_30">如有疑问，请联系微店网客服，感谢您对微店网的支持</div>
+						</c:when>
+					</c:choose>
+				</c:if>
+				<c:if test="${details.orderType==3 }">
+					<!-- 铺货单 -->
+					<c:choose>
+						<c:when test="${details.orderState==8}">
+							<!-- 等待确定 -->
+							<div class="ddxq_gg_ddzt_xx">
+								当前订单状态：<b>下单成功</b>，请等待供应商确认
+							</div>
+							<div class="ddxq_gg_ddzt_xx_1 ml_30 mt_10">
+								1.您可以联系供应商，提醒供应商确认
+								<!-- 
+								<a href="javascript:${details.supplierId };">联系供应商</a>
+								-->
+							</div>
+							<div class="ddxq_gg_ddzt_xx_1 ml_30 ">
+								2.您如果不想要了，可<a href="javascript:void(0);" onclick="cancelwin('${details.orderNum}')">取消订单</a>
+							</div>
+						</c:when>
+						<c:when test="${details.orderState==10}">
+							<!-- 已确定 -->
+							<c:if test="${details.isfullPrice }">
+								<!-- 全款支付 -->
+								<div class="ddxq_gg_ddzt_xx">
+									当前订单状态：<b>供应商已确认订单</b><a href="javascript:orderpay('${details.payOrderNo }');"><span class="ddxq_gg_ddzt_xx_fk">去支付</span></a>
+								</div>
+								<div class="ddxq_gg_ddzt_xx_1 ml_30 mt_10">
+									1.全额支付：<span class="fm_var">￥${details.payment }</span>
+								</div>
+								<div class="ddxq_gg_ddzt_xx_1 ml_30 ">
+									2.预计发货时间为：<span class="fm_var">${details.deliveryTimeStr }</span>
+								</div>
+								<div class="ddxq_gg_ddzt_xx_1 ml_30 ">3.若已和供应商协商价格，请等待供应商修改订单价格</div>
+								<div class="ddxq_gg_ddzt_xx_1 ml_30 ">4.铺货订单不支持退款，如需退款，请线下与供应商交涉</div>
+								<div class="ddxq_gg_ddzt_xx_1 ml_30 ">
+									5.您如果不想要了，可<a href="javascript:void(0);" onclick="cancelwin('${details.orderNum }')">取消订单</a>
+								</div>
+							</c:if>
+							<c:if test="${!details.isfullPrice }">
+								<!-- 支付定金支付 -->
+								<div class="ddxq_gg_ddzt_xx">
+									当前订单状态：<b>供应商已确认订单</b><a href="javascript:orderpay('${details.payOrderNo }');"><span class="ddxq_gg_ddzt_xx_fk">支付定金</span></a>
+								</div>
+								<div class="ddxq_gg_ddzt_xx_1 ml_30 mt_10">
+									1.支付定金为：<span class="fm_var"> <c:if test="${details.bookPayType==1 }">
+									货款的${details.percentage }%
+									</c:if> ￥${details.depositprice }
+									</span>
+								</div>
+								<div class="ddxq_gg_ddzt_xx_1 ml_30 ">
+									<c:choose>
+										<c:when test="${details.tailPayType==0 }">
+										2.尾款支付：发货前支付尾款 ￥${details.finalprice } 请在发货前支付尾款
+										</c:when>
+										<c:otherwise>
+										 2.尾款支付：发货后支付尾款 ￥${details.finalprice } 请在确认收货后及时支付尾款
+										</c:otherwise>
+									</c:choose>
+								</div>
+								<div class="ddxq_gg_ddzt_xx_1 ml_30 ">3.预计发货时间为：${details.deliveryTimeStr }</div>
+								<div class="ddxq_gg_ddzt_xx_1 ml_30 ">4.若已和供应商协商价格，请等待供应商修改订单价格</div>
+								<div class="ddxq_gg_ddzt_xx_1 ml_30 ">5.铺货订单不支持退款，如需退款，请线下与供应商交涉</div>
+								<div class="ddxq_gg_ddzt_xx_1 ml_30 ">
+									6.您如果不想要了，可<a href="javascript:void(0);" onclick="cancelwin('${details.orderNum }')">取消订单</a>
+								</div>
+							</c:if>
+							<div class="ddxq_gg_ddzt_xx_1 ml_30 mt_10">
+								<b>供应商留言</b>
+							</div>
+							<div class="ddxq_gg_ddzt_xx_1 ml_30 ft_sihui">
+								供应商备注：<span>${details.supplierMessage }</span>
+							</div>
+						</c:when>
+						<c:when test="${details.orderState==11}">
+							<!-- 已拒绝 -->
+							<div class="ddxq_gg_ddzt_xx">
+								当前订单状态：<b>已拒绝</b>
+							</div>
+							<div class="ddxq_gg_ddzt_xx_1 ml_30 mt_20">供应商已拒绝了您的铺货申请。</div>
+							<div class="ddxq_gg_ddzt_xx_1 ml_30">
+								1.您可以 <a href="#">联系供应商</a>
+							</div>
+							<div class="ddxq_gg_ddzt_xx_1 ml_30">
+								2.您可以 <a href="#">继续购物</a>
+							</div>
+						</c:when>
+						<c:when test="${details.orderState==12}">
+							<!-- 已支付定金  -->
+							<c:if test="${details.tailPayType==0 }">
+								<!-- 发货前 -->
+								<div class="ddxq_gg_ddzt_xx">
+									当前订单状态：<b>消费者已支付定金</b><a href="javascript:orderpay('${details.payOrderNo }');"> <span class="ddxq_gg_ddzt_xx_fk">支付尾款</span></a>
+								</div>
+							</c:if>
+							<c:if test="${details.tailPayType==1 }">
+								<div class="ddxq_gg_ddzt_xx">
+									当前订单状态：<b>消费者已支付定金</b>；请等待供应商发货
+								</div>
+							</c:if>
+
+							<div class="ddxq_gg_ddzt_xx_1 ml_30 mt_10">
+								1.支付定金为：<span class="fm_var"><c:if test="${details.bookPayType==1 }">
+									货款的${details.percentage }%
+									</c:if> ￥${details.depositprice }</span>
+							</div>
+							<div class="ddxq_gg_ddzt_xx_1 ml_30 ">
+								<c:choose>
+									<c:when test="${details.tailPayType==0 }">
+										2.尾款支付：发货前支付尾款 ￥${details.finalprice } 请在发货前支付尾款
+										</c:when>
+									<c:otherwise>
+										 2.尾款支付：发货后支付尾款 ￥${details.finalprice } 请在确认收货后及时支付尾款
+										</c:otherwise>
+								</c:choose>
+							</div>
+							<div class="ddxq_gg_ddzt_xx_1 ml_30 ">3.预计发货时间为：${details.deliveryTimeStr }</div>
+							<div class="ddxq_gg_ddzt_xx_1 ml_30 ">4.铺货订单定金部分不支持退款，如需退款，请线下与供应商交涉</div>
+							<div class="ddxq_gg_ddzt_xx_1 ml_30 ">5.直到您确实收到货物前，您的款项将暂存在微店网平台；</div>
+						</c:when>
+
+						<c:when test="${details.orderState==1}">
+							<!-- 已支付 -->
+							<div class="ddxq_gg_ddzt_xx">
+								当前订单状态：<b>已付款</b>；等待供应商发货
+							</div>
+							<div class="ddxq_gg_ddzt_xx_1 ml_30 mt_20">
+								<c:choose>
+									<c:when test="${details.isfullPrice }">
+									1.您已全额支付：￥${details.payment }
+									</c:when>
+									<c:otherwise>
+									1.您已支付定金和尾款金额：￥${details.payment }
+									</c:otherwise>
+								</c:choose>
+							</div>
+							<div class="ddxq_gg_ddzt_xx_1 ml_30 ">2.发货时间：${details.deliveryTimeStr }</div>
+							<div class="ddxq_gg_ddzt_xx_1 ml_30 ">3.铺货订单定金部分不支持退款，如需退款，请线下与供应商交涉</div>
+						</c:when>
+						<c:when test="${details.orderState==2}">
+							<!-- 已发货 -->
+							<div class="ddxq_gg_ddzt_xx">
+								当前订单状态：<b>供应商已发货</b>；若您已收到货物，请 <span class="jbzl_dl_qrdz ml_10" style="float: none; display: inline-block;" onclick="confirmcargowin('${details.orderNum}')">确认收货</span>
+							</div>
+							<div class="ddxq_gg_ddzt_xx_1 ml_30 mt_20">
+								<c:if test="${details.isfullPrice }">
+									<!-- 全款支付 -->
+			                1.您已全额支付：<span class="fm_var">￥${details.payment }</span>
+								</c:if>
+								<c:if test="${!details.isfullPrice }">
+									<!-- 分开支付 -->
+									<c:if test="${details.tailPayType==0 }">
+			                1.您已支付定金和尾款：<span class="fm_var">￥${details.payment }</span>
+									</c:if>
+									<c:if test="${details.tailPayType==1 }">
+			                1.您已支付定金：<span class="fm_var">货款的${details.percentage }% ￥${details.depositprice }</span>
+									</c:if>
+								</c:if>
+							</div>
+							<%-- 							<div class="ddxq_gg_ddzt_xx_1 ml_30 ">
+								2.点击这里：<a href="logistics?orderNo=${details.orderNum }">查看物流信息</a>
+							</div> --%>
+							<div class="ddxq_gg_ddzt_xx_1 ml_30 mt_10">
+								<b>物流信息</b>
+							</div>
+							<div class="blank2"></div>
+							<dl class="ddxq_gg_wuliu_dl ml_30">
+								<dd>物流名称：</dd>
+								<dt>${details.logistics.longisticsName }</dt>
+							</dl>
+							<dl class="ddxq_gg_wuliu_dl ml_30">
+								<dd>物流单号：</dd>
+								<dt>${details.logistics.logisticsNo }</dt>
+							</dl>
+							<dl class="ddxq_gg_wuliu_dl ml_30">
+								<dd>物流跟踪：</dd>
+								<dt>
+									<c:forEach var="logstr" items="${details.logistics.tailList }">
+										<span>${logstr}</span>
+									</c:forEach>
+								</dt>
+							</dl>
+						</c:when>
+						<c:when test="${details.orderState==3}">
+							<!-- 已收货 -->
+							<c:choose>
+								<c:when test="${details.tailPayType == 1}">
+									<div class="ddxq_gg_ddzt_xx">
+										当前订单状态：<b>已确认收货</b>； <a href="javascript:orderpay('${details.payOrderNo }');"> <span class="ddxq_gg_ddzt_xx_fk">支付尾款</span>
+										</a>
+									</div>
+									<div class="ddxq_gg_ddzt_xx_1 ml_30 mt_10">
+										1.支付定金为：<span class="fm_var"> <c:if test="${details.bookPayType==1 }">
+									货款的${details.percentage }%
+									</c:if> ￥${details.depositprice }
+										</span>
+
+
+									</div>
+									<div class="ddxq_gg_ddzt_xx_1 ml_30 ">2.铺货订单不支持退款，如需退款，请线下与供应商交涉</div>
+									<div class="ddxq_gg_ddzt_xx_1 ml_30 ">3.供应商选择给您发货后支付尾款，您在确认收货后请及时支付尾款</div>
+									<div class="ddxq_gg_ddzt_xx_1 ml_30 ">
+										4.查看<a href="logistics?orderNo=${details.orderNum }">物流详情</a>
+									</div>
+								</c:when>
+								<c:otherwise>
+									<div class="ddxq_gg_ddzt_xx">
+										当前订单状态： <b>已确认收货</b>；
+									</div>
+									<div class="ddxq_gg_ddzt_xx_1 mt_10 ml_30">1.您已经确认收货，</div>
+									<div class="ddxq_gg_ddzt_xx_1 ml_30 ">
+										2.查看<a href="logistics?orderNo=${details.orderNum }">物流详情</a>
+									</div>
+								</c:otherwise>
+							</c:choose>
+						</c:when>
+						<c:when test="${details.orderState==4}">
+							<!-- 已收货 -->
+							<div class="ddxq_gg_ddzt_xx">
+								当前订单状态：<b class="ddxq_gg_ddzt_xx_col">交易完成</b>； <a href="logistics?orderNo=${details.orderNum }">查看物流</a>
+							</div>
+							<div class="ddxq_gg_ddzt_xx_1 mt_10 ml_30">您的订单已完成交易，微店网已打款给供应商。</div>
+							<div class="ddxq_gg_ddzt_xx_1 ml_30">感谢您对微店网的支持！</div>
+						</c:when>
+						<c:when test="${details.orderState==7}">
+							<!-- 已取消 -->
+							<div class="ddxq_gg_ddzt_xx">
+								当前订单状态：<b>已取消</b>
+							</div>
+							<div class="ddxq_gg_ddzt_xx">
+								该订单已过期
+								<!-- 
+								<span class="ddxq_gg_ddzt_xx_fk f12">重新下单</span>
+								-->
+							</div>
+						</c:when>
+					</c:choose>
+				</c:if>
+			</div>
+
+
+			<!-- 收货地址-留言-订单信息-产品清单 -->
+			<div class="ddxq_gg_sldc">
+				<div class="ddxq_gg_sldc_1 margin_20">
+					<!-- 收货地址 -->
+					<div class="ddxq_gg_sldc_1_sh">
+						<h6 class="mb_10">收货地址</h6>
+						<div class="ddxq_gg_sldc_1_sh_1">
+							<span class="ddxq_gg_sldc_1_sh_1_span">收货人：<font>${details.receivingName}</font></span> <span class="ddxq_gg_sldc_1_sh_1_span" style="margin-left: 50px;"> 联系电话 ：<font>${details.receivingPhone}</font></span>
+						</div>
+						<div class="ddxq_gg_sldc_1_sh_1">
+							<span class="ddxq_gg_sldc_1_sh_1_span">收货地址：<font>${details.receivingAddress}</font></span>
+						</div>
+						<h6 class="mb_10 mt_20">留言</h6>
+						<span class="ddxq_gg_sldc_1_sh_1_span">${details.message }</span>
+						<h6 class="mb_10 mt_20">订单信息</h6>
+						<div class="ddxq_gg_sldc_1_sh_1">
+							<span class="ddxq_gg_sldc_1_sh_1_span">订单号：<font>${details.orderNum }</font></span> <span class="ddxq_gg_sldc_1_sh_1_span" style="margin-left: 50px;"> 支付方式：<font>${details.payWay }</font></span> <span class="ddxq_gg_sldc_1_sh_1_span"> 参与促销：<font>${details.preferential }</font></span>
+						</div>
+						<h6 class="lh_40 bor_to mt_10">产品清单</h6>
+
+						<div class="conter_right_xx_cz mt bor_cls">
+							<div class="conter_right_xx_cz_t" style="background: #e7e7e7;">
+								<ul>
+									<li class="l_8 fw_b">商品信息</li>
+									<li class="l_13 fw_b">单价（元）</li>
+									<li class="l_3 fw_b">佣金（元）</li>
+									<li class="l_3 fw_b">数量</li>
+									<li class="l_3 fw_b">优惠方式（元）</li>
+									<li class="l_3 fw_b">总金额（元）</li>
+									<li class="l_3 fw_b">成交微店</li>
+									<li class="l_3 fw_b" style="margin-left: 70px;">售后</li>
+									<li class="l_7 fw_b" style="margin-left: 95px;">运费（元）</li>
+									<li class="l_7 fw_b" style="margin-left: 70px;">状态</li>
+								</ul>
+							</div>
+							<div class="blank2"></div>
+							<table class="conter_right_xx_cz_table" style="border: 1px solid #e7e7e7;">
+								<tbody>
+									<tr class="mzh_4_17_gai">
+										<td rowspan="7" style="padding: 0px; border: 0px;">
+											<div class="h40_title f12 fl ft_c9" style="margin-left: 10px; width: auto;">
+												店铺：<span class="ft_c3">${details.supplierName }</span>
+											</div> <c:if test="${details.supplierQQ!=null && details.supplierQQ!='' }">
+												<div style="float: left; padding-top: 8px; padding-left: 10px;">
+													<a target=blank href="tencent://message/?uin=${details.supplierQQ}&Menu=yes"> <img border="0" SRC=http://wpa.qq.com/pa?p=1:88888:1 alt="点击联系"></a>
+												</div>
+											</c:if>
+											<c:if test="${details.orderState!=0&&details.orderState!=7&&details.orderState!=13 }">
+											<div class="h40_title f12 fl ft_c9" style="margin-left: 10px; width: auto;">
+												联系电话：<span class="ft_c3">${details.supplierPhone }</span>
+											</div>
+											</c:if>
+										</td>
+									</tr>
+									<tr class="fl">
+										<td class="conter_right_xx_cz_table_55" style="border-bottom: 0px; width: auto;"><c:forEach var="product" items="${details.proList }" varStatus="status">
+												<div class="conter_right_xx_cz_table_55_div" style="${status.index == 0?'border: 0px;padding-top:0px;':''}">
+													<div class="crxczt5d_0">
+													<a href="<%=detaildomain%>/product?sid=&pid=${product.productId}&f=&w="><img src="${product.productImg }"></a>
+													<%-- 	<a href="http://www.${product.buyerId}.okwei.com/cpxq.html?pNo=${product.productId}"><img src="${product.productImg }"></a>
+												 --%>	</div>
+													<div class="crxczt5d_10">
+														<span style="width: 140px;">${product.productTitle }</span> <span style="width: 140px; color: #3c3c3c;"><c:out value="${product.property}" escapeXml="false"></c:out></span>
+													</div>
+													<div class="crxczt5d_4" style="margin-left: 0px;"></div>
+													<div class="crxczt5d_10" style="margin: 0px; width: 100px;">
+														<font style="width: 100px;">${product.price }</font>
+													</div>
+													<div class="crxczt5d_2" style="width: 80px;">
+														<font>${product.commission }</font>
+													</div>
+													<div class="crxczt5d_2" style="width: 80px;">${product.count }</div>
+													<div class="crxczt5d_10" style="width: 90px;">
+														<font style="width: 70px;">${product.preferential }</font>
+													</div>
+													<div class="crxczt5d_10" style="width: 80px;">
+														<font style="width: 70px;">${product.totalamount }</font>
+													</div>
+													<div class="crxczt5d_10  margin_0 mzh_80">
+														<font class="mzh_4_17 margin_0 mzh_80">${product.sourceWeiName }</font>
+													</div>
+													<div class="crxczt5d_2 margin_0 mzh_80">
+														<font class="mzh_4_17 margin_0 mzh_80"></font>
+													</div>
+
+												</div>
+											</c:forEach></td>
+										<td class="conter_right_xx_cz_table_15" rowspan="2" style="border-bottom: 0px; vertical-align: inherit; width: 7%;">
+											<div class="crxczt5d_cz_1">${details.freight }</div>
+										</td>
+										<td class="conter_right_xx_cz_table_15" rowspan="2" style="border-bottom: 0px; vertical-align: inherit; width: 7%;">
+											<div class="crxczt5d_cz_1">
+												<c:choose>
+													<c:when test="${details.orderState==0}">
+													未付款
+												</c:when>
+													<c:when test="${details.orderState==1}">
+													已付款
+												</c:when>
+													<c:when test="${details.orderState==2}">
+													已发货
+												</c:when>
+													<c:when test="${details.orderState==3}">
+													已收货
+												</c:when>
+													<c:when test="${details.orderState==4}">
+													已完成
+												</c:when>
+													<c:when test="${details.orderState==5}">
+													退款中
+												</c:when>
+													<c:when test="${details.orderState==6}">
+													已退款
+												</c:when>
+													<c:when test="${details.orderState==7}">
+													已取消
+												</c:when>
+													<c:when test="${details.orderState==8}">
+													等待确认
+												</c:when>
+													<c:when test="${details.orderState==9}">
+													申请取消
+												</c:when>
+													<c:when test="${details.orderState==10}">
+													已确认
+												</c:when>
+													<c:when test="${details.orderState==11}">
+													已拒绝
+												</c:when>
+													<c:when test="${details.orderState==12}">
+													已付定金
+												</c:when>
+													<c:when test="${details.orderState==13}">
+													已过期
+												</c:when>
+													<c:when test="${details.orderState==14}">
+													已删除
+												</c:when>
+												</c:choose>
+											</div>
+										</td>
+									</tr>
+									<tr class="fl">
+										<td rowspan="7" style="border: 0px; border-top: 1px solid #e7e7e7; padding: 0px;">
+											<c:if test="${details.weiCoin>0 }">
+											<div class="fl count_price f12 tr" style="background: #fff; margin-left: 0px; width: 1140px; padding-right: 14px;">
+												使用微店网微金币 -<span class="f24 ft_red">￥${details.weiCoin }</span>
+											</div>
+											</c:if>
+											<div class="fl count_price f12 tr" style="background: #fff; margin-left: 0px; width: 1140px; padding-right: 14px;">
+												实付款：<span class="f24 ft_red">￥${details.payment-details.weiCoin }</span>
+											</div>
+										</td>
+									</tr>
+								</tbody>
+							</table>
+						</div>
+					</div>
+
+				</div>
+			</div>
+
+			<div class="ddxq_gg_ddjl margin_20">
+				<div class="ddxq_gg_sldc_1_sh">
+					<h6 class="mb_10">订单记录</h6>
+					<ul>
+						<c:forEach var="jilu" items="${details.recordList}">
+							<li>${jilu }</li>
+						</c:forEach>
+					</ul>
+				</div>
+			</div>
+
+
+		</div>
+	</div>
+
+	<!-- 取消订单提示 -->
+	<div id="cancel_ts" class="mzh_tcc">
+		<div class="mzh_tcc_1">是否确认取消该订单？</div>
+	</div>
+	<!-- 删除订单提示 -->
+	<div id="delete_ts" class="mzh_tcc">
+		<div class="mzh_tcc_1">
+			是否确认删除该订单？<br />删除该订单将不再显示
+		</div>
+	</div>
+	<!-- 确认收货提示 -->
+	<div id="quren_ts" class="mzh_tcc">
+		<div class="mzh_tcc_1">您将进行确认收货操作，请确定收到货物才进行此操作</div>
+	</div>
+	<!-- 取消退款提示 -->
+	<div id="cancelrefund_ts" class="mzh_tcc">
+		<div class="mzh_tcc_1">您将确认取消退款操作</div>
+	</div>
+	<!-- 申请退款提示 -->
+	<div id="refund_ts" class="mzh_tcc">
+		<div class="mzh_tcc_1">
+			您将对该订单进行退款处理，退款申请将提交给供应商<br />供应商将在48小时内回应；超时则默认同意您的请求！
+		</div>
+	</div>
+	<!-- 支付确认 -->
+	<div class="updata_tixian layer_pageContent" style="display: none;" id="win_div_4">
+		<div class="updata_tixian">
+			<div class="fl mzh_width_100">
+				<ul class="p10">
+					<li class="f14">系统检测您已发起过支付，请确认支付是否完成或支付账户是否扣款；</li>
+					<li class="f14 mt_10">若支付失败，点击-继续支付，将重新发起支付。</li>
+					<li class="fl mt_47"><input name="button" type="button" class="mzh_xiayibu" style="padding: 0px 20px;" value="继续支付"> <input type="hidden" id="payOrderID" value="">
+						<div class="dis_b ml_20 fl  btn_hui28_pre shou">取消支付</div></li>
+				</ul>
+			</div>
+		</div>
+	</div>
+	<!-- 内容结束 -->
+</body>
+</html>

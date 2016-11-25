@@ -1,0 +1,53 @@
+package com.okwei.myportal.bean.enums;
+
+public enum ReFundStatusEnum {
+	/**
+	 * 申请中
+	 */
+	ShenQingZhong(0),
+	/**
+	 * 供应商同意退款
+	 */
+	GysTongYi(1),
+	/**
+	 * 供应商不同意退款
+	 */
+	GysBuTongYi(2),
+	/**
+	 * 微店网介入
+	 */
+	WeiDianIn(3),
+	/**
+	 * 微店网介入,支持退货(退货时才用到)
+	 */
+	WeiDianTongYi(4),
+	/**
+	 * 买家已发货
+	 */
+	BuyerFaHuo(5),
+	/**
+	 * 退款完成
+	 */
+	GysQueRen(6),
+	/**
+	 * 申请关闭
+	 */
+	ShenQingClose(7),
+	/**
+	 * 其他
+	 */
+	no(99);
+	
+	private final int step; 
+
+    private ReFundStatusEnum(int step) { 
+
+         this.step = step; 
+    }
+    
+    @Override
+    public String toString()
+    {
+    	return String.valueOf(this.step);         	
+    }
+}

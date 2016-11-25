@@ -1,0 +1,49 @@
+<%@ page language="java" contentType="text/html; charset=UTF-8"
+	pageEncoding="UTF-8"%>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c"%>
+<%@ page import="java.util.ResourceBundle"%>
+<%
+    String mydomain = ResourceBundle.getBundle("domain").getString("mydomain"); 
+%>
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>物流详情</title>
+<script>
+	$(function() {
+		$(".ddxq_gg_wuliu_dl dt span:last").attr("class", "ddxq_gg_wuliu_qs");
+	})
+</script>
+</head>
+<body>
+	<div class="weiz_iam f12 fm_song">
+		当前位置：<a href="/maininfo/maininfo">微店中心</a>&gt;<span>物流详情</span>
+	</div>
+	<div class="ddxq_gg">
+		<!-- 物流信息 -->
+		<div class="ddxq_gg_wuliu">
+			<h6 class="mb_10">物流信息</h6>
+			<div class="blank2"></div>
+			<dl class="ddxq_gg_wuliu_dl">
+				<dd>物流名称：</dd>
+				<dt>${logisticsT.longisticsName}</dt>
+			</dl>
+			<dl class="ddxq_gg_wuliu_dl">
+				<dd>物流单号：</dd>
+				<dt>${logisticsT.logisticsNo}</dt>
+			</dl>
+			<dl class="ddxq_gg_wuliu_dl">
+				<dd>物流跟踪：</dd>
+				<dt>
+					<c:forEach var="record" items="${logisticsT.tailList}">
+						<span>${record}</span>
+					</c:forEach>
+				</dt>
+			</dl>
+		</div>
+		<div class="blank"></div>
+		<div class="blank2"></div>
+	</div>
+</body>
+</html>

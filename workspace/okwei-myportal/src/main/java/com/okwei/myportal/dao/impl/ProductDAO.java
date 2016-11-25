@@ -1,0 +1,264 @@
+package com.okwei.myportal.dao.impl;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.stereotype.Repository;
+
+import com.okwei.bean.domain.PBrand;
+import com.okwei.bean.domain.PClassProducts;
+import com.okwei.bean.domain.PProductBatchPrice;
+import com.okwei.bean.domain.PProducts;
+import com.okwei.bean.domain.PShevleBatchPrice;
+import com.okwei.bean.domain.PShopClass;
+import com.okwei.bean.enums.ProductShelveStatu;
+import com.okwei.bean.enums.ProductStatusEnum;
+import com.okwei.common.Limit;
+import com.okwei.common.PageResult;
+import com.okwei.dao.impl.BaseDAO;
+import com.okwei.myportal.bean.dto.ProductDTO;
+import com.okwei.myportal.bean.vo.ProductVO;
+import com.okwei.myportal.dao.IProductDAO;
+import com.okwei.util.ObjectUtil;
+
+@Repository
+public class ProductDAO extends BaseDAO implements IProductDAO {
+
+	@Override
+	public PageResult<ProductVO> getProducts(ProductDTO dto, Limit limit) {
+		PageResult<ProductVO> result = new PageResult<ProductVO>();
+		if (null != dto && null != dto.getStatus()) {
+			if (dto.getStatus() == ProductStatusEnum.OutLine) {
+				// 草稿箱
+				StringBuilder sb_OutLine = new StringBuilder(
+						"SELECT a.ProductID productId,a.defaultImg defaultImg,a.productTitle productTitle,a.productMinTitle productMinTitle,a.defaultPrice defaultPrice,a.bookPrice bookPrice,a.batchPrice batchPrice,a.defaultConmision defaultConmision,a.sid sid,a.brandId brandId,a.supplierWeiId supplierWeiId,c.SName sName "
+								+ "from P_Products a LEFT JOIN P_ShopClass c ON a.SID = c.SID where 1=1");
+				Map<String, Object> params_OutLine = new HashMap<String, Object>();
+				sb_OutLine.append(" and a.State = :state");
+				params_OutLine.put("state", Short.parseShort(dto.getStatus().toString()));
+				if (ObjectUtil.isNotEmpty(dto.getWeiId())) {
+					sb_OutLine.append(" and a.SupplierWeiID = :weiId");
+					params_OutLine.put("weiId", dto.getWeiId());
+				}
+				if (ObjectUtil.isNotEmpty(dto.getShopClassId()) && dto.getShopClassId() > 0) {// 当页面"全部"时，不加此过滤条件
+					sb_OutLine.append(" and a.SID = :sid");
+					params_OutLine.put("sid", dto.getShopClassId());
+				}
+				if (ObjectUtil.isNotEmpty(dto.getTitle())) {
+					sb_OutLine.append(" and a.ProductTitle like :title");
+					params_OutLine.put("title", "%" + dto.getTitle() + "%");
+				}
+				sb_OutLine.append(" order by a.updateTime desc");
+				result = super.queryPageResultByMap(sb_OutLine.toString(), ProductVO.class, limit, params_OutLine);
+			} else if (dto.getStatus() == ProductStatusEnum.Showing || dto.getStatus() == ProductStatusEnum.Drop) {
+				// 销售中，已下架
+				StringBuilder sb_ShowOrDrop = new StringBuilder(
+						"SELECT temp.*,c.SName sName FROM (SELECT a.ProductID productId,a.defaultImg defaultImg,a.productTitle productTitle,a.productMinTitle productMinTitle,"
+								+ "a.defaultPrice defaultPrice,a.bookPrice bookPrice,a.batchPrice batchPrice,a.defaultConmision defaultConmision,"
+								+ "b.ClassID classId,b.ID sjId,b.Type type,a.brandId brandId,a.supplierWeiId supplierWeiId,a.Tag tag,b.Sort sort,b.CreateTime createTime "
+								+ "From P_Products a join P_ClassProducts b on a.ProductID=b.ProductID");
+				Map<String, Object> params_ShowOrDrop = new HashMap<String, Object>();
+				sb_ShowOrDrop.append(" and b.State = :state");
+				if (dto.getStatus() == ProductStatusEnum.Showing) {
+					params_ShowOrDrop.put("state", Short.parseShort(ProductShelveStatu.OnShelf.toString()));
+				} else {
+					params_ShowOrDrop.put("state", Short.parseShort(ProductShelveStatu.OffShelf.toString()));
+				}
+				if (ObjectUtil.isNotEmpty(dto.getTitle())) {
+					sb_ShowOrDrop.append(" and a.ProductTitle like :title");
+					params_ShowOrDrop.put("title", "%" + dto.getTitle() + "%");
+				}
+				if (ObjectUtil.isNotEmpty(dto.getWeiId())) {
+					sb_ShowOrDrop.append(" and b.WeiID = :weiId");
+					params_ShowOrDrop.put("weiId", dto.getWeiId());
+				}
+				if (ObjectUtil.isNotEmpty(dto.getType()) && dto.getType() >= 0) { // 过滤"全部"-1,
+																					// 0表示分销；1、2、3表示自营
+					sb_ShowOrDrop.append(" and b.Type in (:type)"); // 排序
+					List<Short> types = new ArrayList<Short>();
+					if (dto.getType() == 0) {
+						types.add((short) 0);
+					} else {
+						types.add((short) 1);
+						types.add((short) 2);
+						types.add((short) 3);
+					}
+					params_ShowOrDrop.put("type", types);
+				}
+				if (ObjectUtil.isNotEmpty(dto.getShopClassId()) && dto.getShopClassId() > 0) {// 当页面"全部"店铺分类时，不加此过滤条件
+					sb_ShowOrDrop.append(" and b.ClassID = :sid");
+					params_ShowOrDrop.put("sid", Long.parseLong(dto.getShopClassId().toString()));
+				}
+				sb_ShowOrDrop.append(") temp LEFT JOIN P_ShopClass c ON temp.classId = c.SID");
+
+				if (ObjectUtil.isNotEmpty(dto.getShopClassId()) && dto.getShopClassId() > 0) {// 当页面"全部"店铺分类时，不加此过滤条件
+					sb_ShowOrDrop.append(" ORDER BY temp.sort DESC,temp.createTime DESC"); // 按sort排序
+				} else {// 选中"全部"店铺分类时，按updatetime倒序排
+					sb_ShowOrDrop.append(" ORDER BY temp.createTime DESC");
+				}
+
+				result = super.queryPageResultByMap(sb_ShowOrDrop.toString(), ProductVO.class, limit, params_ShowOrDrop);
+			}
+		}
+		return result;
+	}
+
+	@Override
+	public List<PShopClass> getMyShopClass(Long weiId) {
+		String hql = "from PShopClass where state = 1 and level = 1 and weiid = ? order by sort";
+		return super.find(hql, weiId);
+	}
+
+	@Override
+	public List<PBrand> getPBrand(Long weiId) {
+		String hql = "from PBrand where status = 1 and companyNo = ? order by sort";
+		return super.find(hql, weiId);
+	}
+
+	@Override
+	public Long getShowingCount(Long weiId) {
+		String hql = "select count(1) from PClassProducts where weiId = ? and state = ? ";
+		return super.count(hql, weiId, Short.parseShort(ProductShelveStatu.OnShelf.toString()));
+	}
+
+	@Override
+	public Long getShowingCount_subSupplier(Long weiId, String subWeiId) {
+		String hql = "select count(1) from PClassProducts a join PProductRelation b on a.productId=b.productId and a.weiId=? and b.subWeiId=? and a.state=? ";
+		return super.count(hql, weiId, subWeiId, Short.parseShort(ProductShelveStatu.OnShelf.toString()));
+	}
+
+	@Override
+	public Long getDropCount(Long weiId) {
+		String hql = "select count(1) from PClassProducts where weiId = ? and state = ? ";
+		return super.count(hql, weiId, Short.parseShort(ProductShelveStatu.OffShelf.toString()));
+	}
+
+	@Override
+	public Long getDropCount_subSupplier(Long weiId, String subWeiId) {
+		String hql = "select count(1) from PClassProducts a join PProductRelation b on a.productId=b.productId and a.weiId=? and b.subWeiId=? and a.state=? ";
+		return super.count(hql, weiId, subWeiId, Short.parseShort(ProductShelveStatu.OffShelf.toString()));
+	}
+
+	@Override
+	public Long getOutLineCount(Long weiId) {
+		String hql = "select count(1) from PProducts where state = ? and supplierWeiId = ?";
+		return super.count(hql, Short.parseShort(ProductStatusEnum.OutLine.toString()), weiId);
+	}
+
+	@Override
+	public Long getOutLineCount_subSupplier(Long weiId, String subWeiId) {
+		String hql = "select count(1) from PProductSup where state = 0 and weiID = ? and childrenID = ?";
+		return super.count(hql, weiId, subWeiId);
+	}
+
+	@Override
+	public Long getAuditCount(Long weiId) {
+		String hql = "select count(1) from PProductSup where state in(1,2) and weiID = ?";
+		return super.count(hql, weiId);
+	}
+
+	@Override
+	public Long getHandleCount(String subWeiId) {
+		String hql = "select count(1) from PProductSup where state in(1,2) and childrenID = ?";
+		return super.count(hql, subWeiId);
+	}
+
+	@Override
+	public List<PClassProducts> getClassProducts(List<Long> ids, Long weiId) {
+		String hql = "from PClassProducts where weiId = :weiId and productId in(:productIds)";
+		Map<String, Object> params = new HashMap<String, Object>();
+		params.put("weiId", weiId);
+		params.put("productIds", ids);
+		return super.findByMap(hql, params);
+	}
+
+	@Override
+	public List<PProducts> getPProducts(List<Long> ids, Long weiId) {
+		String hql = "from PProducts where supplierWeiId = :weiId and productId in(:productIds)";
+		Map<String, Object> params = new HashMap<String, Object>();
+		params.put("weiId", weiId);
+		params.put("productIds", ids);
+		return super.findByMap(hql, params);
+	}
+
+	@Override
+	public List<PClassProducts> getClassProducts_other(Long productId, Long weiId) {
+		String hql = "from PClassProducts where productId =:productId and weiId <> :weiId";
+		Map<String, Object> params = new HashMap<String, Object>();
+		params.put("productId", productId);
+		params.put("weiId", weiId);
+		return super.findByMap(hql, params);
+	}
+
+	@Override
+	public List<PProductBatchPrice> getBatchPrice(Long productId) {
+		String hql = "from PProductBatchPrice where productId =:productId order by pirce";
+		Map<String, Object> params = new HashMap<String, Object>();
+		params.put("productId", productId);
+		return super.findByMap(hql, params);
+	}
+
+	@Override
+	public List<PShevleBatchPrice> getMyBatchPrice(Long sjId) {
+		String hql = "from PShevleBatchPrice where id =:sjId order by price";
+		Map<String, Object> params = new HashMap<String, Object>();
+		params.put("sjId", sjId);
+		return super.findByMap(hql, params);
+	}
+
+	@Override
+	public PProductBatchPrice getBatchPrice(Long productId, Long bid) {
+		String hql = "from PProductBatchPrice where productId =:productId and bid =:bid order by pirce";
+		Map<String, Object> params = new HashMap<String, Object>();
+		params.put("productId", productId);
+		params.put("bid", bid);
+		List<PProductBatchPrice> list = super.findByMap(hql, params);
+		if (null != list && list.size() > 0) {
+			return list.get(0);
+		} else {
+			return null;
+		}
+	}
+
+	@Override
+	public PShevleBatchPrice getMyBatchPrice(Long sjId, Long sbid) {
+		String hql = "from PShevleBatchPrice where id =:sjId and sbid =:sbid order by price";
+		Map<String, Object> params = new HashMap<String, Object>();
+		params.put("sjId", sjId);
+		params.put("sbid", sbid);
+		List<PShevleBatchPrice> list = super.findByMap(hql, params);
+		if (null != list && list.size() > 0) {
+			return list.get(0);
+		} else {
+			return null;
+		}
+	}
+
+	@Override
+	public Short getMaxSort(Integer shopClassId, Long weiId) {// 在同一级店铺分类中，获取排在最前面的sort
+		String hql = " from PShopClass p where p.state=1 and paretId=? and weiid=? order by sort";
+		List<PShopClass> subs = super.find(hql, shopClassId, weiId);
+		List<Long> subShopClass = new ArrayList<Long>();
+		if (null != subs && subs.size() > 0) {
+			for (PShopClass sub : subs) {
+				subShopClass.add(Long.parseLong(sub.getSid().toString()));
+			}
+		} else {
+			subShopClass.add(Long.parseLong(String.valueOf(shopClassId)));
+		}
+
+		String sql = "select max(PP.sort) from PClassProducts PP where PP.weiId = :weiId and PP.classId in (:classIds) ";
+		Map<String, Object> params = new HashMap<String, Object>();
+		params.put("weiId", weiId);
+		params.put("classIds", subShopClass);
+		List<Short> list = super.findByMap(sql, params);
+		if (null != list && list.size() > 0) {
+			return (short) list.get(0);
+		} else {
+			return 0;
+		}
+	}
+
+}

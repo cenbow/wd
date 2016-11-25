@@ -1,0 +1,228 @@
+<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c"%>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/fmt" prefix="fmt"%>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/functions" prefix="fn"%>
+<%@ taglib prefix="pg" uri="http://www.okwei.com/pagination"%>
+
+<%@page import="com.okwei.util.DateUtils"%>
+<%@ page import="java.util.ResourceBundle"%>
+<%
+	String paydomain = ResourceBundle.getBundle("domain").getString(
+			"paydomain");
+%>
+<%
+	String path = request.getContextPath();
+	String basePath = request.getScheme() + "://" + request.getServerName() + ":" + request.getServerPort()
+			+ path + "/";
+%>
+<!DOCTYPE>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>报名详情</title>
+<link rel="stylesheet" href="../../css/glbdy.css" />
+<link rel="stylesheet" href="../../css/mzh_dd.css" />
+<link rel="stylesheet" href="../../css/jumei_usercenter.min.css" />
+<script src="../../statics/js/jquery-1.7.1.min.js"></script>
+<script src="../../statics/js/mzh_dd.js"></script>
+<script src = "../../statics/js/layer/layer.min.js"></script>
+<style>
+    .conter_right tr{border-bottom: 1px solid #ddd;}
+    .conter_right tr td{border-right: 1px solid #ddd;padding:10px 0;}
+</style>
+<script>
+    /** 弹窗调用函数 **/
+    function win1(proActId,actId,title,win_id,width,height){ //title 标题 win_id 弹窗ID  width 弹窗宽度 height 弹窗高度
+    	var pagei = $.layer({
+            type: 1,   //0-4的选择,0：信息框（默认），1：页面层，2：iframe层，3：加载层，4：tips层。
+            btns: 2,
+            btn: ['确定','取消'],
+            title: title,
+            border: [0],
+            closeBtn: [0],
+            closeBtn: [0, true],
+            shadeClose: true,
+            area: [width,height],
+            page: {dom : '#'+ win_id},
+            no : function(index) {
+    			$("#"+win_id).hide();
+    		},
+            yes: function(){ 
+    	//alert(proActId+"####"+actId)
+            	$.ajax({ 
+            	    url: "/act/deleteDetail",
+            	    type: "post",
+            	    data:{
+            	    	proActID:proActId,
+            	    	actID:actId
+            	    	},
+            	    dataType : 'json',
+            	    success: function (data) { 
+            	        if(data.Statu == "Success"){ 
+            	        	alert(data.StatusReson,true);
+            			    };
+            			    window.location.href = window.basePath + "act/editlist?actid="+actId;
+            			    layer.close(pagei);
+            	        },
+            	    error: function () {
+            	        //alert("数据提交失败！请稍后重试！");
+            	    }
+            	}); 
+            }
+        });
+    }
+</script>
+</head>
+
+<body style="background: #f3f3f3;">
+<div class="outermost">
+	<form id="searcherForm" name="searcherForm" action="editlist">
+	<input type="hidden" name="actid" value="${actid}">
+    <div class="fr conter_right">
+        <div class="fl mzh_100 bor_si mt_10 mb_20">
+            <h4 class="mzh_100 bg_white line_42">【${actModel.title }】活动详情：</h4>
+            <div class="fl bg_f3 p10 line_42">
+                <div class="fl ml_20 mr_20">报名产品： <span>${pageRes.totalCount }</span></div>
+                <div class="fl ml_20 mr_20">入选产品数量： <span>${passCount}</span></div>
+            </div>
+        </div>
+      <table class="conter_right fl bg_white bor_si f14 tc">
+          <tr class="bg_f3 line_42">
+              <th>产品图片</th>
+              <th>产品标题</th>
+              <th>价格</th>
+              <th>审核状态</th>
+              <th>展示时间段</th>
+              <th>操作</th>
+          </tr>
+          <c:forEach var="proModel" items="${pageRes.list}" varStatus="index">
+          <tr>
+              <td><img src="${proModel.productImg}" width="50" height="50"></td>
+              <td>${proModel.productTitle }</td>
+              <td>
+                  <p>现价：${proModel.priceBf }</p>
+                  <p>活动价：${proModel.price }</p>
+                  <p>佣金：${proModel.commission }</p>
+              </td>
+              <td><c:choose>
+						<c:when test="${proModel.state==1 }">
+							已通过
+						</c:when>
+						<c:when test="${proModel.state==2 }">
+							<p>不通过</p>
+							<p>(${proModel.reason })</p>
+						</c:when>
+						<c:otherwise>
+							未审核
+						</c:otherwise>
+					</c:choose>
+				</td>
+              <td>
+              <c:forEach var="expMode" items="${proModel.productExtends}" varStatus="index" >
+				<p>${DateUtils.format(expMode.beginTimeDate ,"yyyy/MM/dd HH:mm" )}-${DateUtils.format(expMode.endtimeDate ,"HH:mm" ) }</p>
+			  </c:forEach>
+              </td>
+              <td>
+                  <a href="actProductPage?actid=${proModel.actId }&proActid=${proModel.proActId }">编辑</a>
+                  <a href="#" onclick="win1(${proModel.proActId },${proModel.actId },'删除产品','win_div_2','520','300')">删除</a>
+                  <!-- <a href="#" onclick="win('删除产品','win_div_2','520','300')">删除</a> -->
+              </td>
+          </tr>
+          </c:forEach>
+          
+          
+          <!-- 
+          <tr>
+              <td><img src="../../images/adf.jpg" width="50" height="50"></td>
+              <td>黄土高原苹果</td>
+              <td>
+                  <p>现价：200</p>
+                  <p>活动价：180</p>
+                  <p>佣金：10</p>
+              </td>
+              <td>未审核</td>
+              <td>2016/3/8  11:00-12:00</td>
+              <td>
+                  <a href="选择产品后.html">编辑</a>
+                  <a href="#" onclick="win('删除产品','win_div_2','520','300')">删除</a>
+              </td>
+          </tr>
+          <tr>
+              <td><img src="../../images/adf.jpg" width="50" height="50"></td>
+              <td>黄土高原苹果</td>
+              <td>
+                  <p>现价：200</p>
+                  <p>活动价：180</p>
+                  <p>佣金：10</p>
+              </td>
+              <td>已通过</td>
+              <td>2016/3/8  11:00-12:00</td>
+              <td>
+                  <a href="选择产品后.html">编辑</a>
+                  <a href="#" onclick="win('删除产品','win_div_2','520','300')">删除</a>
+              </td>
+          </tr>
+          <tr>
+              <td><img src="../../images/adf.jpg" width="50" height="50"></td>
+              <td>黄土高原苹果</td>
+              <td>
+                  <p>现价：200</p>
+                  <p>活动价：180</p>
+                  <p>佣金：10</p>
+              </td>
+              <td>已通过</td>
+              <td>2016/3/8  11:00-12:00</td>
+              <td>
+                  <a href="选择产品后.html">编辑</a>
+                  <a href="#" onclick="win('删除产品','win_div_2','520','300')">删除</a>
+              </td>
+          </tr>
+          <tr>
+              <td><img src="../../images/adf.jpg" width="50" height="50"></td>
+              <td>黄土高原苹果</td>
+              <td>
+                  <p>现价：200</p>
+                  <p>活动价：180</p>
+                  <p>佣金：10</p>
+              </td>
+              <td>
+                  <p>未通过</p>
+                  <p>(没有优势)</p>
+              </td>
+              <td></td>
+              <td>
+                  <a href="选择产品后.html">编辑</a>
+                  <a href="#" onclick="win('删除产品','win_div_2','520','300')">删除</a>
+              </td>
+          </tr>
+           -->
+      </table>
+    </div>
+        <div class="pull-right">
+				<pg:page pageResult="${pageRes}" />
+		</div>
+    </form>
+</div>
+<script language="javascript" type="text/javascript">
+		$(function() {
+			var page = new Pagination({
+				formId : "searcherForm",
+				isAjax : false,
+				targetId : "navTab",
+				submitId : "searchBtn",
+				validateFn : false
+			});
+			page.init();
+
+		});
+	</script>
+
+<!-- 删除 -->
+
+<div class="fl mzh_100 f14" style="display:none;" id="win_div_2">
+    <div class="mzh_100 fl f18">
+        确认删除该产品？
+    </div>
+</div>
+</body>
+</html>

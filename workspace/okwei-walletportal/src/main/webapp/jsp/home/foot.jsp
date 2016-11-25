@@ -1,0 +1,172 @@
+<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c"%>
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title></title>
+<link rel="stylesheet" type="text/css" href="/statics/css/pc-base.css" />
+<link rel="stylesheet" type="text/css" href="/statics/css/footer.css" />
+
+<script type="text/javascript" src="<%=request.getContextPath() %>/statics/js/lib/jquery-1.11.2.js?_=${VERSION}"></script>
+<script>
+$(function(){
+    $('#Qiye').mouseover(function(){
+        $('#mzh_QQ').show();
+    })
+    $('#Qiye').mouseout(function(){
+        $('#mzh_QQ').hide();
+    })
+})
+</script>
+</head>
+<body>
+
+	<footer>
+	<div class="blank"  ></div>
+	<div class="bottom_di">
+
+		<div class="wdwrap">
+			<div class="bottom-text">
+				<div class="weix_jyi fl">
+					<dl>
+						<dt>关于微店网</dt>
+						<dd>
+							<a href="http://www.okwei.com/help/us#qywh" target="_blank">企业文化</a>
+						</dd>
+						<dd>
+							<a href="http://www.okwei.com/help/us#lxwm" target="_blank">联系我们</a>
+						</dd>
+						<dd class="bg_blue">
+							<a href="http://join.okwei.com/supplier/apply?w=" id="footjz" target="_blank">供应商进驻</a>
+						</dd>
+					</dl>
+				</div>
+				<div class="fl" style="width: 1px; height: 101px; background: #ddd; margin-left: 35px;"></div>
+				<dl style="margin-left: 35px; width: 145px;">
+					<dt class="fl" style="width: 145px;">
+						<img src="/statics/images/dianhua_09_24.png" class="fl" /><span class="f; ml5" style="line-height: 22px;">招商热线</span>
+					</dt>
+					<div class="blank_1"></div>
+					<c:forEach var="phone" items="${list }">
+						<c:if test="${phone.type == 0 }">
+							<dd class="fl">
+								<span style="font-size: 18px;" id="phone_0">${phone.phone }</span>
+							</dd>
+							<div class="blank_1"></div>
+							<dd class="fl">
+								<span style="font-size: 12px;" id="phone_1">分机：${phone.extensionNums }</span>
+							</dd>
+							<div class="blank_1"></div>
+						</c:if>
+					</c:forEach>
+				</dl>
+				<div class="fl" style="width: 1px; height: 101px; background: #ddd; margin-left: 30px;"></div>
+
+				<dl style="margin-left: 30px; width: 160px;">
+					<dt class="fl" style="width: 160px;">
+						<img src="/statics/images/dianhua_09_24.png" class="fl" /><span class="fl ml5" style="line-height: 22px;">客服热线</span>
+					</dt>
+					<div class="blank_1"></div>
+					<c:forEach var="phone" items="${list }">
+						<c:if test="${phone.type == 2 }">
+							<dd class="fl">
+								<span style="font-size: 18px;" id="phone_4">${phone.phone }</span>
+							</dd>
+							<div class="blank_1"></div>
+							<dd class="fl">
+								<span style="font-size: 12px; width: 110px; display: inline-block; white-space: normal; word-break: break-all;margin:0px;line-height: 20px;" id="phone_5">分机：${phone.extensionNums }</span>
+							</dd>
+							<div class="blank_1"></div>
+						</c:if>
+					</c:forEach>
+				</dl>
+				<div class="fl" style="width: 1px; height: 101px; background: #ddd; margin-left: 5px;"></div>
+				<dl style="margin-left: 30px; width: 165px;">
+					<dt class="fl" style="width: 165px;">
+						<img src="/statics/images/kfzx_09_24.png" class="fl" /><span class="fl ml5" style="line-height: 22px;">在线客服</span>
+					</dt>
+					<div class="blank_1"></div>
+					<span style="font-size: 12px;">周一至周五（9:00-18:00）</span>
+					<div class="blank_1"></div>
+		            <dd class="fl">
+		                <div class="QQbtn" id="Qiye" style="position:relative;">企业QQ留言
+		                    <div id="mzh_QQ" style="background-color: rgb(255, 255, 255); position: absolute; left: 0px; bottom: -155px; z-index: 999; width: 151px; box-shadow: rgb(180, 180, 180) 0px 0px 3px 0px; padding-bottom: 10px; display: none;">
+		                        <div style="float: left; width: 151px; margin-top: 10px;">
+		                            <div style="float: left; margin: 0px 10px; color: #666; text-indent:0;  font-size:12px; line-height:26px;"> 客服一：</div>
+		                            <a target="_blank" href="http://wpa.qq.com/msgrd?v=3&uin=2792985013&site=qq&menu=yes" target="_blank" > <img src="http://wpa.qq.com/pa?p=2:1059854962:51" style="float:left; text-indent:0;"></a> </div>
+		                        <div style="float: left; width: 151px; margin-top: 10px;">
+		                            <div style="float: left; margin: 0px 10px; color: #666;  text-indent:0;  font-size:12px;  line-height:26px;"> 客服二：</div>
+		                            <a target="_blank" href="http://wpa.qq.com/msgrd?v=3&uin=3130213554&site=qq&menu=yes" target="_blank" > <img src="http://wpa.qq.com/pa?p=2:1059854962:51" style="float:left; text-indent:0;"></a> </div>
+		                        <div style="float: left; width: 151px; margin-top: 10px;">
+		                            <div style="float: left; margin: 0px 10px; color: #666;  text-indent:0;  font-size:12px; line-height:26px;"> 客服三：</div>
+		                            <a target="_blank" href="http://wpa.qq.com/msgrd?v=3&uin=2936150637&site=qq&menu=yes" target="_blank" > <img src="http://wpa.qq.com/pa?p=2:1059854962:51" style="float:left; text-indent:0;"></a> </div>
+		                        <div style="float: left; width: 151px; margin-top: 10px;">
+		                            <div style="float: left; margin: 0px 10px; color: #666;  text-indent:0; font-size:12px; line-height:26px;"> 客服四：</div>
+		                            <a target="_blank" href="http://wpa.qq.com/msgrd?v=3&uin=2256734804&site=qq&menu=yes" target="_blank" > <img src="http://wpa.qq.com/pa?p=2:1059854962:51" style="float:left; text-indent:0;"></a> </div>
+		                    </div>
+		                </div>
+		           </dd>
+				</dl>
+				<div class="fl" style="width: 1px; height: 101px; background: #ddd; margin-left: 35px;"></div>
+				<dl style="margin-left: 42px; float: left; display: inline;">
+					<dt>手机微店网</dt>
+					<dd>
+						<img src="/statics/images/wd-wx1.png" width="80" height="80" alt="手机微店网" />
+					</dd>
+				</dl>
+				<dl style="margin-left: 60px; float: left; display: inline;">
+					<dt>微店网服务号</dt>
+					<dd>
+						<img src="/statics/images/wd-wx.png" width="80" height="80" alt="微店网服务号" />
+					</dd>
+				</dl>
+				<dl style="float: right; display: inline;">
+					<dt>微店网APP下载</dt>
+					<dd>
+						<img src="/statics/images/wd-wx2.png" width="80" height="80" alt="微店网服务号" />
+					</dd>
+				</dl>
+			</div>
+		</div>
+		<div class="clear"></div>
+	</div>
+	<div class="foot fl">
+		<div class="wdwrap">
+			<ul class="foot-text">
+				<li><span>Copyright © 2012深圳市云商微店网络技术有限公司</span><span>地址：深圳市罗湖区国威路68号互联网产业园2栋5层</span></li>
+				<li><c:forEach var="phone" items="${list }">
+						<c:if test="${phone.type == 3 }">
+							<span>电话：${phone.phone }</span>
+						</c:if>
+					</c:forEach> <c:forEach var="phone" items="${list }">
+						<c:if test="${phone.type == 4 }">
+							<span>传真：${phone.phone }</span>
+						</c:if>
+					</c:forEach> <span>E-mail：<a href="mailto:kefu@okwei.com" title="E-mail">kefu@okwei.com</a></span></li>
+				<li><span>经营许可证：粤ICP备<a href="http://www.okwei.com/aboutus.html#sz" title="经营许可证" target="_blank" style="text-decoration: underline;">10203293号-3</a></span> <span>增值电信业务经营许可证：<a href="http://www.okwei.com/aboutus.html#dxzzfw" title="增值电信业务经营许可证" target="_blank" style="text-decoration: underline;">粤B2-20130803</a></span></li>
+				<li><a target="_blank" title="法律顾问">法律顾问：广东德盈律师事务所 欧雄灿</a></li>
+			</ul>
+			<p class="foot-pic">
+				<a target="_blank" href="http://www.okwei.com/aboutus.html#sz" title="营业执照"><img alt="营业执照" src="/statics/images/foot1.png"></a> <a target="_blank" href="http://www.okwei.com/aboutus.html#sz" title="税务登记"><img alt="税务登记" src="/statics/images/foot2.png"></a> <a target="_blank" href="http://www.okwei.com/aboutus.html#kxrz" title="工商网监"><img alt="工商网监" src="/statics/images/foot3.png"></a> <a target="_blank" href="http://www.okwei.com/aboutus.html#kxrz" title="众信网络身份现场认证"><img alt="众信网络身份现场认证" src="/statics/images/foot4.png"></a> <a target="_blank" href="http://www.okwei.com/aboutus.html#kxrz" title="可信网站认证"><img alt="可信网站认证" src="/statics/images/foot5.png"></a> <a target="_blank" href="http://www.okwei.com/aboutus.html#dxzzfw" title="电信增值服务许可证"><img
+					alt="电信增值服务许可证" src="/statics/images/foot6.png"></a> <a target="_blank" href="javascript:void(0);" title="财付通特约商户"><img alt="财付通特约商户" src="/statics/images/foot7-1.png"></a> <a target="_blank" href="javascript:void(0);" title="银联特约商户"><img alt="银联特约商户" src="/statics/images/foot8-1.png"></a>
+			</p>
+		</div>
+	</div>
+	<script>
+		function GetQueryString(name) {
+			var reg = new RegExp("(^|&)" + name + "=([^&]*)(&|$)");
+			var r = window.location.search.substr(1).match(reg);
+			if (r != null)
+				return unescape(r[2]);
+			return null;
+		}
+		//footjz
+		var w = GetQueryString("w");
+		if(w!=null && w!=""){
+			var footjz = document.getElementById("footjz");
+			footjz.href= footjz.href + w;
+		}
+	</script> </footer>
+</body>
+</html>

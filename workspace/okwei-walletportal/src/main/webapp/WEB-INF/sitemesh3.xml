@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<sitemesh>
+
+	<!-- 指明满足“/*”的页面，将被“/WEB-INF/views/decorators/decorator.html”所装饰 -->
+	<mapping path="/*" decorator="/WEB-INF/decorators/decorator.jsp" />
+<!-- 	<mapping path="/bankCardMgt/*" decorator="/WEB-INF/decorators/default.jsp" />
+	<mapping path="/walletMgt/*" decorator="/WEB-INF/decorators/default.jsp" /> -->
+	<mapping path="/cashCoupon/*" decorator="/WEB-INF/decorators/decorator-noheader.jsp"></mapping>
+	<mapping path="/platform/*" decorator="/WEB-INF/decorators/decorator-noheader.jsp"></mapping>
+	<mapping path="/reward/*" decorator="/WEB-INF/decorators/decorator-noheader.jsp"></mapping>
+	<mapping path="/*.ajax" exclue="true" />
+	<mapping path="/wallet/*" exclue="true" />
+	<mapping path="/home/footers.html" exclue="true" />
+	<mapping path="/home/foot" exclue="true" />
+	<mapping path="/jsp/home/footers.html" exclue="true" /> 
+	<mapping path="*/popup/*" exclue="true" />
+	
+	
+</sitemesh>

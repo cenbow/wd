@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<sitemesh>
+	<!-- 指明满足“/*”的页面，将被“/WEB-INF/views/decorators/decorator.html”所装饰 -->
+	<!-- <mapping path="/*" decorator="/WEB-INF/decorators/decorator.jsp" /> -->
+	<!-- <mapping path="/*" exclue="true" /> -->
+	<mapping decorator="/WEB-INF/decorators/decorator.jsp" />
+	<mapping path="/llpay/LLPayNotify" exclue="true" />
+	<mapping path="/llpay/queryCardBin" exclue="true" />
+	<mapping path="/wxpay/WxAppPayNotify" exclue="true" />
+	<mapping path="/tenpay/TenPayNotify" exclue="true" />
+	<mapping path="/bfbpay/BFBPayNotify" exclue="true" />
+	<mapping path="/chinapay/ChinaPayNotify" exclue="true" />
+	<mapping path="/wap/payj.jsp" exclue="true" />
+	
+</sitemesh>

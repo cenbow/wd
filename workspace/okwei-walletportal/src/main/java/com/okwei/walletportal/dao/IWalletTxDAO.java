@@ -1,0 +1,46 @@
+package com.okwei.walletportal.dao;
+
+import java.util.List;
+
+import com.okwei.bean.domain.UBankCard;
+import com.okwei.bean.domain.UPublicBanks;
+import com.okwei.dao.IBaseDAO;
+
+
+public interface IWalletTxDAO extends IBaseDAO {
+
+	/**
+	 * 获取用户的银行卡列表
+	 * @param weiID
+	 * @return
+	 */
+	public List<UBankCard> getBankCards(long weiID);
+	
+	/**
+	 * 获取本月提现数量
+	 * @param weiID
+	 * @return
+	 */
+	public long getMothTxNum(long weiID);
+	
+	/**
+	 * 获取银行卡实体
+	 * @param cardID
+	 * @return
+	 */
+	public UBankCard getBankCard(long cardID,long weiID);
+	
+	/**
+	 * 获取提现中的金额
+	 * @param weiID
+	 * @return
+	 */
+	public double getTxingAmout(long weiID);
+	/**
+	 * 获取 
+	 * @param weiid
+	 * @return
+	 */
+	public UPublicBanks getPublicBanks(long weiid);
+	
+}

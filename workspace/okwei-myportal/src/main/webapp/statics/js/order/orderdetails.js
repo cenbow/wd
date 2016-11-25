@@ -1,0 +1,40 @@
+/**
+ * 购买订单详情
+ */
+function countdown(dateStr) {
+	setInterval("timer('" + dateStr + "')", 1000);
+}
+function timer(dateStr) {
+	var ts = (new Date(dateStr)) - (new Date());// 计算剩余的毫秒数
+	var dd = parseInt(ts / 1000 / 60 / 60 / 24, 10);// 计算剩余的天数
+	var hh = parseInt(ts / 1000 / 60 / 60 % 24, 10) + dd * 24;// 计算剩余的小时数
+	var mm = parseInt(ts / 1000 / 60 % 60, 10);// 计算剩余的分钟数
+	var ss = parseInt(ts / 1000 % 60, 10);// 计算剩余的秒数
+	if (ss <= 0) {
+		ss = 00;
+	}
+	if (mm <= 0) {
+		mm = 00;
+	}
+	if (hh <= 0) {
+		hh = 00;
+	}
+	hh = checkTime(hh);
+	mm = checkTime(mm);
+	if (isNaN(ss) || ss == null || ss == "") {
+		ss = "00";
+	}
+	if (isNaN(mm) || mm == null || mm == "") {
+		mm = "00";
+	}
+	if (isNaN(hh) || hh == null || hh == "") {
+		hh = "00";
+	}
+	$("#countdown").html("<font>" + hh + "小时<font>" + mm + "</font>分<font>" + ss + "</font>秒");
+}
+function checkTime(i) {
+	if (i < 10) {
+		i = "0" + i;
+	}
+	return i;
+}

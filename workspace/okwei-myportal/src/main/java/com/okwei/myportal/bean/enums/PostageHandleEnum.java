@@ -1,0 +1,30 @@
+package com.okwei.myportal.bean.enums;
+/**
+ * 运费类型　
+ */
+public enum PostageHandleEnum
+{
+
+    /**
+     * 包邮
+     */
+    BaoYou(2),
+    /**
+     * 不包邮
+     */
+    BuBaoYou (3);
+
+    private final int step;
+
+    private PostageHandleEnum(int step)
+    {
+
+        this.step = step;
+    }
+
+    @Override
+    public String toString()
+    {
+        return String.valueOf(this.step);
+    }
+}

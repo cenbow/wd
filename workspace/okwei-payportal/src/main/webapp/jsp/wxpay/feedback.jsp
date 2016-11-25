@@ -1,0 +1,28 @@
+<%@ page language="java" contentType="text/html; charset=GBK" pageEncoding="GBK"%>
+<%@ page import="com.tenpay.TenpayUtil"%>
+<%@ page import="com.tenpay.MD5Util"%>
+<%@ page import="com.wxpay.WxRequestHandler"%>
+<%@ page import="com.wxpay.WxResponseHandler"%>
+<%@ page import="com.tenpay.TenpayHttpClient"%>
+<%@ include file="config.jsp"%>
+<%
+	//=================================
+//维权接口
+//=================================
+	//创建支付应答对象
+	WxRequestHandler queryReq = new WxRequestHandler(null, null);
+	queryReq.init();
+	//初始化页面提交过来的参数
+	WxResponseHandler resHandler = new WxResponseHandler(request, response);
+	resHandler.setKey(APP_KEY);
+	
+	//判断签名
+if(resHandler.isWXsign() == true) {
+	//回复服务器处理成功
+	System.out.print("ok");
+	}
+	else{
+	//SHA1签名失败
+	System.out.print("fail");
+	}
+%>

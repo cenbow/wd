@@ -1,0 +1,272 @@
+package com.okwei.walletportal.dao.impl;
+ 
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.stereotype.Repository;
+
+import com.okwei.bean.domain.OPayOrder;
+import com.okwei.bean.domain.OSupplyerOrder;
+import com.okwei.bean.domain.UCancleOrderAmoutDetail;
+import com.okwei.bean.domain.USupplyer;
+import com.okwei.bean.domain.UTradingDetails;
+import com.okwei.bean.domain.UTuizhu;
+import com.okwei.bean.domain.UWalletDetails;
+import com.okwei.bean.domain.UWeiSeller;
+import com.okwei.bean.enums.AmountStatusEnum;
+import com.okwei.bean.enums.AmountTypeEnum;
+import com.okwei.bean.enums.LtwoTypeEnum;
+import com.okwei.bean.enums.UserAmountType;
+import com.okwei.common.Limit;
+import com.okwei.common.PageResult;
+import com.okwei.dao.impl.BaseDAO;
+import com.okwei.util.DateUtils;
+import com.okwei.walletportal.bean.vo.SettleAccountDetailVO;
+import com.okwei.walletportal.dao.IWalletMgtDAO;
+
+@Repository
+public class WalletMgtDAO extends BaseDAO implements IWalletMgtDAO {
+
+	@Override
+	public PageResult<UWalletDetails> getMyWalletDetailPage(Long userId,
+			Limit limit, int detailType, String fromDate, String toDate) {
+		String hql = "from UWalletDetails where weiId=:weiId";
+		Map<String, Object> params = new HashMap<String, Object>();
+		params.put("weiId", userId);
+		// 根据日期进行筛选
+		if (fromDate != null && !fromDate.equals("")) {
+			fromDate = fromDate+" 00:00:00";
+			Date beginTime = DateUtils.format(fromDate, "yyyy-MM-dd HH:mm:ss"); 
+			hql += " and createTime>=:fromdate";
+			params.put("fromdate",beginTime);
+		}
+		
+		if (toDate != null && !toDate.equals("")) {
+			toDate = toDate+ " 23:59:59"; 
+			Date endTime = DateUtils.format(toDate, "yyyy-MM-dd HH:mm:ss");
+			hql += " and createTime<=:todate";
+			params.put("todate",endTime); 
+		}
+		if (detailType == 1) { // 1表示收入
+			hql += " and type in ("
+					+ Short.parseShort(UserAmountType.chongzhi.toString())
+					+ ","
+					+ Short.parseShort(UserAmountType.classComminsion
+							.toString()) + ","
+					+ Short.parseShort(UserAmountType.orderYj.toString()) + ","
+					+ Short.parseShort(UserAmountType.rzYj.toString()) + ","
+					+ Short.parseShort(UserAmountType.supplyPrice.toString())
+					+ ","
+					+ Short.parseShort(UserAmountType.buyerPrice.toString())
+					+ ")";
+		}
+		if (detailType == 2) { // 2表示支出
+			hql += " and type in ("
+					+ Short.parseShort(UserAmountType.tixian.toString()) + ","
+					+ Short.parseShort(UserAmountType.monthtax.toString())
+					+ "," + Short.parseShort(UserAmountType.gouwu.toString())
+					+ "," + Short.parseShort(UserAmountType.refund.toString())
+					+ ")";
+		}
+		// 根据交易时间进行降序
+		hql += " order by createTime desc";
+		return super.findPageResultByMap(hql, limit, params);
+	}
+
+	@Override
+	public PageResult<UTradingDetails> getMyWalletSettleAccountPage(
+			Long userId, Limit limit, int statusType, String fromDate,
+			String toDate) {
+		String hql = "from UTradingDetails where weiId=:weiId";
+		Map<String, Object> params = new HashMap<String, Object>();
+		params.put("weiId", userId);
+		// 根据日期进行筛选
+		if (fromDate != null && !fromDate.equals("")) {
+			fromDate = fromDate+" 00:00:00";
+			Date beginTime = DateUtils.format(fromDate, "yyyy-MM-dd HH:mm:ss"); 
+			hql += " and createTime>=:fromdate";
+			params.put("fromdate",beginTime);
+		}
+		
+		if (toDate != null && !toDate.equals("")) {
+			toDate = toDate+ " 23:59:59"; 
+			Date endTime = DateUtils.format(toDate, "yyyy-MM-dd HH:mm:ss");
+			hql += " and createTime<=:todate";
+			params.put("todate",endTime); 
+		}
+		if (statusType == 1) { // 1表示未到账
+			hql += " and state in ("
+					+ Short.parseShort(AmountStatusEnum.shouHuoDongjie
+							.toString())
+					+ ","
+					+ Short.parseShort(AmountStatusEnum.tuiKuanZhong.toString())
+					+ ","
+					+ Short.parseShort(AmountStatusEnum.waitTax.toString())
+					+ ","
+					+ Short.parseShort(AmountStatusEnum.weiFangKuan.toString())
+					+ ")";
+		}
+		if (statusType == 2) { // 2表示已完成
+			hql += " and state in ("
+					+ Short.parseShort(AmountStatusEnum.yiFangKuan.toString())
+					+ ","
+					+ Short.parseShort(AmountStatusEnum.yiTuiKuan.toString())
+					+ ")";
+		}
+		// 根据交易时间进行降序
+		hql += " order by createTime desc";
+		return super.findPageResultByMap(hql, limit, params);
+	}
+
+	@Override
+	public PageResult<UCancleOrderAmoutDetail> getMyWalletWithdrawRecordPage(
+			Long userId, Limit limit, String fromDate, String toDate) {
+		String hql = "from UCancleOrderAmoutDetail where weiId=:weiId and type=1";
+		Map<String, Object> params = new HashMap<String, Object>();
+		params.put("weiId", userId);
+		// 根据日期进行筛选
+		if (fromDate != null && !fromDate.equals("")) {
+			fromDate = fromDate+" 00:00:00";
+			Date beginTime = DateUtils.format(fromDate, "yyyy-MM-dd HH:mm:ss"); 
+			hql += " and createTime>=:fromdate";
+			params.put("fromdate",beginTime);
+		}
+		
+		if (toDate != null && !toDate.equals("")) {
+			toDate = toDate+ " 23:59:59"; 
+			Date endTime = DateUtils.format(toDate, "yyyy-MM-dd HH:mm:ss");
+			hql += " and createTime<=:todate";
+			params.put("todate",endTime); 
+		}
+		// 根据交易时间进行降序
+		hql += " order by createTime desc";
+		return super.findPageResultByMap(hql, limit, params);
+	}
+
+	@Override
+	public SettleAccountDetailVO getSettleAccountDetail(
+			UTradingDetails tradeDetail) {
+		SettleAccountDetailVO vo = new SettleAccountDetailVO();
+		if(tradeDetail==null){
+			return vo;
+		}
+		vo.setTradingDetails(tradeDetail);
+		if (Short.parseShort(AmountTypeEnum.orderYj.toString()) == tradeDetail.getType()) { // 表示交易佣金
+			OSupplyerOrder so = super.get(OSupplyerOrder.class, tradeDetail.getSupplyOrder());
+			if(so!=null){
+				vo.setTotalPrice(so.getTotalPrice());
+			}else{
+				vo.setTotalPrice(0D);
+			}
+			UWeiSeller seller = super.get(UWeiSeller.class,tradeDetail.getWeiId());
+			if(seller!=null){
+				vo.setShop(seller.getWeiName());
+			}else{
+				vo.setShop("");
+			}
+			vo.setCreateTime(tradeDetail.getCreateTime());
+			if(so!=null){
+				vo.setCommision(so.getCommision());
+			}else{
+				vo.setCommision(0D);
+			}
+			vo.setComment("交易佣金");
+		}
+		else if (Short.parseShort(AmountTypeEnum.rzYj.toString()) == tradeDetail.getType()) { // 表示认证佣金
+			USupplyer supplyer = super.get(USupplyer.class,Long.valueOf(tradeDetail.getSupplyOrder()));
+			vo.setTotalPrice(tradeDetail.getAmount());
+			vo.setCreateTime(tradeDetail.getCreateTime());
+			if(supplyer!=null){
+				vo.setShop(supplyer.getCompanyName());
+			}else{
+				vo.setShop("");
+			}
+			if(tradeDetail.getLtwoType()!=null){
+				if (Short.parseShort(LtwoTypeEnum.BookCut.toString()) == tradeDetail.getLtwoType()) {   //认证佣金的二级类型为抽成
+					vo.setComment("云商进驻佣金");
+				}else{    //认证佣金的二级类型为其他类型
+					vo.setComment("认证点进驻佣金");
+				}
+			}
+		}
+		else if (Short.parseShort(AmountTypeEnum.supplyPrice.toString()) == tradeDetail.getType()) { // 表示货款
+			vo.setTotalPrice(tradeDetail.getAmount());
+			vo.setCreateTime(tradeDetail.getCreateTime());
+			vo.setComment("货款");
+			vo.setOrderNo(tradeDetail.getOrderNo());
+		}else{
+			vo.setTotalPrice(tradeDetail.getAmount());
+			vo.setCreateTime(tradeDetail.getCreateTime());
+			vo.setOrderNo(tradeDetail.getOrderNo());
+			switch(tradeDetail.getType()){
+			case 4:
+				vo.setComment("货款");
+				break;
+			case 5:
+				vo.setComment("分类带来的佣金");
+				break;
+			case 6:
+				vo.setComment("充值");
+				break;
+			case 7:
+				vo.setComment("提现");
+				break;
+			case 8:
+				vo.setComment("购物");
+				break;
+			case 9:
+				vo.setComment("退款扣除");
+				break;
+			case 10:
+				vo.setComment("月结扣税");
+				break;
+			case 12:
+				vo.setComment("悬赏");
+				break;
+			}
+		}
+		return vo;
+	}
+
+	@Override
+	public UTradingDetails getTradeDetails(Long detailId, Long weiId) {
+		String hql="from UTradingDetails where detailId=? and weiId=?";
+		Object[] params = new Object[2];
+		params[0] = detailId;
+		params[1] = weiId;
+		UTradingDetails tradingDetails = super.getUniqueResultByHql(hql, params);
+		if(tradingDetails!=null){
+			return tradingDetails;
+		}else{
+			return null;
+		}
+	}
+
+	@Override
+	public UTuizhu getTuizhuRecord(long weiId, Short type) {
+		String hql = "from UTuizhu where weiId=? and type=? order by tid desc";
+		List<UTuizhu> list = super.find(hql, weiId,type);
+		if (list != null & list.size() > 0) {
+			return list.get(0);
+		}
+		return null;
+	}
+
+	@Override
+	public OPayOrder getPayOrderByCondition(long weiID, Short typeState,
+			Short state) {
+		OPayOrder payOrder = null;
+		String hql = "from OPayOrder where weiId=? and  state=? and typeState=?";
+		Object[] params = new Object[3];
+		params[0] = weiID;
+		params[1] = state;
+		params[2] = typeState;
+		List<OPayOrder> list = find(hql, params);
+		if (list != null && list.size() > 0) {
+			payOrder = list.get(0);
+		}
+		return payOrder;
+	}
+}

@@ -1,0 +1,24 @@
+package com.okwei.supplyportal.bean.vo;
+
+public class MsgResult {
+	/**
+	 * 状态
+	 */
+	private int state;
+	/**
+	 * 信息
+	 */
+	private String msg;
+	public int getState() {
+		return state;
+	}
+	public void setState(int state) {
+		this.state = state;
+	}
+	public String getMsg() {
+		return msg;
+	}
+	public void setMsg(String msg) {
+		this.msg = msg;
+	}
+}

@@ -1,0 +1,92 @@
+package com.okwei.walletportal.bean.vo;
+
+public class VerifierInfo {
+    private String name;
+    private String cwei;
+    private long weiid;
+    private String phone;
+    private String qq;
+    private String photo;
+    
+    
+    private String gwname;
+    private String gwcwei;
+    private long gwweiid;
+    private String gwphone;
+    private String gwqq;
+    private String gwphoto;
+    public String getName() {
+        return name;
+    }
+    public void setName(String name) {
+        this.name = name;
+    }
+    public String getCwei() {
+        return cwei;
+    }
+    public void setCwei(String cwei) {
+        this.cwei = cwei;
+    }
+    public long getWeiid() {
+        return weiid;
+    }
+    public void setWeiid(long weiid) {
+        this.weiid = weiid;
+    }
+    public String getPhone() {
+        return phone;
+    }
+    public void setPhone(String phone) {
+        this.phone = phone;
+    }
+    public String getQq() {
+        return qq;
+    }
+    public void setQq(String qq) {
+        this.qq = qq;
+    }
+    public String getGwname() {
+        return gwname;
+    }
+    public void setGwname(String gwname) {
+        this.gwname = gwname;
+    }
+    public String getGwcwei() {
+        return gwcwei;
+    }
+    public void setGwcwei(String gwcwei) {
+        this.gwcwei = gwcwei;
+    }
+    public long getGwweiid() {
+        return gwweiid;
+    }
+    public void setGwweiid(long gwweiid) {
+        this.gwweiid = gwweiid;
+    }
+    public String getGwphone() {
+        return gwphone;
+    }
+    public void setGwphone(String gwphone) {
+        this.gwphone = gwphone;
+    }
+    public String getGwqq() {
+        return gwqq;
+    }
+    public void setGwqq(String gwqq) {
+        this.gwqq = gwqq;
+    }
+    public String getPhoto() {
+        return photo;
+    }
+    public void setPhoto(String photo) {
+        this.photo = photo;
+    }
+    public String getGwphoto() {
+        return gwphoto;
+    }
+    public void setGwphoto(String gwphoto) {
+        this.gwphoto = gwphoto;
+    }
+    
+    
+}

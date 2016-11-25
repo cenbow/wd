@@ -1,0 +1,215 @@
+<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c"%>
+<%@ page import="java.util.ResourceBundle"%>
+<%
+    String mydomain = ResourceBundle.getBundle("domain").getString(
+					"mydomain");
+%>
+<!DOCTYPE html PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN" "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>支付失败</title>
+<link rel="stylesheet" href="/statics/css/glbdy.css" />
+<link rel="stylesheet" href="/statics/css/index.css" />
+<link rel="stylesheet" href="/statics/css/mzh_dd.css" />
+<link rel="stylesheet" href="/statics/css/mzh_ibs.css" />
+<style>
+a.ft_lan {
+	color: #3366cc;
+}
+</style>
+<script type="text/javascript">
+	$(function() {
+		$(".mzh_xiayibu").click(function() {
+			var orderNo = $("#orderNo").val();
+			//重新支付
+			$.ajax({
+				url : "Repayment",
+				type : "post",
+				async : false,
+				data : {
+					orderNo : orderNo
+				},
+				dataType : "json",
+				success : function(data) {
+					if (data.status == 1) {
+						window.location.href = "cashier?orderNo=" + data.msg;
+					} else {
+						alert(data.msg);
+					}
+				}
+			});
+		});
+		$(".btn_hui28_pre").click(function() {
+			var layerObj = $('.xubox_layer');
+			$.each(layerObj, function() {
+				var i = $(this).attr('times');
+				layer.close(i);
+			});
+		})
+	});
+
+	function Resubmit() {
+		var orderNo = $("#orderNo").val();
+		//重新提交
+		$.ajax({
+			url : "yzResubmit",
+			type : "post",
+			async : false,
+			data : {
+				orderNo : orderNo
+			},
+			dataType : "json",
+			success : function(data) {
+				if (data.status == 1) {
+					win4('支付', 'win_div_4', '514px', '260px');
+				} else if (data.status == 2) {
+					window.location.href = "success";
+				} else {
+					window.location.href = "cashier?orderNo=" + orderNo;
+				}
+			}
+		});
+	}
+
+	function win4(title, win_id, width, height) { //title 标题 win_id 弹窗ID  width 弹窗宽度 height 弹窗高度
+		var pagei = $.layer({
+			type : 1, //0-4的选择,0：信息框（默认），1：页面层，2：iframe层，3：加载层，4：tips层。
+			btns : 0,
+			btn : [ '确定', '取消' ],
+			title : title,
+			border : [ 0 ],
+			closeBtn : [ 0 ],
+			closeBtn : [ 0, true ],
+			shadeClose : true,
+			area : [ width, height ],
+			page : {
+				dom : '#' + win_id
+			},
+			end : function() {
+				$("#AddCount").hide()
+			}
+		});
+	}
+	window.onload =function() {
+		var Request = new Object(); 
+		Request = GetRequest(); 
+		var type,orderno; 
+		type = Request['type']; 
+		orderno=Request['orderno'];
+		if(type==10)
+		{
+			checkOrder(orderno);
+		}
+    };
+    function GetRequest() {    	  
+    	  var url = location.search; //获取url中"?"符后的字串
+    	   var theRequest = new Object();
+    	   if (url.indexOf("?") != -1) {
+    	      var str = url.substr(1);
+    	      strs = str.split("&");
+    	      for(var i = 0; i < strs.length; i ++) {
+    	         theRequest[strs[i].split("=")[0]]=(strs[i].split("=")[1]);
+    	      }
+    	   }
+    	   return theRequest;
+    	};
+    function checkOrder(orderNo){
+    	var i = 9;
+        setInterval(function(){
+            if(i == 0) {
+            	//重新查询一下看是否支付成功
+    			$.ajax({
+    				url : "checkOrder",
+    				type : "post",
+    				async : false,
+    				data : {
+    					orderNo : orderNo
+    				},
+    				dataType : "json",
+    				success : function(data) {
+    					if (data.status == 1) {
+    						window.location.href = "success?orderNo=" + data.msg;
+    					} else {
+    						window.location.href = "error?type=0&msg="+data.msg;
+    					}
+    				}
+    			});                
+            }
+            document.getElementById("test").innerHTML = i--;
+
+        },1000);
+    }
+	
+</script>
+</head>
+<body>
+	<div class="content mar_au">
+		<!--<div class="weiz_iam f12 fm_song">当前位置：<a href="#">供应管理</a>><span>IBS支付收银台</span></div>-->
+		<div class="fr conter_right mzh_width_100">
+			<div class="blank2"></div>
+			<div class="bor_si fl bg_white mzh_width_100">
+				<div class="mlf_50">
+					<div class="fl mzh_width_100 pt60 mb_30" style="min-height: 200px;">
+						<dl class="fl ml_270">
+							<dd>
+								<img src="/statics/images/c-ico1.png" width="28" class="fl mr_10">
+							</dd>
+							<dt class="fl">
+								<h2 class="fl line_22">
+									<c:choose>
+										<c:when test="${type == 0 }">
+											<c:out value="${msg } " />
+										</c:when>
+										<c:when test="${type == 10 }">
+											<c:out value="${msg } " /><span id="test">10</span>秒
+										</c:when>
+										<c:when test="${type == 1 }">支付的订单号不能为空</c:when>
+										<c:when test="${type == 2 }">订单不存在</c:when>
+										<c:when test="${type == 3 }">不能支付别人的订单</c:when>
+										<c:when test="${type == 4 }">该订单金额异常</c:when>
+										<c:when test="${type == 5 }">该订单已处理，请到IBS查看</c:when>
+										<c:when test="${type == 6 }">批发号供应商进驻保证金金额不正确</c:when>
+										<c:when test="${type == 7 }">批发号供应商成为认证点服务金额不正确</c:when>
+										<c:when test="${type == 8 }">批发号供应商进驻升级认证点服务套餐金额不正确</c:when>
+										<c:when test="${type == 9 }">快捷支付的银行卡号码有误</c:when>
+										<c:otherwise>很抱歉！您的支付过程出现了一些问题，支付失败了！</c:otherwise>
+									</c:choose>
+								</h2>
+							</dt>
+							<dt class="fl mt_20">
+								<h4 class="fl mr_10 line_22">您可能需要：</h4>
+								<div style="float: left; width: 100px;">
+									<%-- 									<c:choose>
+										<c:when test="${type == 9 || type == 0 }">
+											<a href="/pay/cashier?orderNo=${orderNo }" class="ft_lan line_22">重新选择支付方式</a>
+										</c:when>
+										<c:otherwise>
+											<a href="<%=mydomain%>/order/buylist" class="ft_lan line_22">返回查看订单管理</a>
+										</c:otherwise>
+									</c:choose> --%>
+									<a href="<%=mydomain%>/order/buylist" class="ft_lan line_22">返回查看订单管理</a> <a href="javascript:Resubmit();" class="ft_lan line_22">点此重新进行支付</a>
+								</div>
+							</dt>
+						</dl>
+					</div>
+				</div>
+			</div>
+		</div>
+	</div>
+	<div class="updata_tixian layer_pageContent" style="display: none;" id="win_div_4">
+		<div class="updata_tixian">
+			<div class="fl mzh_width_100">
+				<ul class="p10">
+					<li class="f14">系统检测您已发起过支付，请确认支付是否完成或支付账户是否扣款；</li>
+					<li class="f14 mt_10">若支付失败，点击-继续支付，将重新发起支付。</li>
+					<li class="fl mt_47"><input name="button" type="submit" class="mzh_xiayibu" style="padding: 0px 20px;" value="继续支付">
+						<div class="dis_b ml_20 fl  btn_hui28_pre shou">取消支付</div></li>
+				</ul>
+			</div>
+		</div>
+	</div>
+	<input type="hidden" id="orderNo" value="${orderNo }" />
+</body>
+</html>

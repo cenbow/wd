@@ -1,0 +1,156 @@
+@charset "utf-8";
+/******** IBS支付收银台 *********/
+.cor_0ff{color: #7fce00;}
+.color_999{color: #999;}
+.color_999:hover{color: #f10;}
+.color_000{color: #000;}
+.color_fff{color: #fff;}
+.mzh_qcz{float: left;padding: 0 8px;background: #71b601;color: #fff;border-radius: 5px;height: 24px;line-height: 24px;}
+.mzh_qcz:hover{background: #7fce00;color: #fff;}
+.Binding li{width: 100%;}
+.Binding .bank_list li{width: 20%;}
+.mzh_xiayibu{float: left;padding:0 30px;cursor:pointer;line-height: 30px;color: #fff;background: #71b601;border-radius: 5px;}
+.mzh_xiayibu:hover{background: #7fce00;color: #fff;}
+.ml_270{margin-left: 270px;}
+.ml_170{margin-left: 170px;}
+.pt60{padding-top: 60px;}
+.mb_30{margin-bottom: 30px;}
+.line_22{line-height: 22px;}
+.bg_889ffe{background: #889ffe;width: 285px;padding: 3px 0px;line-height: 30px;}
+.color_36c{color: #36c;}
+.cup{cursor: pointer;}
+
+.ddxq_gg_flow {float: left;width: 900px;background: url("../pic/liucheng_3_27.jpg") repeat-x;position: relative;height: 80px;margin: 55px 0 0 50px;}
+/** 4个（1个变红） **/
+.ddxq_gg_flow_red_4_1_yes{width: 0px;float: left;background: #da0000;position: relative;height: 4px;font-family: "宋体";}/* 5-1个 */
+.ddxq_gg_flow_red_4_1_yes .ddxq_gg_flow_red_4_1{float: left;width: 120px;position: absolute;top: -15px;left: -50px;}/* 5-1个 */
+.ddxq_gg_flow_red_4_1_yes .ddxq_gg_flow_red_4_1 b{float: left;width: 25px;line-height: 25px;border-radius: 50%;background: #da0000;color: #fff;font-family: "Arial";text-align: center;font-size: 14px;margin:0 0 6px 45px;border: 4px solid #fff;}
+.ddxq_gg_flow_red_4_1_yes .ddxq_gg_flow_red_4_1 span{float: left;width: 120px;text-align: center;color: #d30202;font-weight: bold;line-height: 20px;}
+.ddxq_gg_flow_red_4_1_yes .ddxq_gg_flow_red_4_1 font{float: left;width: 120px;text-align: center;color: #999;line-height: 16px;}
+
+
+.ddxq_gg_flow_red_4_1_yes .ddxq_gg_flow_red_4_2{float: left;width: 120px;position: absolute;top: -15px;left: 210px;}
+.ddxq_gg_flow_red_4_1_yes .ddxq_gg_flow_red_4_2 b{float: left;width: 25px;line-height: 25px;border-radius: 50%;background: #ddd;color: #fff;font-family: "Arial";text-align: center;font-size: 14px;margin:0 0 6px 45px;border: 4px solid #fff;}
+.ddxq_gg_flow_red_4_1_yes .ddxq_gg_flow_red_4_2 span{float: left;width: 120px;text-align: center;color: #999;line-height: 20px;}
+
+
+.ddxq_gg_flow_red_4_1_yes .ddxq_gg_flow_red_4_3{float: left;width: 120px;position: absolute;top: -15px;left: 520px;}
+.ddxq_gg_flow_red_4_1_yes .ddxq_gg_flow_red_4_3 b{float: left;width: 25px;line-height: 25px;border-radius: 50%;background: #ddd;color: #fff;font-family: "Arial";text-align: center;font-size: 14px;margin:0 0 6px 45px;border: 4px solid #fff;}
+.ddxq_gg_flow_red_4_1_yes .ddxq_gg_flow_red_4_3 span{float: left;width: 128px;text-align: center;color: #999;line-height: 20px;}
+
+
+.ddxq_gg_flow_red_4_1_yes .ddxq_gg_flow_red_4_4{float: left;width: 120px;position: absolute;top: -15px;left: 790px;}
+.ddxq_gg_flow_red_4_1_yes .ddxq_gg_flow_red_4_4 b{float: left;width: 25px;line-height: 25px;border-radius: 50%;background: #ddd;color: #fff;font-family: "Arial";text-align: center;font-size: 14px;margin:0 0 6px 45px;border: 4px solid #fff;}
+.ddxq_gg_flow_red_4_1_yes .ddxq_gg_flow_red_4_4 span{float: left;width: 128px;text-align: center;color: #999;line-height: 20px;}
+
+
+/** 4个（2个变红） **/
+.ddxq_gg_flow_red_4_2_yes{width: 260px;float: left;background: #da0000;position: relative;height: 4px;font-family: "宋体";}
+.ddxq_gg_flow_red_4_2_yes .ddxq_gg_flow_red_4_1{float: left;width: 120px;position: absolute;top: -15px;left: -50px;}
+.ddxq_gg_flow_red_4_2_yes .ddxq_gg_flow_red_4_1 b{float: left;width: 25px;line-height: 25px;border-radius: 50%;background: #da0000;color: #fff;font-family: "Arial";text-align: center;font-size: 14px;margin:0 0 6px 45px;border: 4px solid #fff;}
+.ddxq_gg_flow_red_4_2_yes .ddxq_gg_flow_red_4_1 span{float: left;width: 120px;text-align: center;color: #d30202;font-weight: bold;line-height: 20px;}
+.ddxq_gg_flow_red_4_2_yes .ddxq_gg_flow_red_4_1 font{float: left;width: 120px;text-align: center;color:
+    #999;line-height: 16px;}
+
+
+.ddxq_gg_flow_red_4_2_yes .ddxq_gg_flow_red_4_2{float: left;width: 120px;position: absolute;top: -15px;left: 210px;}
+.ddxq_gg_flow_red_4_2_yes .ddxq_gg_flow_red_4_2 b{float: left;width: 25px;line-height: 25px;border-radius: 50%;background: #da0000;color: #fff;font-family: "Arial";text-align: center;font-size: 14px;margin:0 0 6px 45px;border: 4px solid #fff;}
+.ddxq_gg_flow_red_4_2_yes .ddxq_gg_flow_red_4_2 span{float: left;width: 120px;text-align: center;color: #d30202;font-weight: bold;line-height: 20px;}
+.ddxq_gg_flow_red_4_2_yes .ddxq_gg_flow_red_4_2 font{float: left;width: 120px;text-align: center;color: #999;line-height: 16px;}
+
+
+.ddxq_gg_flow_red_4_2_yes .ddxq_gg_flow_red_4_3{float: left;width: 120px;position: absolute;top: -15px;left: 520px;}
+.ddxq_gg_flow_red_4_2_yes .ddxq_gg_flow_red_4_3 b{float: left;width: 25px;line-height: 25px;border-radius: 50%;background: #ddd;color: #fff;font-family: "Arial";text-align: center;font-size: 14px;margin:0 0 6px 45px;border: 4px solid #fff;}
+.ddxq_gg_flow_red_4_2_yes .ddxq_gg_flow_red_4_3 span{float: left;width: 128px;text-align: center;color: #999;line-height: 20px;}
+
+
+.ddxq_gg_flow_red_4_2_yes .ddxq_gg_flow_red_4_4{float: left;width: 120px;position: absolute;top: -15px;left: 790px;}
+.ddxq_gg_flow_red_4_2_yes .ddxq_gg_flow_red_4_4 b{float: left;width: 25px;line-height: 25px;border-radius: 50%;background: #ddd;color: #fff;font-family: "Arial";text-align: center;font-size: 14px;margin:0 0 6px 45px;border: 4px solid #fff;}
+.ddxq_gg_flow_red_4_2_yes .ddxq_gg_flow_red_4_4 span{float: left;width: 128px;text-align: center;color: #999;line-height: 20px;}
+
+
+/** 4个（3个变红） **/
+.ddxq_gg_flow_red_4_3_yes{width: 580px;float: left;background: #da0000;position: relative;height: 4px;font-family: "宋体";}
+.ddxq_gg_flow_red_4_3_yes .ddxq_gg_flow_red_4_1{float: left;width: 120px;position: absolute;top: -15px;left: -50px;}
+.ddxq_gg_flow_red_4_3_yes .ddxq_gg_flow_red_4_1 b{float: left;width: 25px;line-height: 25px;border-radius: 50%;background: #da0000;color: #fff;font-family: "Arial";text-align: center;font-size: 14px;margin:0 0 6px 45px;border: 4px solid #fff;}
+.ddxq_gg_flow_red_4_3_yes .ddxq_gg_flow_red_4_1 span{float: left;width: 120px;text-align: center;color: #d30202;font-weight: bold;line-height: 20px;}
+.ddxq_gg_flow_red_4_3_yes .ddxq_gg_flow_red_4_1 font{float: left;width: 120px;text-align: center;color: #999;line-height: 16px;}
+
+
+.ddxq_gg_flow_red_4_3_yes .ddxq_gg_flow_red_4_2{float: left;width: 120px;position: absolute;top: -15px;left: 210px;}
+.ddxq_gg_flow_red_4_3_yes .ddxq_gg_flow_red_4_2 b{float: left;width: 25px;line-height: 25px;border-radius: 50%;background: #da0000;color: #fff;font-family: "Arial";text-align: center;font-size: 14px;margin:0 0 6px 45px;border: 4px solid #fff;}
+.ddxq_gg_flow_red_4_3_yes .ddxq_gg_flow_red_4_2 span{float: left;width: 120px;text-align: center;color: #d30202;font-weight: bold;line-height: 20px;}
+.ddxq_gg_flow_red_4_3_yes .ddxq_gg_flow_red_4_2 font{float: left;width: 120px;text-align: center;color: #999;line-height: 16px;}
+
+
+.ddxq_gg_flow_red_4_3_yes .ddxq_gg_flow_red_4_3{float: left;width: 120px;position: absolute;top: -15px;left: 520px;}
+.ddxq_gg_flow_red_4_3_yes .ddxq_gg_flow_red_4_3 b{float: left;width: 25px;line-height: 25px;border-radius: 50%;background: #da0000;color: #fff;font-family: "Arial";text-align: center;font-size: 14px;margin:0 0 6px 45px;border: 4px solid #fff;}
+.ddxq_gg_flow_red_4_3_yes .ddxq_gg_flow_red_4_3 span{float: left;width: 120px;text-align: center;color: #d30202;font-weight: bold;line-height: 20px;}
+.ddxq_gg_flow_red_4_3_yes .ddxq_gg_flow_red_4_3 font{float: left;width: 120px;text-align: center;color: #999;line-height: 16px;}
+
+
+.ddxq_gg_flow_red_4_3_yes .ddxq_gg_flow_red_4_4{float: left;width: 120px;position: absolute;top: -15px;left: 790px;}
+.ddxq_gg_flow_red_4_3_yes .ddxq_gg_flow_red_4_4 b{float: left;width: 25px;line-height: 25px;border-radius: 50%;background: #ddd;color: #fff;font-family: "Arial";text-align: center;font-size: 14px;margin:0 0 6px 45px;border: 4px solid #fff;}
+.ddxq_gg_flow_red_4_3_yes .ddxq_gg_flow_red_4_4 span{float: left;width: 128px;text-align: center;color: #999;line-height: 20px;}
+
+
+/** 4个（4个变红） **/
+.ddxq_gg_flow_red_4_4_yes{width: 860px;float: left;background: #da0000;position: relative;height: 4px;font-family: "宋体";}
+.ddxq_gg_flow_red_4_4_yes .ddxq_gg_flow_red_4_1{float: left;width: 120px;position: absolute;top: -15px;left: -50px;}
+.ddxq_gg_flow_red_4_4_yes .ddxq_gg_flow_red_4_1 b{float: left;width: 25px;line-height: 25px;border-radius: 50%;background: #da0000;color: #fff;font-family: "Arial";text-align: center;font-size: 14px;margin:0 0 6px 45px;border: 4px solid #fff;}
+.ddxq_gg_flow_red_4_4_yes .ddxq_gg_flow_red_4_1 span{float: left;width: 120px;text-align: center;color: #d30202;font-weight: bold;line-height: 20px;}
+.ddxq_gg_flow_red_4_4_yes .ddxq_gg_flow_red_4_1 font{float: left;width: 120px;text-align: center;color: #999;line-height: 16px;}
+
+
+.ddxq_gg_flow_red_4_4_yes .ddxq_gg_flow_red_4_2{float: left;width: 120px;position: absolute;top: -15px;left: 210px;}
+.ddxq_gg_flow_red_4_4_yes .ddxq_gg_flow_red_4_2 b{float: left;width: 25px;line-height: 25px;border-radius: 50%;background: #da0000;color: #fff;font-family: "Arial";text-align: center;font-size: 14px;margin:0 0 6px 45px;border: 4px solid #fff;}
+.ddxq_gg_flow_red_4_4_yes .ddxq_gg_flow_red_4_2 span{float: left;width: 120px;text-align: center;color: #d30202;font-weight: bold;line-height: 20px;}
+.ddxq_gg_flow_red_4_4_yes .ddxq_gg_flow_red_4_2 font{float: left;width: 120px;text-align: center;color: #999;line-height: 16px;}
+
+
+.ddxq_gg_flow_red_4_4_yes .ddxq_gg_flow_red_4_3{float: left;width: 120px;position: absolute;top: -15px;left: 520px;}
+.ddxq_gg_flow_red_4_4_yes .ddxq_gg_flow_red_4_3 b{float: left;width: 25px;line-height: 25px;border-radius: 50%;background: #da0000;color: #fff;font-family: "Arial";text-align: center;font-size: 14px;margin:0 0 6px 45px;border: 4px solid #fff;}
+.ddxq_gg_flow_red_4_4_yes .ddxq_gg_flow_red_4_3 span{float: left;width: 120px;text-align: center;color: #d30202;font-weight: bold;line-height: 20px;}
+.ddxq_gg_flow_red_4_4_yes .ddxq_gg_flow_red_4_3 font{float: left;width: 120px;text-align: center;color: #999;line-height: 16px;}
+
+
+.ddxq_gg_flow_red_4_4_yes .ddxq_gg_flow_red_4_4{float: left;width: 120px;position: absolute;top: -15px;left: 790px;}
+.ddxq_gg_flow_red_4_4_yes .ddxq_gg_flow_red_4_4 b{float: left;width: 25px;line-height: 25px;border-radius: 50%;background: #da0000;color: #fff;font-family: "Arial";text-align: center;font-size: 14px;margin:0 0 6px 45px;border: 4px solid #fff;}
+.ddxq_gg_flow_red_4_4_yes .ddxq_gg_flow_red_4_4 span{float: left;width: 120px;text-align: center;color: #d30202;font-weight: bold;line-height: 20px;}
+.ddxq_gg_flow_red_4_4_yes .ddxq_gg_flow_red_4_4 font{float: left;width: 120px;text-align: center;color: #999;line-height: 16px;}
+
+
+
+/********  *********/
+.input_05_28{float: left;width: 209px;padding-left: 5px;overflow: hidden;border: 1px solid #d2d2d2;color: #999;height: 36px;}
+.line_36{line-height: 36px;}
+#mzh_srsjh li{float: left;width: 100%;}
+.fs_08_25{width: 80px;background: #4ec526;cursor: pointer;border-radius: 5px;height: 36px;line-height: 36px;}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

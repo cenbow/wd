@@ -1,0 +1,189 @@
+$(function() {
+	sumMoney();
+	// 显示退款方式
+	ChoiceRefundMode();
+	$("#selRefundMode").change(function() {
+		var type = $(this).val();
+		if (type == 1) {
+			$("#lctk").show();
+			$("#lcth").hide();
+		} else {
+			$("#lctk").hide();
+			$("#lcth").show();
+		}
+	});
+	// 全选
+	$("#checkAll").click(function() {
+		$('input[name="subBox"]').attr("checked", this.checked);
+		sumMoney();
+	});
+	var $subBox = $("input[name='subBox']");
+	$subBox.click(function() {
+		$("#checkAll").attr("checked", $subBox.length == $("input[name='subBox']:checked").length ? true : false);
+		sumMoney();
+	});
+	// 上传图片
+	$('#uploadImg').uploadify({
+		'buttonImage' : '/statics/images/sctp_3_28.jpg',
+		'buttonClass' : 'browser',
+		'dataType' : 'html',
+		'removeCompleted' : false,
+		'swf' : '/statics/js/uploadify/uploadify.swf',
+		'debug' : false,
+		'width' : '120',
+		'height' : '120',
+		'auto' : true,
+		'multi' : false,
+		'fileTypeExts' : '*.jpg;*.gif;*.png;*.jpeg',
+		'fileTypeDesc' : '图片类型(*.jpg;*.jpeg;*.gif;*.png)',
+		'formData' : {
+			'cate' : "1",
+			'type' : "3"
+		},
+		'uploader' : 'http://fdfsservice.okwei.com/handle/UploadImg.ashx',
+		'fileSizeLimit' : '1024',
+		'progressData' : 'speed',
+		'removeCompleted' : true,
+		'removeTimeout' : 0,
+		'requestErrors' : true,
+		'onFallback' : function() {
+			alert("您的浏览器没有安装Flash");
+		},
+		'onUploadStart' : function(file) {
+			$(".uploadify-queue").css("height", "50px");
+		},
+		'onUploadSuccess' : function(file, data, response) {
+			var json = JSON.parse(data);
+			if (json.Status != 1) {
+				alert(json.StatusReason);
+			} else {
+				var html = "<div class='mzh_hover'><img src='" + imgUrl + json.ImgUrl + "' class='ddxq_gg_tkly_dt_img_1'><span class='mzh_hover_close'></span><input type='hidden' name='tkimage' value='" + json.ImgUrl + "'/></div>";
+				$("#divImage").append(html);
+			}
+		}
+	});
+
+	$(".mzh_hover_close").live("click", function() {
+		$(this).parent(".mzh_hover").remove();
+	});
+
+	$("#tkprice").keyup(function() {
+		var tmptxt = $(this).val();
+		tmptxt = tmptxt.replace(/[^\d.]/g, ""); // 清除“数字”和“.”以外的字符
+		tmptxt = tmptxt.replace(/^\./g, ""); // 验证第一个字符是数字而不是.
+		tmptxt = tmptxt.replace(/\.{2,}/g, "."); // 只保留第一个. 清除多余的.
+		if (tmptxt.indexOf(".") > 0 && tmptxt.length - tmptxt.indexOf(".") > 3) {
+			tmptxt = tmptxt.substr(0, tmptxt.indexOf(".") + 3);
+		}
+		tmptxt = tmptxt.replace(".", "$#$").replace(/\./g, "").replace("$#$", ".");
+		$(this).val(tmptxt);
+	});
+
+	$("#submitRefund").bind("click", function() {
+		submitApply();
+	});
+});
+var imgUrl = "http://img1.okimgs.com";
+// 选择退款方式
+function ChoiceRefundMode() {
+	var type = $("#selRefundMode").val();
+	if (type == 1) {
+		$("#lctk").show();
+	} else {
+		$("#lcth").show();
+	}
+}
+
+// 计算最多可以退款的金额
+function sumMoney() {
+	var flag = false;
+	$("input[name=subBox]:checked").each(function() {
+		flag = true;
+	});
+	if (!flag) {
+		$("#maxPrice").html("0.0");
+		return;
+	}
+
+	var maxPrice = $("#maxAmount").val();
+	var price = 0;
+	$("input[name=subBox]").not("input:checked").each(function() {
+		var amount = $(this).parent(".conter_right_xx_cz_table_55_div").find("[name=commission]").text();
+		price += parseFloat(amount);
+	});
+	var total = parseFloat(maxPrice) - price;
+	$("#maxPrice").html(total);
+}
+
+// 选择退款原因
+function seltkReason(obj) {
+	$("#tkReason").val($(obj).find("option:selected").text());
+}
+
+function submitApply() {
+	var supOrderID = $("#supOrderID").text();
+	var proOrderID = new Array();
+	$("input[name=subBox]:checked").each(function() {
+		proOrderID.push($(this).val());
+	});
+	if (proOrderID.length == 0) {
+		alert("请选择要退款的产品");
+		return;
+	}
+	var tkType = $("#selRefundMode option:selected").val();
+	var tkReason = $.trim($("#tkReason").val());
+	if (tkReason == "") {
+		alert("请输入退款理由");
+		return;
+	}
+	var tkImage = new Array();
+	$("[name=tkimage]").each(function() {
+		tkImage.push($(this).val());
+	});
+	var tkMoney = $.trim($("#tkprice").val());
+	if (tkMoney == "") {
+		alert("退款金额不能为空");
+		return;
+	} else {
+		var maxprice = $("#maxPrice").text();
+		var amount = parseFloat(tkMoney);
+		if (amount <= 0) {
+			alert("退款金额必须大于0");
+			return;
+		}
+		if (amount > parseFloat(maxprice)) {
+			alert("最大退款金额为" + maxprice + "元");
+			return;
+		}
+	}
+	var data = {
+		supOrderID : supOrderID,
+		proOrderID : proOrderID.toString(),
+		tkType : tkType,
+		tkReason : tkReason,
+		tkImage : tkImage.toString(),
+		tkMoney : tkMoney
+	};
+	$("#submitRefund").unbind("click");
+	$.ajax({
+		url : "/order/submitApply",
+		type : "post",
+		async : false,
+		contentType : "application/x-www-form-urlencoded; charset=utf-8",
+		data : data,
+		error : function(XMLHttpRequest, textStatus, errorThrown) {
+			alert("服务器出现异常");
+		},
+		success : function(data) {
+			if (data.msg == "1") {
+				alert("申请退款成功，等待供应商确认");
+				location.href = "/order/buylist";
+			} else {
+				alert(data.msg);
+				$("#submitRefund").bind("click", function() {
+					submitApply();
+				});
+			}
+		}
+	});
+}

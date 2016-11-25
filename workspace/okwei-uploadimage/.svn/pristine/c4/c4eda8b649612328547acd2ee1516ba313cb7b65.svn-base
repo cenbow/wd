@@ -1,0 +1,400 @@
+package com.okwei.restful.utils;
+
+import java.awt.Graphics;
+import java.awt.Image;
+import java.awt.Toolkit;
+import java.awt.image.BufferedImage;
+import java.awt.image.CropImageFilter;
+import java.awt.image.FilteredImageSource;
+import java.awt.image.ImageFilter;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.util.HashMap;
+import java.util.Map;
+
+import javax.imageio.ImageIO;
+
+import com.okwei.restful.enums.ActionTypeEnum;
+import com.okwei.restful.vo.BackImgModle;
+import com.okwei.restful.vo.BaseReturnModle;
+
+import sun.misc.BASE64Decoder;
+
+
+
+public class ImageHelper {
+
+	 public  static String domain = "";//ConfigurationManager.AppSettings["domain"];
+	 public  static String upLoadTemp =  AppSettingUtil.getSingleValue("imgPathTemp");// AppDomain.CurrentDomain.BaseDirectory + "temp";
+	
+	
+	
+	 /**
+	  * 保存到临时区
+	  * @param imgStr
+	  * @param itype
+	  * @return
+	  * @throws Exception
+	  */
+	 public static String saveToStack(String imgData,int itype) throws Exception
+	 {
+			String resultImg="";
+			String imgBasenew= upLoadTemp; 
+			String uploadPath="Images/"+DateOperate.getTimeString("yyyyMM")+"/"; 
+			 //对字节数组字符串进行Base64解码并生成图片  
+	        if (imgData == null||"".equals(imgData)) //图像数据为空  
+	            return "";
+	        BASE64Decoder decoder = new BASE64Decoder();  
+	        //Base64解码
+	        byte[] b = decoder.decodeBuffer(imgData);  
+	        for(int i=0;i<b.length;++i)  
+	        {      
+	        	if(b[i]<0) //调整异常数据   
+	        	{
+	        		b[i]+=256;  
+	        	}  
+	        }  
+	         //生成jpeg图片  
+	        String newFileName = DateOperate.getTimeString("yyyyMMddhhmmssSSS") +"_1.JPG";//新生成的图片
+	        //resultImg=ImgDomain.GetFullImgUrl("/"+uploadPath+newFileName);
+	        File f=new File(imgBasenew+uploadPath);
+	        if(!f.isDirectory())
+	        {
+	           //f.mkdirs();
+	        	f.mkdir();
+	        }
+	        OutputStream out = new FileOutputStream(imgBasenew+uploadPath+newFileName); 
+	        out.write(b); 
+	        out.flush(); 
+	        out.close();  
+			return uploadPath+newFileName; 
+	}
+	
+	/**
+	 * 图片base6位转换 保存
+	 * @param imgStr
+	 * @itype （1001：头像,1002:聊天，默认产品图片）
+	 * @return
+	 */
+	public static String imgBase64String(String imgStr,int itype) throws Exception
+	{
+		String resultImg="";
+		String imgBasenew= AppSettingUtil.getSingleValue("imgUploadBase");//"D://" 
+		String uploadPath="Images/"+DateOperate.getTimeString("yyyyMM")+"/"; //"proimage/"+DateOperate.getTimeString("yyyyMM")+"/"; 
+		 //对字节数组字符串进行Base64解码并生成图片  
+        if (imgStr == null) //图像数据为空  
+            return "";
+        BASE64Decoder decoder = new BASE64Decoder();  
+        //Base64解码
+        byte[] b = decoder.decodeBuffer(imgStr);  
+        for(int i=0;i<b.length;++i)  
+        {      
+        	if(b[i]<0) //调整异常数据   
+        	{
+        		b[i]+=256;  
+        	}  
+        }  
+         //生成jpeg图片  
+        String newFileName = DateOperate.getTimeString("yyyyMMddhhmmssSSS") +"_1.JPG";//新生成的图片
+        resultImg=ImgDomain.GetFullImgUrl("/"+uploadPath+newFileName);//"http://10.10.10.194:8080/"+uploadPath+newFileName; //
+        File f=new File(imgBasenew+uploadPath);
+        if(!f.isDirectory())
+        {
+           //f.mkdirs();
+        	f.mkdir();
+        }
+        OutputStream out = new FileOutputStream(imgBasenew+uploadPath+newFileName); 
+        out.write(b); 
+        out.flush(); 
+        out.close();  
+        //图片原路径
+        String cutPathString=imgBasenew+uploadPath+newFileName;
+        switch (itype) {
+		case 1001://头像
+			imgCutSave(cutPathString, cutPathString.replace("_1.", "_5."), 150, 150);
+			resultImg=resultImg.replace("_1.", "_5.");
+			break;
+		case 1002://聊天
+			imgCutSave(cutPathString, cutPathString.replace("_1.", "_12."), 120, 120);
+			imgCutSave(cutPathString, cutPathString.replace("_1.", "_75."), 750, 750);
+			resultImg=resultImg.replace("_1.", "_12.");
+			break;
+		default: //产品图片切割
+			proImgCut(cutPathString);
+			resultImg=resultImg.replace("_1.", "_24.");
+			break;
+		}
+		return resultImg;
+	}
+	
+	/**
+	 * 产品图片上传切割
+	 * @param filePath 图片绝对路径 如" \\192.168.10.1\proimg1.okwei.com\201503\20140207035553522871_1.jpg"
+	 */
+	public static void proImgCut(String filePath)
+	{
+		imgCutSave(filePath, filePath.replace("_1.", "_80."), 80, 60);
+		imgCutSave(filePath, filePath.replace("_1.", "_75."), 750, 750);
+		imgCutSave(filePath, filePath.replace("_1.", "_32."), 320, 320);
+		imgCutSave(filePath, filePath.replace("_1.", "_16."), 160, 160);
+		imgCutSave(filePath, filePath.replace("_1.", "_24."), 240, 240);
+		imgCutSave(filePath, filePath.replace("_1.", "_12."), 120, 120);
+		imgCutSave(filePath, filePath.replace("_1.", "_8."), 80, 80);
+	}
+	
+	
+	/**
+	 * 图片等比例压缩保存
+	 * @param srcImageFile
+	 * @param pathNew
+	 * @param size（原图的缩小比例）
+	 */
+	public static void imgScale(String srcImageFile,String pathNew,double size)
+	{
+		try {
+			 BufferedImage bi = ImageIO.read(new File(srcImageFile));
+			 double srcWidth = bi.getWidth(); // 源图宽度
+			 double srcHeight = bi.getHeight(); // 源图高度
+			 srcWidth=srcWidth*size;
+			 srcHeight=srcHeight*size;
+			//压缩处理
+		    scale(srcImageFile,pathNew, srcWidth, srcHeight); 
+		    
+		} catch (Exception e) {
+			// TODO: handle exception
+		}
+	}
+	/**
+	 * 图片等比例压缩保存
+	 * @param srcImageFile
+	 * @param pathNew
+	 * @param size（原图的缩小比例）
+	 */
+	public static void imgScale(String srcImageFile,String pathNew,double size,double minSize)
+	{
+		try {
+			 BufferedImage bi = ImageIO.read(new File(srcImageFile));
+			 double srcWidth = bi.getWidth(); // 源图宽度
+			 double srcHeight = bi.getHeight(); // 源图高度
+			 srcWidth=srcWidth*size;
+			 srcHeight=srcHeight*size;
+			 if(srcHeight<minSize&&srcWidth<minSize)
+			 {
+				 double temp=srcHeight/srcWidth;
+				 if(temp>1)
+				 {
+					 srcHeight=minSize;
+					 srcWidth=minSize/temp;
+				 }else {
+					srcWidth=minSize;
+					srcHeight=minSize*temp;
+				 }
+			 }
+			//压缩处理
+		    scale(srcImageFile,pathNew, srcWidth, srcHeight); 
+		    
+		} catch (Exception e) {
+			// TODO: handle exception
+		}
+	}
+	
+	
+	
+	/**
+	 * 图片压缩切割
+	 * @param srcImageFile
+	 * @param pathNew 新保存的文件名
+	 * @param cutWidth 裁剪后的宽
+	 * @param cutHeight 裁剪后的高
+	 */
+	public static void imgCutSave(String srcImageFile,String pathNew, double cutWidth,double cutHeight)
+	{
+		try {
+			 BufferedImage bi = ImageIO.read(new File(srcImageFile));
+			 double srcWidth = bi.getWidth(); // 源图宽度
+			 double srcHeight = bi.getHeight(); // 源图高度
+			 double tem=srcWidth/srcHeight;
+			 double aWidth=0 ,aHeight=0;//成功压缩的图片 宽、高（原图比例）
+			 if(cutWidth<=srcWidth ||cutHeight<=srcHeight)//小于原图宽度
+			 {
+				 if(tem>1)
+				 {
+					 aHeight=cutHeight;aWidth=cutHeight*tem;
+				 }else 
+				 {
+					 aWidth=cutWidth;
+					 aHeight=cutWidth/tem;
+				 }
+			 }else {
+				aWidth=srcWidth; 
+				aHeight=srcHeight;
+			}
+			//压缩处理
+		    scale(srcImageFile,pathNew, aWidth, aHeight); 
+		    //裁剪
+		    cut(pathNew, cutWidth, cutWidth); 
+			
+		} catch (Exception e) {
+			// TODO: handle exception
+		}
+	}
+	
+	/**
+	 * 图片压缩
+	 * @param srcImageFile
+	 * @param standardWidth
+	 * @param standardHeight
+	 */
+	private static void scale(String srcImageFile,String pathNew, double standardWidth, double standardHeight) 
+	{
+		try{
+		    BufferedImage src = ImageIO.read(new File(srcImageFile)); // 读入文件
+
+		    Image image = src.getScaledInstance((int) standardWidth, (int) standardHeight, Image.SCALE_DEFAULT);
+		    BufferedImage tag = new BufferedImage((int) standardWidth,(int) standardHeight, BufferedImage.TYPE_INT_RGB);
+		    Graphics g = tag.getGraphics();
+		    g.drawImage(image, 0, 0, null);
+		    g.dispose();
+		    ImageIO.write(tag, "JPG", new File(pathNew));// 输出到文件流
+		    
+		}catch (IOException e) {
+		    e.printStackTrace();
+		}
+	}
+	
+	/**
+	 * 图片切割
+	 * @param srcImageFile
+	 * @param standardWidth
+	 * @param standardHeight
+	 */
+	private static void cut(String srcImageFile, double standardWidth,double standardHeight) 
+	{   
+		try {
+		    Image img;
+		    ImageFilter cropFilter;
+		    // 读取源图像
+		    BufferedImage bi = ImageIO.read(new File(srcImageFile));
+		    int srcWidth = bi.getWidth(); // 源图宽度
+		    int srcHeight = bi.getHeight(); // 源图高度
+		    if(standardHeight>=srcHeight)
+		    	standardHeight=srcHeight;
+		    if(standardWidth>=srcWidth)
+		    	standardWidth=srcWidth;
+		    if (srcWidth >= standardWidth && srcHeight >= standardHeight) 
+		    {
+		    	Image image = bi.getScaledInstance(srcWidth, srcHeight, Image.SCALE_DEFAULT);
+		    	int w = 0;
+		    	int h = 0;
+		    	double wScale = srcWidth / standardWidth;
+		    	double hScale = srcHeight / standardHeight;
+		    	int srcWidth2;
+		    	int srcHeight2;
+		    	if (wScale > hScale) {
+		    		srcWidth2 = (int) (standardWidth * hScale);
+		    		w = (srcWidth - srcWidth2) / 2;
+		    		srcWidth = srcWidth2;
+		    		h = 0;
+		    	}else {
+		    		srcHeight2 = (int) (standardHeight * wScale);
+		    		h = (srcHeight - srcHeight2) / 2;
+		    		srcHeight = srcHeight2;
+		    		w = 0;
+		    	}
+		    	cropFilter = new CropImageFilter(w, h, srcWidth, srcHeight);
+		    	img = Toolkit.getDefaultToolkit().createImage(new FilteredImageSource(image.getSource(), cropFilter));
+		    	BufferedImage tag = new BufferedImage(srcWidth, srcHeight, BufferedImage.TYPE_INT_RGB);
+		    	Graphics g = tag.getGraphics();
+		    	g.drawImage(img, 0, 0, null);
+		    	g.dispose();
+		    	ImageIO.write(tag, "JPEG", new File(srcImageFile));
+		    } 
+		}catch (Exception e) {
+		    e.printStackTrace();
+		}
+	}
+	
+
+	//=====================================================================
+	
+	/**
+	 * 上传网络图片 返回微店网可用图片地址
+	 * @param url （如 http://wx.qlogo.cn/mmopen/iby9JOqq5yWf4AtPAO0aPrLiaEWdE2AJtksu9uAutonEobiaeWeXf4aDKmdvvHktSwqK7WYj6V0naLX7ZblzDSTMgtfLf0dPulL/0）
+	 * @return
+	 */
+	public static String upImgReturnSrc(String url)
+	{
+		String imgSrc = "";
+		try {
+			byte[] btImg = getImageFromNetByUrl(url);
+			if (null != btImg && btImg.length > 0) {
+				String fileName = DateOperate.getTimeString("yyyyMMddhhmmssSSS")
+						+ "_1.jpg";// 新生成的图片
+				imgSrc = writeImageToDisk(btImg, fileName);
+			} 
+		} catch (Exception e) {
+			// TODO: handle exception
+			imgSrc="";
+		}
+		return imgSrc;
+	}
+	
+	  /** 
+     * 将图片写入到磁盘 
+     * @param img 图片数据流 
+     * @param fileName 文件保存时的名称 
+     */  
+    public static String writeImageToDisk(byte[] img, String fileName) throws Exception{  
+       
+        	String imgBasenew=AppSettingUtil.getSingleValue("imgUploadBase");
+        	String uploadPath="Images/"+DateOperate.getTimeString("yyyyMM")+"/";
+            File file = new File(imgBasenew+ uploadPath); 
+            if(!file.isDirectory())
+            {
+               //f.mkdirs();
+            	file.mkdir();
+            }
+            FileOutputStream fops = new FileOutputStream(imgBasenew+uploadPath+fileName);  
+            fops.write(img);  
+            fops.flush();  
+            fops.close();  
+            return ImgDomain.GetFullImgUrl(uploadPath+fileName);
+      
+    }  
+    /** 
+     * 根据地址获得数据的字节流 
+     * @param strUrl 网络连接地址 
+     * @return 
+     */  
+    public static byte[] getImageFromNetByUrl(String strUrl) throws Exception{  
+            URL url = new URL(strUrl);  
+            HttpURLConnection conn = (HttpURLConnection)url.openConnection();  
+            conn.setRequestMethod("GET");  
+            conn.setConnectTimeout(5 * 1000);  
+            InputStream inStream = conn.getInputStream();//通过输入流获取图片数据  
+            byte[] btImg = readInputStream(inStream);//得到图片的二进制数据  
+            return btImg;  
+    }  
+    /** 
+     * 从输入流中获取数据 
+     * @param inStream 输入流 
+     * @return 
+     * @throws Exception 
+     */  
+    public static byte[] readInputStream(InputStream inStream) throws Exception{  
+        ByteArrayOutputStream outStream = new ByteArrayOutputStream();  
+        byte[] buffer = new byte[1024];  
+        int len = 0;  
+        while( (len=inStream.read(buffer)) != -1 ){  
+            outStream.write(buffer, 0, len);  
+        }  
+        inStream.close();  
+        return outStream.toByteArray();  
+    }
+}

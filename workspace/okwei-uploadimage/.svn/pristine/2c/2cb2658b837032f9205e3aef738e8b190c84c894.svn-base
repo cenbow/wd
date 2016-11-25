@@ -1,0 +1,30 @@
+package com.okwei.restful.utils;
+
+import com.okwei.restful.vo.BackImgModle;
+
+public class ImgProcess {
+
+	/**
+	 * 上传图片到本地（临时目录）
+	 * @return
+	 */
+	public  BackImgModle uploadImgToLocal(String data,int type){
+		BackImgModle result=new BackImgModle();
+		try {
+			String imgsrc= ImageHelper.saveToStack(data, type);
+			result.setStatus(1);
+			result.setImgUrl(imgsrc);
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		return result;
+	}
+	/**
+	 * 上传到 文件服务器（并删除临时文件）
+	 * @return
+	 */
+	public BackImgModle uploadImgToFastFDS(String data,int type){
+		return null;
+	} 
+}

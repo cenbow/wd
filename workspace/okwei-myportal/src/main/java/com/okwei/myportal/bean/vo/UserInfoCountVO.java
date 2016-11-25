@@ -1,0 +1,257 @@
+package com.okwei.myportal.bean.vo;
+
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.List;
+
+public class UserInfoCountVO implements Serializable {
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = -167826658968818305L;
+	//微店主信息
+	private String image;
+	private String shopname;
+	private Long weiid;
+	private int securestep;
+	private Short yun;
+	private Short batch;
+	private Short verifer;
+	private String stepstr;
+	
+	public String getImage() {
+		return image;
+	}
+	public void setImage(String image) {
+		this.image = image;
+	}
+	public String getShopname() {
+		return shopname;
+	}
+	public void setShopname(String shopname) {
+		this.shopname = shopname;
+	}
+	public Long getWeiid() {
+		return weiid;
+	}
+	public void setWeiid(Long weiid) {
+		this.weiid = weiid;
+	}
+	public int getSecurestep() {
+		return securestep;
+	}
+	public void setSecurestep(int securestep) {
+		this.securestep = securestep;
+	}
+	public Short getYun() {
+		return yun;
+	}
+	public void setYun(Short yun) {
+		this.yun = yun;
+	}
+	public Short getBatch() {
+		return batch;
+	}
+	public void setBatch(Short batch) {
+		this.batch = batch;
+	}
+	public Short getVerifer() {
+		return verifer;
+	}
+	public void setVerifer(Short verifer) {
+		this.verifer = verifer;
+	}
+	//订单数量
+    private int todayordercout;//今日新增
+    private int needpaycount;//待支付的
+    private int needsendcount;//待发货的
+    private int needacceptcount;//待收货的
+    private int needsaycount;//待评价的
+    
+    //商品数量
+    private int oncount;//已上架的商品数
+    private int offcount;//已下架的商品数
+    private int graftCount;//草稿箱数量
+    
+    //分销商数
+    private int yaddedcount;//昨日新增
+    private int totalcount;//总分销商数
+    
+    /**
+     * 上游供应商 
+     */
+    private int attedtionCount;
+    /**
+     * 下游分销
+     */
+    private int attedtionedCount;
+    
+    //销售的订单数量
+    /**
+     * 待支付
+     */
+    private int waitPayCount;
+    /**
+     * 待发货
+     */
+    private int waitSendCount;
+    /**
+     * 待收货
+     */
+    private int waitAcceptCount;
+    /**
+     * 售后中
+     */
+    private int customeringCount;
+    //12月17日新加
+    private long waitVerifyCount;//待审核数量（平台号可见）
+    private long mySupplyCount;//我的下级供应商数量（平台号可见）
+    private long agentCount;//代理商数量（品牌号，平台号可见）
+    private long groundCount;//落地店数量（品牌号，平台号可见）
+    
+    public long getWaitVerifyCount()
+    {
+        return waitVerifyCount;
+    }
+    public void setWaitVerifyCount(long waitVerifyCount)
+    {
+        this.waitVerifyCount = waitVerifyCount;
+    }
+    public long getMySupplyCount()
+    {
+        return mySupplyCount;
+    }
+    public void setMySupplyCount(long mySupplyCount)
+    {
+        this.mySupplyCount = mySupplyCount;
+    }
+    public long getAgentCount()
+    {
+        return agentCount;
+    }
+    public void setAgentCount(long agentCount)
+    {
+        this.agentCount = agentCount;
+    }
+
+    public long getGroundCount()
+    {
+        return groundCount;
+    }
+    public void setGroundCount(long groundCount)
+    {
+        this.groundCount = groundCount;
+    }
+    //公告信息
+    private NoticeMsg noticemsg;
+	public int getTodayordercout() {
+		return todayordercout;
+	}
+	public void setTodayordercout(int todayordercout) {
+		this.todayordercout = todayordercout;
+	}
+	public int getNeedpaycount() {
+		return needpaycount;
+	}
+	public void setNeedpaycount(int needpaycount) {
+		this.needpaycount = needpaycount;
+	}
+	public int getNeedsendcount() {
+		return needsendcount;
+	}
+	public void setNeedsendcount(int needsendcount) {
+		this.needsendcount = needsendcount;
+	}
+	public int getNeedacceptcount() {
+		return needacceptcount;
+	}
+	public void setNeedacceptcount(int needacceptcount) {
+		this.needacceptcount = needacceptcount;
+	}
+	public int getNeedsaycount() {
+		return needsaycount;
+	}
+	public void setNeedsaycount(int needsaycount) {
+		this.needsaycount = needsaycount;
+	}
+	public int getOncount() {
+		return oncount;
+	}
+	public void setOncount(int oncount) {
+		this.oncount = oncount;
+	}
+	public int getOffcount() {
+		return offcount;
+	}
+	public void setOffcount(int offcount) {
+		this.offcount = offcount;
+	}
+	public int getYaddedcount() {
+		return yaddedcount;
+	}
+	public void setYaddedcount(int yaddedcount) {
+		this.yaddedcount = yaddedcount;
+	}
+	public int getTotalcount() {
+		return totalcount;
+	}
+	public void setTotalcount(int totalcount) {
+		this.totalcount = totalcount;
+	}
+	public String getStepstr() {
+		return stepstr;
+	}
+	public void setStepstr(String stepstr) {
+		this.stepstr = stepstr;
+	}
+	public NoticeMsg getNoticemsg() {
+		return noticemsg;
+	}
+	public void setNoticemsg(NoticeMsg noticemsg) {
+		this.noticemsg = noticemsg;
+	}
+	public int getGraftCount() {
+		return graftCount;
+	}
+	public void setGraftCount(int graftCount) {
+		this.graftCount = graftCount;
+	}
+	public int getAttedtionCount() {
+		return attedtionCount;
+	}
+	public void setAttedtionCount(int attedtionCount) {
+		this.attedtionCount = attedtionCount;
+	}
+	public int getAttedtionedCount() {
+		return attedtionedCount;
+	}
+	public void setAttedtionedCount(int attedtionedCount) {
+		this.attedtionedCount = attedtionedCount;
+	}
+	public int getWaitPayCount() {
+		return waitPayCount;
+	}
+	public void setWaitPayCount(int waitPayCount) {
+		this.waitPayCount = waitPayCount;
+	}
+	public int getWaitSendCount() {
+		return waitSendCount;
+	}
+	public void setWaitSendCount(int waitSendCount) {
+		this.waitSendCount = waitSendCount;
+	}
+	public int getWaitAcceptCount() {
+		return waitAcceptCount;
+	}
+	public void setWaitAcceptCount(int waitAcceptCount) {
+		this.waitAcceptCount = waitAcceptCount;
+	}
+	public int getCustomeringCount() {
+		return customeringCount;
+	}
+	public void setCustomeringCount(int customeringCount) {
+		this.customeringCount = customeringCount;
+	}
+
+	
+}

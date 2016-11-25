@@ -1,0 +1,18 @@
+package com.okwei.myportal.bean.dto;
+
+public class ConstantParam {
+	public static final String IBS_USERTONGJITOTAL="UserCount_";
+	public static final String IBS_USERSHOPINFO="ShopInfo_";
+	public static final String IBS_USERYESERDAYPERSONCOUNT="YeserdayPersonCount_";
+	public static final String IBS_USERTOTALCOUNT="TotalPersonCount_";
+	
+	/**
+	 * 上游供应数量缓存Key
+	 */
+	public static final String ATTENTIONCOUNT = "AttentionCount_";
+	/**
+	 * 下游分销数量缓存Key
+	 */
+	public static final String ATTENTIONEDCOUNT ="AttentionedCount_";
+	
+}

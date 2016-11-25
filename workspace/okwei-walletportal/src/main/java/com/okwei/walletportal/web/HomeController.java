@@ -1,0 +1,160 @@
+package com.okwei.walletportal.web;
+
+import java.io.BufferedReader;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
+import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.ResourceBundle;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import net.sf.json.JSONObject;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+ 
+
+
+
+
+
+
+
+
+
+
+
+
+import com.okwei.bean.domain.BFootPhone;
+import com.okwei.bean.vo.ReturnModel;
+import com.okwei.bean.vo.ReturnStatus;
+import com.okwei.common.JsonUtil;
+import com.okwei.util.HttpClientUtil;
+import com.okwei.util.ObjectUtil;
+import com.okwei.util.ParseHelper;
+import com.okwei.util.RedisUtil;
+
+@Controller
+@RequestMapping(value = "/home")
+public class HomeController
+{
+    private final static Log logger = LogFactory.getLog(HomeController.class);
+    @RequestMapping(value = "/foot", method = { RequestMethod.GET })
+    public String foot(Model model){
+        String name = "Okwei_Index_foot";
+        List<BFootPhone> list = new ArrayList<BFootPhone>();
+        try {
+            List<BFootPhone> nowlist = (List<BFootPhone>)RedisUtil.getObject(name);
+            if(nowlist != null && nowlist.size() > 0){
+                list = nowlist;
+            }
+            else {
+                logger.error("获取:lndomain");
+                String domain = ResourceBundle.getBundle("domain").getString( "lndomain"); 
+                String htmlJson = HttpClientUtil.doGetMethod(domain + "/InterfaceService/GetPhoneNumbers",null);
+                if(!ObjectUtil.isEmpty(htmlJson)){ 
+                        List<BFootPhone> list2 = jsonToReturnModel(htmlJson);
+                        if(list2!=null && list2.size() >0){
+                            list = list2;
+                            RedisUtil.setObject(name,list2);
+                        } 
+                }
+            }
+        }
+        catch(Exception e){
+            
+        }
+        model.addAttribute("list",list);
+        return "home/foot";
+    }
+    
+    public List<BFootPhone> jsonToReturnModel(String htmljson){ 
+        if(!ObjectUtil.isEmpty(htmljson)){
+            JSONObject jsonobject = JSONObject.fromObject(htmljson);
+            if(jsonobject!=null){
+                int statu = ParseHelper.toInt(jsonobject.getString("Statu"));
+                if(statu == 1){ 
+                    List<BFootPhone> list = (List<BFootPhone>)JsonUtil.json2Objectlist(jsonobject.getString("BaseModle"),BFootPhone.class);
+                    return list;
+                }
+            }
+        }
+        return null;
+    }
+    
+    
+    @RequestMapping(value = "/toHtmlFoot", method = { RequestMethod.GET })
+    public String toHtmlFoot(HttpServletRequest request, HttpServletResponse response)  throws IOException{
+        String path = request.getContextPath();
+        String basePath = request.getScheme() + "://" + request.getServerName() + ":" + request.getServerPort() + path + "/home/foot";
+        String name = request.getRealPath("/") + "jsp/home/footers.html";//
+        //String name = request.getRealPath("/") + "\\jsp\\home\\indexv1.htm";//
+        response.setContentType("text/html; charset=utf-8");
+        PrintWriter writer = response.getWriter();
+        if (PrintPage(name, basePath)) {
+            writer.print("成功");
+        } else {
+            writer.print("失败");
+        }
+        writer.close();
+        return "home/foot";
+    }
+    
+
+    public boolean PrintPage(String page, String url_addr) {
+        URL url;
+        String rLine = null;
+        PrintWriter fileOut = null;
+        InputStream ins = null;
+        try {
+            url = new URL(url_addr);
+            // System.out.println(url + ".......");
+            ins = url.openStream();
+            BufferedReader bReader = new BufferedReader(new InputStreamReader(ins, "utf-8"), 1 * 512 * 1024);// 获取编码为gb2312的文件
+            // BufferedReader bReade1r = new BufferedReader(new
+            // InputStreamReader(ins, "utf-8"), 1 * 1024 * 1024);
+            FileOutputStream out = new FileOutputStream(page);
+            OutputStreamWriter writer = new OutputStreamWriter(out, "utf-8");
+            fileOut = new PrintWriter(writer);
+            // 循环取取数据,并写入目标文件中
+            while ((rLine = bReader.readLine()) != null) {
+                String tmp_rLine = rLine;
+                // System.out.println(tmp_rLine);
+                int str_len = tmp_rLine.length();
+                if (str_len > 0) {
+                    fileOut.println(tmp_rLine);
+                    fileOut.flush();
+                }
+                tmp_rLine = null;
+            }
+            url = null;
+            return true;
+        } catch (IOException e) {
+            // System.out.println("error: " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        } catch (Exception es) {
+            // System.out.println(es.getMessage());
+            return false;
+        } finally {// 关闭资源
+            fileOut.close();
+            try {
+                ins.close();
+            } catch (IOException ex) {
+                // 关闭输入流出错
+                ex.printStackTrace();
+            }
+        }
+    }
+}

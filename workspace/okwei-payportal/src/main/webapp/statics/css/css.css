@@ -1,0 +1,275 @@
+﻿@charset "utf-8";
+/* CSS Document */
+ 
+.Box20{margin:20px 0 0 0;float:left;}
+.Box40{margin:40px 0 0 0;float:left;}
+.Box30{margin:30px 0 0 0;float:left;}
+
+.content{width:1190px;margin:10px auto 0 auto;overflow:hidden; clear:both;}
+
+/* 注册 */
+.JM_banner{width:1190px;height:110px;margin:10px 0 0 0; height:170px;}	
+/* 共用title */
+.mainFloor{width:1190px;float:left;font-family:"微软雅黑";margin:16px 0 0 0;}
+.mainFloor .title{width:1190px;float:left;height:40px;background:url(http://base2.okimgs.com/images/Wtitle.png) repeat-x 0 bottom;}
+.mainFloor .title h2 em{float:left;font-style:normal;height:35px;padding:0 30px 5px 10px;font-size:24px;color:#000;line-height:35px;font-weight:normal;background:url(http://base.okimgs.com/images/Wtitle.png) repeat-x 0 -586px;font-family:"微软雅黑";}
+.mainFloor .title h2 a{float:right;font-style:normal;font-size:14px;line-height:45px;font-weight:normal;font-family:"宋体";height:35px;overflow:hidden;}
+/* 开微店收入两大来源 */
+.mainFloor_con{width:1190px;float:left;padding:0 0 17px 0;}
+	.mainTxt_con{width:1190px;padding:30px 30px 30px 30px;float:left;border-left:1px solid #e1e1e2;border-right:1px solid #e1e1e2;border-bottom:1px solid #b8babb;background:#f1f1f1 url(http://base.okimgs.com/images/mainCon_txt_bj.gif) repeat-x;}
+		.mainTxt_con_title{width:1190px;float:left;}
+			.mainTxt_con_title h2{width:1128px;float:left;font-size:24px;color:#333;font-weight:normal;font-family:"微软雅黑";}
+			.title_con{font-size:16px;line-height:24px;color:#333;padding:12px 0 0 0;width:1128px;float:left;}
+		
+		.mainTxt_con_box {width:928px;float:left;margin:16px 0 0 0; margin-left:100px;}
+			.mainTxt_con_box td{text-align:center;width:192px;float:left;font-size:14px;font-family:宋体;line-height:20px;color:#333;}
+			.mainTxt_con_box td img{padding:0 0 5px 0;}
+	
+		.mainTxt_con_box1 {width:928px;float:left;margin:16px 0 0 0; margin-left:100px;}
+			.mainTxt_con_box1 td{width:436px;float:left;}
+	
+	.title_button{float:right;background:url(http://base.okimgs.com/images/wd_button.png) no-repeat scroll 0 -253px;display:inline-block;height:37px;line-height:35px;padding:0 0 0 15px;cursor:pointer;overflow:hidden;}
+	.title_button p{background:url(http://base1.okimgs.com/images/wd_button.png) no-repeat right -305px;color:#fff;font-weight:normal;display:inline-block;float:left;font-family:"微软雅黑";font-size:14px;height:37px;line-height:35px;padding:0 15px 0 0;text-align:center;}
+		
+
+/* 开微店三大优势 */
+.mainTxt_LR {width:1128px;border-bottom:1px solid #e7e7e7;float:left;padding:0 0 15px 0;}
+.mainTxt_LR dl{float:left;width:507px;}
+.mainTxt_LR dt{float:left;border-bottom:3px solid #cdcdcd;font-size:24px;font-family:"微软雅黑";padding:0 15px 12px 0;}
+.mainTxt_LR dd{float:left;width:507px;margin:10px 0 0 0;}
+.mainTxt_LR dd span{width:507px;float:left;line-height:24px;font-size:16px;color:#333;}
+.mainTxt_B{float:left;margin:20px 0 0 0;cursor:pointer;}
+.mainTxt_B s{background:url(http://base2.okimgs.com/images/Wtitle.png) no-repeat 0 -224px;height:54px;width:13px;float:left;}
+.mainTxt_B em{font-style:normal;background:url(http://base3.okimgs.com/images/Wtitle.png) no-repeat right -278px;height:54px;padding:0 23px 0 10px;float:left;line-height:50px;font-size:20px;color:#fff;}
+
+.mainTxt_img{float:right;padding:0 30px 0 0;}
+
+/* 交易三大保障 */
+.sdbz{width:1128px;float:left;}
+.sdbz li{line-height:26px;font-size:18px;font-family:"微软雅黑";width:1128px;float:left;margin:0 0 16px 0;}
+.sdbz li font{background:url(http://base.okimgs.com/images/Wtitle.png) no-repeat 0 -352px;width:26px;height:30px;display:block;font-size:18px;font-family:Arial;text-align:center;line-height:26px;color:#fff;float:left;margin:0 10px 0 0;}
+
+/* 六大支持 让你的微店轻松上路 */
+.ldzc{width:1128px;float:left;}
+.ldzc h2{font-size:26px;font-family:"微软雅黑";font-weight:normal;width:928px;float:left;}
+.ldzc ul{width:928px;float:left;margin:20px 0 0 0; }
+.ldzc ul li{float:left;font-size:18px;font-family:"微软雅黑";color:#fff;}
+.ldzc_1{width:130px;height:107px;background:url(http://base1.okimgs.com/images/Wqiu_bj.png) no-repeat 0 0;text-align:center;padding:36px 0 0 0;line-height:30px;margin:0 29px 0 0;display:inline;overflow:hidden;}
+.ldzc_2{width:130px;height:107px;background:url(http://base2.okimgs.com/images/Wqiu_bj.png) no-repeat 0 -143px;text-align:center;padding:36px 0 0 0;line-height:30px;margin:20px 29px 0 0;display:inline;overflow:hidden;}
+.ldzc_3{width:130px;height:107px;background:url(http://base3.okimgs.com/images/Wqiu_bj.png) no-repeat 0 -286px;text-align:center;padding:36px 0 0 0;line-height:30px;margin:0 29px 0 0;display:inline;overflow:hidden;}
+.ldzc_4{width:130px;height:107px;background:url(http://base.okimgs.com/images/Wqiu_bj.png) no-repeat 0 -429px;text-align:center;padding:36px 0 0 0;line-height:30px;margin:20px 29px 0 0;display:inline;overflow:hidden;}
+
+/* 云端产品库供应商 100%实体认证 */
+.shitidian_txt{width:1128px;float:left;}		
+	.shitidian_txt dl{border:1px solid #e0e0e0;width:193px;height:256px;background:#fff;margin:0 15px 15px 0px;display:inline;float:left;padding:9px 9px 0 9px;font-family:"宋体";font-size:12px;}
+	.shitidian_txt dt{width:193px;height:150px;margin:0 0 7px 0;overflow:hidden;}
+	.shitidian_txt dd{line-height:18px;float:left;width:193px;color:#666;}
+	.shitidian_txt dd li{float:left;line-height:18px;}
+	.shitidian_txt dd li a{color:#333;}
+	.shitidian_txt dd.main_txt{background:#f6f6f6;height:41px;width:186px;margin:6px 0 0 0;float:left;line-height:18px;padding:7px 0 0 7px;}
+	.shitidian_txt dl.margins_no{margin:0 0 20px 0;}
+.credit{background:url(http://base1.okimgs.com/images/Wcon_bj.gif) no-repeat;width:1128px;float:left;height:86px;line-height:86px;font-size:20px;color:#fff;font-family:"微软雅黑";}
+
+/* 微店创业 VS 淘宝创业 */
+.wdcy{width:1128px;float:left;}
+	.wdcy table{font-size:12px;color:#333;width:1127px;float:left;display:inline;font-family:"宋体";border-top:1px solid #d8d8d8;border-left:1px solid #d8d8d8;background:#fafafa;}
+	.wdcy td{border-bottom:1px solid #d8d8d8;border-right:1px solid #d8d8d8;font-size:14px;font-family:"微软雅黑";line-height:45px;}
+	
+
+/* 哪些人适合开微店？ */
+.kwd{width:928px;float:left;}
+	.kwd ul{display:block;float:left;width:580px;}
+	.kwd li{float:left;width:89px;margin:0 27px 0 0;display:inline;text-align:center;}
+	.kwd li span{border:1px solid #cacaca;padding:1px;background:#fff;height:82px;width:85px;float:left;display:block;}
+	.kwd li img{padding:4px;background:#f4f6f3;}	
+	.kwd .JM_txtcon{float:left;font-size:24px;line-height:75px;width:318px;}
+
+/* 他们正在利用微店平台赚钱 */
+.Micro_txt{float:left;width:1128px;}		
+	.Micro_txt ul{float:left;width:1128px;height:330px;overflow:hidden;}
+	.Micro_txt ul li{float:left;width:1128px;}
+	.Micro_txt dl{float:left;margin:0 20px 30px 0;width:210px;overflow:hidden;display:inline;font-size:16px;font-family:"宋体";height:60px;}
+	.Micro_txt dt{float:left;margin:0 5px 0 0;display:inline;border:1px solid #cacaca;padding:1px;background:#fff;height:56px;width:56px;}
+	.Micro_txt dt a{padding:3px;background:#f4f6f3;width:50px;height:50px;display:block;float:left;}
+
+	.Micro_txt dd{float:left;height:60px;line-height:18px;overflow:hidden;width:145px;}
+	.Micro_txt dd span{display:block;float:left;height:20px;line-height:20px;overflow:hidden;width:145px;}
+	.Micro_txt dd p{color:#666666;float:left;font-size:12px;width:145px;height:20px;line-height:20px;overflow:hidden;font-family:Arial;}
+	.Micro_txt dd strong{color:#666;float:left;font-size:14px;font-weight:normal;height:20px;line-height:20px;overflow:hidden;width:145px;}
+	.Micro_txt dd strong.red{color:#e80000;float:left;font-size:14px;font-weight:normal;height:20px;line-height:20px;overflow:hidden;width:145px;}
+    .Micro_txt dd strong.green{ color:#22a018; float:left;font-size:14px;font-weight:normal;height:20px;line-height:20px;overflow:hidden;width:145px;}
+
+/* 对话 */
+.mainDh{width:1190px;float:left;padding:0 0 17px 0;font-family:"微软雅黑";margin:20px 0 0 0;}
+	.mainDh_con{width:1190px;padding:30px 30px 30px 30px;float:left;border:1px solid #e1e1e2;border-bottom:1px solid #b8babb;background:#f1f1f1 url(http://base.okimgs.com/images/mainCon_txt_bj.gif) repeat-x;}
+	.mainDh_con_bj{background:url(http://base3.okimgs.com/images/Wpic_6.png) no-repeat;width:928px;float:left; }
+	.mainDh_con_bj td{font-size:18px;color:#333;line-height:30px;}
+	.mainDh_con_bj ul{font-size:20px;margin:50px 0 0 0;width:928px;float:left;}	
+	.mainDh_con_bj li{line-height:36px;width:928px;float:left;}
+	.mainDh_txt{width:1128px;float:left;}
+	.mainDh_txt span{line-height:50px;float:left;margin:20px 0 0 10px;display:inline-block;}
+	
+	
+/* 大家再说 */
+.djzs{float:left;width:928px;}	
+	.djzs ul{float:left;width:928px; }	
+	.djzs li{float:left;width:928px;color:#333;font-size:14px;line-height:30px;font-family:"微软雅黑";}
+		
+	/* 注册成功后提示框 */
+	.WDzhuce{width:470px;margin:0 auto;border:8px solid #999;background:#fcfcfc;}
+		.WDzhuce_title{width:470px;height:34px;line-height:34px;background:url(http://base.okimgs.com/images/wd_bj.png) repeat-x 0 -184px;color:#fff;overflow:hidden;}
+		.WDzhuce_title h2{color:#fff;font-size:14px;font-weight:bold;padding:0 0 0 10px;float:left;}
+		.WDzhuce_title a{width:13px;height:13px;background:url(http://base1.okimgs.com/images/wd_bj.png) no-repeat 0 -228px;float:right;text-indent:-999px;overflow:hidden;margin:10px 10px 0 0 ;display:inline;}
+		
+		.WDzhuce_txt{background:#f8f8f8;padding:30px 0 40px 70px;}
+		.WDzhuce_txt dt{background:url(http://base2.okimgs.com/images/Wbj1.png) no-repeat 0 -134px;text-indent:51px;height:44px;line-height:44px;font-size:16px;}
+		.WDzhuce_txt dd {margin:10px 0 0 0;}
+		.WDzhuce_txt dd li{line-height:30px;color:#333;}
+		
+		.WDzhuce_txt dd.WDzhuce_button{width:130px;height:40px;line-height:40px;background:#f18800;font-size:16px;font-family:"微软雅黑";color:#fff;text-align:center;margin:15px 0 0 0;cursor:pointer;}
+	
+	.rdman{width:386px;float:left;}
+	.xitongtuijian {color:#005FC1;cursor:pointer;width:60px;height:20px;float:left;margin:0 0 0 10px;display:inline;}
+	#tipsRd{font-size:12px;margin:0 0 0 5px;}
+
+/* 0824 新加  弹出窗样式 */
+.index_tc{width:446px;border:8px solid #999;height:auto;background:#fcfcfc;float:left;margin:0 0 0 0px;}
+	.index_tc_title{height:34px;line-height:34px;background:url(http://base3.okimgs.com/images/wd_bj.png) repeat-x 0 -184px;}
+	.index_tc_title h2{color:#fff;font-size:14px;font-weight:bold;padding:0 0 0 10px;float:left;}
+	.index_tc_title .close{width:13px;height:13px;background:url(http://base.okimgs.com/images/wd_bj.png) no-repeat 0 -228px;float:right;text-indent:-999px;overflow:hidden;margin:10px 10px 0 0 ;display:inline;cursor:pointer;}
+	
+	/* 登录方式 */
+	.index_tc_txt{padding:30px 30px 0 30px;width:386px;float:left;}
+	.index_qqdl{width:386px;border-bottom:1px dashed #ddd;padding:0 0 25px 0;float:left;margin:0 0 22px 0;}
+	.index_qqdl h2{font-size:14px;color:#333;font-family:"微软雅黑";width:386px;float:left;margin:0 0 15px 0;font-weight:normal;}
+	.index_qqdl span{background:url(http://base1.okimgs.com/images/Connect_logo_4.png) no-repeat;width:170px;height:32px;display:block;cursor:pointer;float:left;margin:0 0 0 75px;display:inline;}
+	.index_qqd2{width:386px;padding:60px 0 80px 0;float:left;}
+	.index_qqd2 span{background:url(http://base2.okimgs.com/images/Connect_logo_4.png) no-repeat;width:170px;height:32px;display:block;cursor:pointer;margin:0 auto;}
+	.index_qqd2 h2{font-size:14px;font-family:"微软雅黑";color:#666;font-weight:normal;width:170px;height:32px;text-align:center;line-height:40px;margin:0 auto;}
+	.index_tc_txt dl.index_tc_dl2{width:386px;float:left;}
+	.index_tc_txt dl.index_tc_dl2 dt{font-size:14px;color:#333;font-family:"微软雅黑";width:386px;float:left;margin:0 0 15px 0;}
+	.index_tc_txt dl.index_tc_dl2 dd{width:386px;float:left;margin:0 0 15px 0;line-height:24px;}
+	.index_tc_txt dl.index_tc_dl2 dd span{width:70px;float:left;text-align:right;}
+	.index_tc_txt dl.index_tc_dl2 dd span font{color:#f00;font-size:12px;padding:0 5px 0 0;}
+	.index_tc_txt dl.index_tc_dl2 dd input{width:65px;float:left;padding:0 0 0 6px;border:1px solid #b5b5b5;height:22px;line-height:22px;width:180px;}
+	
+	.index_tc_txt dl.index_tc_dl2 dd.reg_bottom{float:left;width:324px;margin:0 0 30px 62px;}
+	.index_tc_txt dl.index_tc_dl2 dd.reg_bottom a{color:#FFFFFF;cursor:pointer;display:block;float:left;font-size:12px;height:28px;overflow:hidden;width:98px;}
+	.index_tc_txt dl.index_tc_dl2 dd.reg_bottom a b.left_bj{background:url("http://base3.okimgs.com/images/Order_bj.png") no-repeat 0 -684px;float:left;height:28px;width:3px;}
+	.index_tc_txt dl.index_tc_dl2 dd.reg_bottom a em{background:url("http://base.okimgs.com/images/Order_bj.png") repeat-x 0 -722px;float:left;font-style:normal;height:28px;line-height:28px;text-align:center;width:92px;}
+	.index_tc_txt dl.index_tc_dl2 dd.reg_bottom a b.right_bj{background:url("http://base1.okimgs.com/images/Order_bj.png") no-repeat right -684px;float:right;height:28px;width:3px;}
+
+/* 登录方式 */
+	.index_tc_txt{padding:40px 30px 20px 30px;width:386px;float:left;}
+	.index_qqdl1{width:386px;padding:0 0 25px 0;float:left;margin:30px 0 22px 30px;}
+	.index_qqdl1 span{background:url(http://base2.okimgs.com/images/Connect_logo_4.png) no-repeat;width:220px;height:32px;display:block;cursor:pointer;}
+	
+	.rdman{width:386px;float:left;}
+        .rdman span{width:130px;}
+	.xitongtuijian {color:#005FC1;cursor:pointer;width:60px;height:20px;float:left;margin:0 0 0 10px;display:inline;}
+	.index_tc_txt .index_tc_dl4{width:386px;}
+	.index_tc_txt .index_tc_dl4 {font-size:14px;color:#333;font-family:"微软雅黑";width:386px;margin:0 0 15px 0;}
+	.index_tc_txt .index_tc_dl4 {width:386px;margin:0 0 15px 60px;line-height:24px;}
+	.index_tc_txt .index_tc_dl4  span{float:left;text-align:right;}
+	.index_tc_txt .index_tc_dl4 .index_qqdl span{width:170px;float:left;text-align:right;}
+	.index_tc_txt .index_tc_dl4  span font{color:#f00;font-size:12px;padding:0 5px 0 0;}
+	.index_tc_txt .index_tc_dl4 input{width:60px;float:left;padding:0 0 0 6px;border:1px solid #b5b5b5;height:22px;line-height:22px;}
+        .qqlogin2{width:220px;}
+/* 让千百万微店销售您的产品 */
+.mainXsms{width:928px;float:left;}
+.mainXsms p{width:928px;float:left;font-size:22px;font-family:"微软雅黑";color:#ff7a0d;}
+.mainXsms img{margin:0 0 10px 80px;display:inline;float:left;}
+.mainSq_button{width:281px;height:54px;background:url(http://base3.okimgs.com/images/Wjm_anniu1.png) no-repeat;text-align:center;color:#fff;font-size:20px;line-height:54px;cursor:pointer;margin-top:25px;}
+
+/* 供应商进驻认证员 */
+.mainRZY{width:1128px;float:left;position:relative;}
+/* 认证员筛选 */
+.mainRZY_txt{width:1122px;float:left;background:url(http://base.okimgs.com/images/W_yj.png) no-repeat;height:58px;padding:0 0 0 6px;}
+.mainRZY_txt_con{width:1116px;height:56px;border-top:1px solid #bbe4a0;border-bottom:1px solid #bbe4a0;background:#f0ffe6;float:left;}
+.mainRZY_txt b.right_bj{width:6px;float:right;height:58px;background:url(http://base1.okimgs.com/images/W_yj.png) no-repeat right;}
+.mainRZY_txt_con span{float:left;font-size:18px;color:#329500;font-family:"微软雅黑";line-height:56px;padding:0 0 0 20px;}
+.mainRZY_txt_input{float:left;border:1px solid #bbe4a0;margin:10px 0 0 15px;display:inline;height:26px;background:url(http://base2.okimgs.com/images/IBS_inputBJ.gif) no-repeat -1px -1px;padding:6px 6px 0 6px;}
+.mainRZY_txt_input select{border:0px;background:none;font-size:14px;}
+
+.mainRZY_pic{width:1128px;float:left;margin:20px 0 0 0;}
+.mainRZY_pic li{width:1128px;float:left;margin:0 0 20px 0;}
+.mainRZY_pic dl{float:left;margin:0 25px 0 0;display:inline;width:129px; cursor:pointer;}
+.mainRZY_pic dt{padding:1px;border:1px solid #cacaca;background:#fff;width:125px;height:140px;float:left;}
+.mainRZY_pic dd{width:129px;float:left;overflow:hidden;font-family:"宋体";line-height:20px;padding:7px 0 0 0;}
+.mainRZY_pic dd a{width:129px;float:left;overflow:hidden;font-size:14px;color:#333;}
+.mainRZY_pic dd p{width:129px;float:left;overflow:hidden;font-size:12px;color:#666;}
+.mainRZY_pic dd span{width:129px;float:left;overflow:hidden;font-size:12px;color:#333;font-family:Arial;}
+
+.mainRZY_pic_txt{width:1128px;height:460px;overflow-y:scroll;overflow:hidden;overflow-x:hidden;}
+::-webkit-scrollbar {
+	width:14px;
+	height:14px;
+	background:-webkit-gradient(linear,left top,right top,color-stop(0%,rgba(202,202,202,0.07)),color-stop(100%,rgba(229,229,229,0.07)));
+	background:-webkit-linear-gradient(left,rgba(202,202,202,0.07) 0%,rgba(229,229,229,0.07) 100%);
+	background-color:rgba(229,229,229,.3);
+	-webkit-box-shadow:0 0 1px 0 rgba(0,0,0,.15) inset,0 1px 0 0 #fff;
+	box-shadow:0 0 1px  0 rgba(0,0,0,.15) inset,0 1px 0 0 #fff;
+	overflow:visible;
+	border-radius:4px;
+	border:solid 1px #A6A6A6;
+}
+::-webkit-scrollbar-button {
+	width:0;
+	height:0;
+	display:block;
+	background-color:transparent;
+}
+::-webkit-scrollbar-track {
+	}::-webkit-scrollbar-track-piece {
+	}::-webkit-scrollbar-thumb {
+	background:-webkit-gradient(linear,left top,right top,color-stop(0%,rgba(233,233,233,0.05)),color-stop(100%,rgba(221,221,221,0.05)));
+	background:-webkit-linear-gradient(left,rgba(233,233,233,0.05) 0%,rgba(221,221,221,0.05) 100%);
+	-webkit-box-shadow:0 2px 1px 0 rgba(0,0,0,.05),inset 1px 1px 0 0 #FFF;
+	box-shadow:0 2px 1px 0 rgba(0,0,0,.05),inset 1px 1px 0 0 #FFF;
+	background-color:rgba(229,229,229,.9);
+	overflow:visible;
+	border-radius:4px;
+	border:solid 1px #A6A6A6;
+}
+::-webkit-scrollbar-thumb:hover {
+	background-color:rgba(229,229,229,.4);
+}
+::-webkit-scrollbar-thumb:active {
+	background-color:rgba(229,229,229,1);
+	-webkit-box-shadow:0 0 1px 0 rgba(0,0,0,.15) inset;
+	box-shadow:0 0 1px 0 rgba(0,0,0,.15) inset;
+}
+::-webkit-scrollbar-corner {
+	}
+::-webkit-resizer {
+	}
+/* 认证员弹出 */
+.SQ_tc{border:1px solid #7ea3c2;width:460px;height:auto; position:absolute;background:#fff;left:0px;top:0px;}
+.SQ_tc_title{width:460px;float:left;height:34px;line-height:34px;background:url(http://base3.okimgs.com/images/wd_bj.png) repeat-x 0 -184px;}
+.SQ_tc_title h2{color:#fff;font-size:14px;font-weight:bold;padding:0 0 0 10px;float:left;}
+.SQ_tc_title .close{width:13px;height:13px;background:url(http://base.okimgs.com/images/wd_bj.png) no-repeat 0 -228px;float:right;text-indent:-999px;overflow:hidden;margin:10px 10px 0 0 ;display:inline;cursor:pointer;}
+.SQ_tc_txt{width:400px;padding:30px 30px 20px 30px;*padding:30px 30px 30px 30px;_padding:30px 30px 0 30px;float:left;display:inline;}
+.SQ_tc_txt ul{width:400px;float:left;}   
+.SQ_tc_txt li{width:400px;float:left;line-height:24px;margin:0 0 10px 0;font-family:"宋体";font-size:12px;}
+.SQ_tc_txt li span{width:125px;height:140px;border:1px solid #ddd;padding:1px;float:left;margin:10px 0 0 134px;display:inline;}
+.SQ_tc_txt li strong{width:400px;text-align:center;float:left;font-size:14px;font-weight:bold;font-family:"宋体";margin:10px 0 0 0;}
+.SQ_tc_txt li p{width:400px;text-align:center;float:left;font-size:14px;font-family:"Arial";}
+.SQ_tc_button{float:left;margin:10px 0 0 100px;_margin:10px 0 0 42px;padding:0 0 0 15px;background:url(http://base1.okimgs.com/images/wd_button.png) no-repeat 0 -253px;display:inline-block;height:37px;line-height:35px;}
+.SQ_tc_button a{float:left;height:37px;line-height:35px;text-align:center;font-size:14px;color:#fff;font-family:"微软雅黑";background:url(http://base2.okimgs.com/images/wd_button.png) no-repeat right -305px;display:inline-block;padding:0 15px 0 0;}
+
+/* 最新热卖 */
+.mainHot{width:1128px;float:left;}
+.mainHot li{width:1128px;float:left;margin:0 0 20px 0;}
+.mainHot dl{float:left;width:134px;height:191px;padding:1px;border:1px solid #ddd;background:#fff;margin:0 20px 20px 0;display:inline;}
+.mainHot dt{float:left;width:134px;height:134px;background:#fff;overflow:hidden;}
+.mainHot dd{float:left;width:134px;height:57px;background:#fafafa;font-size:12px;font-family:"宋体";}
+.mainHot dd span{float:left;width:128px;height:26px;line-height:26px;padding:0 0 0 6px;overflow:hidden;}
+.mainHot dd p{float:left;width:128px;height:31px;line-height:31px;background:url(http://base3.okimgs.com/images/brand_three_bg.png) no-repeat;padding:0 0 0 6px;cursor:pointer;}
+.mainHot dd p a font{float:left;font-size:12px;color:#fff;font-family:Verdana;}
+.mainHot dd p a{float:left;font-size:14px;color:#fff;font-family:Arial;}
+   .show1_txt_con{float:left;width:279px;margin:7px 0 0 0;} 
+			.show1_jiage{background:url(http://base.okimgs.com/images/pricetag.png) no-repeat right;height:30px;padding:0 20px 0 0;float:left; display:inline-block;}
+			.show1_jiage em{font-style:normal;height:30px;line-height:30px;font-size:18px;font-family:Arial;color:#fff;background:#fe4242;padding:0 0 0 7px;display:inline-block;}
+			.show1_jiage em font{font-family:Verdana;font-size:14px;padding:0 5px 0 0;}
+			.show1_jiage p{font-size:12px;color:#fff1f1;float:left;margin:0 0 0 7px;line-height:32px;}
+			.show1_jiage span{float:left;color:#fff !important;padding:0px !important;}

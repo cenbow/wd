@@ -1,0 +1,384 @@
+package com.okwei.pay.web;
+
+import java.io.IOException;
+import java.io.UnsupportedEncodingException;
+import java.util.ResourceBundle;
+
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
+
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+import org.jdom.JDOMException;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONObject;
+import com.llpay.client.config.PartnerConfig;
+import com.llpay.client.config.ServerURLConfig;
+import com.llpay.client.conn.HttpRequestSimple;
+import com.llpay.client.utils.LLPayUtil;
+import com.llpay.client.vo.OrderInfo;
+import com.llpay.client.vo.PayDataBean;
+import com.llpay.client.vo.PaymentInfo;
+import com.llpay.client.vo.QueryOrderInfo;
+import com.llpay.client.vo.RetBean;
+import com.okwei.bean.domain.OPayOrder;
+import com.okwei.bean.domain.UBankCard;
+import com.okwei.bean.domain.UWeiSeller;
+import com.okwei.bean.enums.PayTypeEnum;
+import com.okwei.bean.vo.BResultMsg;
+import com.okwei.pay.bean.enums.PayResultStateEnum;
+import com.okwei.pay.bean.vo.BaseSSOController;
+import com.okwei.bean.vo.LoginUser;
+import com.okwei.pay.bean.vo.PayResult;
+import com.okwei.pay.service.IPayOrderService;
+import com.okwei.service.order.IBasicPayService;
+import com.wxpay.WxPaySetting;
+import com.wxpay.WxRequestHandler;
+
+@Controller
+@RequestMapping(value="/llpay")
+public class LLPayController extends BaseSSOController {
+    
+    @Autowired
+    IPayOrderService service;
+    @Autowired 
+    IBasicPayService payService;
+    private Log logger = LogFactory.getLog(this.getClass());
+    String paydomain = ResourceBundle.getBundle("domain").getString("paydomain");
+	
+    @RequestMapping(value = "/payrequest",method ={RequestMethod.POST,RequestMethod.GET})
+    public String PrepositPay(@RequestParam(required = false,defaultValue = "") String orderNo,
+    		@RequestParam(required = false,defaultValue = "0") Long cardID,
+    		HttpServletRequest request,HttpServletResponse response,Model model) throws JDOMException, IOException
+    {  	
+    	LoginUser loginUser = super.getLoginUser();
+        UBankCard bCard = service.getBankCard(cardID);
+        if(bCard ==null || (long)bCard.getWeiId() !=loginUser.getWeiID())
+        {
+        	//跳转到错误页 并提示消息
+        	 return "redirect:"+paydomain+"/pay/error?type=0&msg=银行卡信息错误";
+        }
+    	PayResult payResult = service.verifilyOrder(orderNo, loginUser.getWeiID(),true);
+    	if(payResult.getState() != PayResultStateEnum.Success)
+    	{
+    		//跳转到错误页 并提示消息
+    		 return "redirect:"+paydomain+"/pay/error?type=" + payResult.getType()+"&msg="+new String(payResult.getMessage().getBytes(),"ISO8859-1");
+    	}
+        
+        OrderInfo orderInfo = new OrderInfo();
+        orderInfo.setNo_order(orderNo);
+        orderInfo.setDt_order(LLPayUtil.getCurrentDateTimeStr());
+        orderInfo.setMoney_order(payResult.getMessage());//
+        orderInfo.setName_goods("微店网商品");
+        orderInfo.setInfo_order("用户购买微店网商品");
+    	
+    	 // 构造支付请求对象
+        PaymentInfo paymentInfo = new PaymentInfo();
+        paymentInfo.setVersion(PartnerConfig.VERSION);
+        paymentInfo.setOid_partner(PartnerConfig.OID_PARTNER);        
+        paymentInfo.setSign_type(PartnerConfig.SIGN_TYPE);
+        paymentInfo.setBusi_partner(PartnerConfig.BUSI_PARTNER);
+        paymentInfo.setNo_order(orderInfo.getNo_order());
+        paymentInfo.setDt_order(orderInfo.getDt_order());
+        paymentInfo.setName_goods(orderInfo.getName_goods());
+        paymentInfo.setInfo_order(orderInfo.getInfo_order());
+        paymentInfo.setMoney_order(orderInfo.getMoney_order());
+        paymentInfo.setNotify_url(PartnerConfig.NOTIFY_URL);
+        paymentInfo.setUrl_return(PartnerConfig.URL_RETURN);
+        paymentInfo.setUserreq_ip(LLPayUtil.getIpAddr(request));
+        paymentInfo.setUrl_order("");
+        paymentInfo.setValid_order("10080");// 单位分钟，可以为空，默认7天
+        paymentInfo.setRisk_item(createRiskItem(loginUser.getWeiID()));
+        paymentInfo.setTimestamp(LLPayUtil.getCurrentDateTimeStr());
+/*        if (!LLPayUtil.isnull(request.getParameter("no_agree")))
+        {
+            paymentInfo.setNo_agree(request.getParameter("no_agree"));
+            paymentInfo.setBack_url("http://www.lianlianpay.com/");
+        } else
+        {
+        
+        }*/
+        //如果 no_agree 为空 从系统中获取用户身份信息
+        if(bCard !=null)
+        {
+            paymentInfo.setUser_id(String.valueOf(loginUser.getWeiID()));//  商户系统中用户唯一编号
+            paymentInfo.setId_type("0");// 0 身份证
+            paymentInfo.setId_no(bCard.getIdcard());//身份证号
+            paymentInfo.setAcct_name(bCard.getName());//用户真实姓名
+            paymentInfo.setFlag_modify("1");//
+            paymentInfo.setCard_no(bCard.getBanckCard());//银行卡号
+            paymentInfo.setBack_url(PartnerConfig.Back_url+orderNo);
+        }
+        
+        // 加签名
+        String sign = LLPayUtil.addSign(JSON.parseObject(JSON
+                .toJSONString(paymentInfo)), PartnerConfig.TRADER_PRI_KEY,PartnerConfig.MD5_KEY);
+        paymentInfo.setSign(sign);
+
+        request.setAttribute("version", paymentInfo.getVersion());
+        request.setAttribute("oid_partner", paymentInfo.getOid_partner());
+        request.setAttribute("user_id", paymentInfo.getUser_id());
+        request.setAttribute("sign_type", paymentInfo.getSign_type());
+        request.setAttribute("busi_partner", paymentInfo.getBusi_partner());
+        request.setAttribute("no_order", paymentInfo.getNo_order());
+        request.setAttribute("dt_order", paymentInfo.getDt_order());
+        request.setAttribute("name_goods", paymentInfo.getName_goods());
+        request.setAttribute("info_order", paymentInfo.getInfo_order());
+        request.setAttribute("money_order", paymentInfo.getMoney_order());
+        request.setAttribute("notify_url", paymentInfo.getNotify_url());
+        request.setAttribute("url_return", paymentInfo.getUrl_return());
+        request.setAttribute("userreq_ip", paymentInfo.getUserreq_ip());
+        request.setAttribute("url_order", paymentInfo.getUrl_order());
+        request.setAttribute("valid_order", paymentInfo.getValid_order());
+        request.setAttribute("timestamp", paymentInfo.getTimestamp());
+        request.setAttribute("sign", paymentInfo.getSign());
+        request.setAttribute("risk_item", paymentInfo.getRisk_item());
+        request.setAttribute("no_agree", paymentInfo.getNo_agree());
+        request.setAttribute("id_type", paymentInfo.getId_type());
+        request.setAttribute("id_no", paymentInfo.getId_no());
+        request.setAttribute("acct_name", paymentInfo.getAcct_name());
+        request.setAttribute("flag_modify", paymentInfo.getFlag_modify());
+        request.setAttribute("card_no", paymentInfo.getCard_no());
+        request.setAttribute("back_url", paymentInfo.getBack_url());
+        request.setAttribute("req_url", ServerURLConfig.PAY_URL);
+        
+		return "llpay/gotoPrepositPay";
+    }
+    
+    @ResponseBody
+    @RequestMapping(value = "/LLPayNotify",method ={RequestMethod.POST,RequestMethod.GET})
+    public String LLPayNotify(HttpServletRequest request,HttpServletResponse response) throws IOException
+    {         	
+    	response.setCharacterEncoding("UTF-8");        
+	   String reqStr = LLPayUtil.readReqStr(request);
+       RetBean retBean = new RetBean();
+ 	   PayResult payResult = payedNotify(reqStr);
+ 	   if(payResult.getState() != PayResultStateEnum.TryAgain)
+ 	   {	
+	        retBean.setRet_code("0000");
+	        retBean.setRet_msg("交易成功");
+ 	   }
+ 	   else
+ 	   {
+	        retBean.setRet_code("9999");
+	        retBean.setRet_msg("交易失败");
+ 	   }
+    	
+        return JSON.toJSONString(retBean); 
+    }
+    
+    @RequestMapping(value = "/LLPayPageReturn",method ={RequestMethod.POST,RequestMethod.GET})
+    public String LLPayPageReturn(PayDataBean dataBean) throws UnsupportedEncodingException
+    {
+		 String reqStr = JSON.toJSONString(dataBean);
+	   PayResult payResult = payedNotify(reqStr);
+	   if(payResult.getState() == PayResultStateEnum.Success)
+	   {
+		   //跳转成功页面
+		   return "redirect:"+paydomain+"/pay/success?orderNo="+payResult.getOrderNo();
+	   }
+	   else
+	   {
+		   if("该订单正在处理中...".equals(payResult.getMessage()))
+			   return  "redirect:"+paydomain+"/pay/error?type=10&orderno="+dataBean.getNo_order()+"&msg="+new String(payResult.getMessage().getBytes(),"ISO8859-1");
+		   else
+			   //跳转错误页面
+			   return "redirect:"+paydomain+"/pay/error?type=" + payResult.getType()+"&msg="+new String(payResult.getMessage().getBytes(),"ISO8859-1");
+	   }
+    }
+    
+    /**
+     * 处理连连支付成功通知
+     * @param request
+     * @param response
+     * @return
+     */
+    private PayResult payedNotify(String reqStr) 
+    {    
+    	PayResult payResult = new PayResult();
+    	payResult.setState(PayResultStateEnum.Failure);        
+        if (LLPayUtil.isnull(reqStr))
+        {    
+        	payResult.setMessage("连连支付：通知参数为空");
+            return payResult;      
+        }
+        try
+        {
+        	//验签
+            if (!LLPayUtil.checkSign(reqStr, PartnerConfig.YT_PUB_KEY,PartnerConfig.MD5_KEY))
+            {
+            	payResult.setMessage("连连支付：验签失败");
+                return payResult;  
+            }
+            else
+            {       
+                // 解析异步通知对象
+                PayDataBean payDataBean = JSON.parseObject(reqStr, PayDataBean.class);
+                String orderNo =payDataBean.getNo_order();
+                double payAmout =Double.valueOf(payDataBean.getMoney_order());                
+                // TODO:更新订单，发货等后续处理
+                if(payDataBean.getResult_pay().equals("SUCCESS"))
+                {
+                	return QueryOrder(orderNo);
+					/*payResult = service.OrderPaymentSuccess(orderNo,payAmout,PayTypeEnum.LLPay);
+					if(payResult.getState() ==PayResultStateEnum.Success)
+ 					{	
+					payResult = service.OrderPaymentSuccess(orderNo,payAmout,PayTypeEnum.LLPay);
+					if(payResult.getState() ==PayResultStateEnum.Success)
+					{
+//						payResult = service.orderDataProcessing(orderNo, PayTypeEnum.LLPay);
+
+						//5.0支付-------------------
+						try {
+							OPayOrder order=payService.getOPayOrder(orderNo, true);
+							BResultMsg resultMsg=payService.editOrderDataProcess(order, PayTypeEnum.LLPay);
+							if(resultMsg.getState()==1){
+								payResult.setState(PayResultStateEnum.Success);
+								return payResult;
+							}else {
+								payResult.setState(PayResultStateEnum.Failure);
+								logger.error("连连支付" + orderNo + "|" +resultMsg.getMsg());
+								payResult.setMessage(resultMsg.getMsg());
+							}
+							
+						} catch (Exception e) {
+							// TODO: handle exception
+							logger.error("连连支付" + payResult.getOrderNo() + "|" + e);
+							payResult.setMessage(e.getMessage());
+						}						
+					}
+					logger.error("连连支付" + payResult.getOrderNo() + "|" + payResult.getMessage());*/
+
+					}else {
+						logger.error("连连支付" + payResult.getOrderNo() + "|" + payResult.getMessage());
+					}
+                }           	
+            
+        } 
+        catch (Exception e)
+        {
+
+        }
+    	
+        
+        return payResult;     	
+    }
+    
+	@RequestMapping(value = "/appNotifyWxPay",method ={RequestMethod.POST,RequestMethod.GET})
+    public void appNotifyLLPay(String tiket,String orderNo,Integer notifyType){
+		if(service.checkAppNotify(tiket, orderNo,notifyType,PayTypeEnum.LLPay)){
+			QueryOrder(orderNo);
+		}			
+    }
+    
+    
+    
+    @ResponseBody
+    @RequestMapping(value = "/queryCardBin",method ={RequestMethod.POST,RequestMethod.GET})
+    public String queryCardBin(@RequestParam(required = false,defaultValue = "")String card_no) throws UnsupportedEncodingException
+    {
+        JSONObject reqObj = new JSONObject();
+        reqObj.put("oid_partner", PartnerConfig.OID_PARTNER);
+        reqObj.put("card_no", card_no);
+        reqObj.put("sign_type", PartnerConfig.SIGN_TYPE);
+        String sign = LLPayUtil.addSign(reqObj, PartnerConfig.TRADER_PRI_KEY,
+        		PartnerConfig.MD5_KEY);
+        reqObj.put("sign", sign);
+        String reqJSON = reqObj.toString();
+       // System.out.println("银行卡卡bin信息查询请求报文[" + reqJSON + "]");
+        String resJSON = HttpRequestSimple.getInstance().postSendHttp(
+                ServerURLConfig.QUERY_BANKCARD_URL, reqJSON);
+       // System.out.println("银行卡卡bin信息查询响应报文[" + resJSON + "]");
+        return resJSON;
+    }
+
+    private PayResult QueryOrder(String orderNo)
+    {
+    	PayResult payResult = new PayResult();
+    	payResult.setState(PayResultStateEnum.TryAgain);   
+    	
+    	QueryOrderInfo query = new QueryOrderInfo();
+    	query.setNo_order(orderNo);
+    	query.setOid_partner(PartnerConfig.OID_PARTNER);
+    	query.setSign_type(PartnerConfig.SIGN_TYPE);
+    	String sign = LLPayUtil.addSign(JSON.parseObject(JSON.toJSONString(query)),
+    			PartnerConfig.TRADER_PRI_KEY,PartnerConfig.MD5_KEY);
+    	query.setSign(sign);
+    	String queryjosn =JSON.toJSONString(query);
+    	String result = WxRequestHandler.httpPost(PartnerConfig.QUERYORDER_URL, queryjosn);//发起查询订单
+    	if(result ==null || "".equals(result))
+    	{
+    		return payResult;
+    	}
+    	 if (LLPayUtil.checkSign(result, PartnerConfig.YT_PUB_KEY,
+    			 PartnerConfig.MD5_KEY))
+    	 {
+    		 PayDataBean payDataBean = JSON.parseObject(result, PayDataBean.class);
+             if(payDataBean.getResult_pay().equals("SUCCESS"))
+             {
+            	  	double payAmout =Double.valueOf(payDataBean.getMoney_order()); 
+					payResult = service.OrderPaymentSuccess(orderNo,payAmout,PayTypeEnum.LLPay);
+					if(payResult.getState() ==PayResultStateEnum.Success)
+					{	
+						//5.0支付-------------------
+						
+						try {
+							OPayOrder order=payService.getOPayOrder(orderNo, false);
+							BResultMsg resultMsg=payService.editOrderDataProcess(order, PayTypeEnum.LLPay);
+							if(resultMsg.getState()==1){
+								payResult.setState(PayResultStateEnum.Success);
+								return payResult;
+							}else {
+								payResult.setState(PayResultStateEnum.Failure);
+							}
+							payResult.setMessage(resultMsg.getMsg());
+							payResult.setOrderNo(orderNo); 
+							
+						} catch (Exception e) {
+							// TODO: handle exception
+							logger.error("连连支付" + payResult.getOrderNo() + "|" + payResult.getMessage());
+						}
+						
+						//--------------------------
+					}
+					logger.error("连连支付" + payResult.getOrderNo() + "|" + payResult.getMessage());
+             }
+    	 }else {
+			logger.error("连连支付error:"+result+"。param:"+queryjosn);
+		}
+    	 
+    	return payResult;
+    }
+    
+    
+    /**
+     * 根据连连支付风控部门要求的参数进行构造风控参数
+     * @return
+     */
+    private String createRiskItem(long weiID)
+    {
+        JSONObject riskItemObj = new JSONObject();
+        riskItemObj.put("user_info_mercht_usertype", "1");//用户类型 1 普通 2 vip
+        riskItemObj.put("frms_ware_category", "4999");//默认 无法区分类目
+       UWeiSeller user = service.getWeiSeller(weiID);
+       if(user !=null)
+       {
+           riskItemObj.put("user_info_mercht_userno", String.valueOf(user.getWeiId()));//用户ID 
+           riskItemObj.put("user_info_full_name", user.getWeiName());//用户昵称
+           riskItemObj.put("frms_ware_category", String.valueOf(user.getWeiId()));//用户登陆名
+           riskItemObj.put("user_info_bind_phone", user.getMobilePhone());//绑定手机号
+           riskItemObj.put("user_info_dt_register", LLPayUtil.getDateTimeStr(user.getRegisterTime()));//注册时间
+           riskItemObj.put("user_info_register_ip",user.getIpAddress());//注册IP
+           riskItemObj.put("user_info_mail", user.getEmail());//用户邮箱
+       }
+        return riskItemObj.toString();
+    }
+}

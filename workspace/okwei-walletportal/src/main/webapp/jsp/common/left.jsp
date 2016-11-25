@@ -1,0 +1,32 @@
+<%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8"%>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c"%>
+<%@ page import="java.util.ResourceBundle"%>
+<%
+    String mydomain = ResourceBundle.getBundle("domain").getString("mydomain");
+	String sellerdomain = ResourceBundle.getBundle("domain").getString("sellerdomain");
+	String okweidomain = ResourceBundle.getBundle("domain").getString("okweidomain"); 
+	String setLftedomain  = ResourceBundle.getBundle("domain").getString("setdomain");
+%>
+<div id="leftMenu" class="fl conter_left">
+	<div class="p10">
+		<div name="menu_top">
+			<h2>
+				<img class="ico_5" src="/statics/images/space.gif"><span
+					name="node">钱包管理</span><i></i>
+			</h2>
+			<ul>
+			    <c:if test="${userinfo.pth ==1 || userinfo.pph ==1 }"> 
+					<li name="leaf_node"><a href="/reward/rewardLists">悬赏列表</a></li>
+					<li name="leaf_node"><a href="/platform/platformList">平台服务费</a></li>
+		     	</c:if>
+			    <c:if test="${userinfo.pthldd ==1 }"> 
+					<li name="leaf_node"><a href="/cashCoupon/cashCoupon">我的现金券</a></li>
+				</c:if>
+					<li name="leaf_node"><a href="/walletMgt/index">我的钱包</a></li> 
+					<li name="leaf_node"><a href='/bankCardMgt/bankCard'>银行卡</a></li>
+					<li name="leaf_node"><a href='<%=setLftedomain %>/userInfo/settings?set=paylogin'>修改支付密码</a></li>
+			
+			</ul>
+		</div>
+	</div>
+</div>

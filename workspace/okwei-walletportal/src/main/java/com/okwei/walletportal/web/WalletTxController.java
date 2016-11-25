@@ -1,0 +1,254 @@
+package com.okwei.walletportal.web;
+
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Date;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+import com.okwei.bean.domain.UBatchSupplyer;
+import com.okwei.bean.domain.UYunSupplier;
+import com.okwei.bean.enums.BondType;
+import com.okwei.bean.enums.SupplierStatusEnum;
+import com.okwei.bean.vo.LoginUser;
+import com.okwei.common.JsonUtil;
+import com.okwei.util.DateUtils;
+import com.okwei.walletportal.bean.enums.BaseResultState;
+import com.okwei.walletportal.bean.vo.BaseResultVO;
+import com.okwei.walletportal.bean.vo.BaseSSOController;
+import com.okwei.walletportal.bean.vo.WalletTxVO;
+import com.okwei.walletportal.service.IWalletTxService;
+
+ 
+
+@Controller
+@RequestMapping(value = "/walletMg")
+public class WalletTxController extends BaseSSOController {
+	
+	@Autowired
+	private IWalletTxService Service;
+	
+	@ResponseBody
+    @RequestMapping(value = "/checkWallet",method ={RequestMethod.POST,RequestMethod.GET})
+	public String getParamModel(Model model){
+		LoginUser user = super.getLoginUser();
+		long weiID =user.getWeiID();
+			
+		return JsonUtil.objectToJson(Service.getIsCanUserWallt(weiID));
+	}
+	
+	@ResponseBody
+    @RequestMapping(value = "/getWalletInfo",method ={RequestMethod.POST,RequestMethod.GET})
+	public String getWalletInfo(Model model){
+		LoginUser user = super.getLoginUser();
+		long weiID =user.getWeiID();
+		
+		BaseResultVO resultVO = new BaseResultVO();
+		WalletTxVO txVO = Service.getWalletTxInfo(weiID);
+		if(txVO !=null){
+			resultVO.setState(BaseResultState.Success);
+			resultVO.setObj(txVO);
+		}else{
+			resultVO.setState(BaseResultState.Failure);
+		}
+			
+		return JsonUtil.objectToJson(resultVO);
+	}
+	
+	@ResponseBody
+    @RequestMapping(value = "/getMobileCode",method ={RequestMethod.POST,RequestMethod.GET})
+	public String getMobileCode(Model model){
+		LoginUser user = super.getLoginUser();
+		long weiID =user.getWeiID();
+		BaseResultVO resultVO = Service.getMobileCode(weiID);
+		return JsonUtil.objectToJson(resultVO);
+	}
+	
+	@ResponseBody
+    @RequestMapping(value = "/submitTx",method ={RequestMethod.POST,RequestMethod.GET})
+	public String submitTx(@RequestParam(required = false,defaultValue = "0") Double amount,
+			@RequestParam(required = false,defaultValue = "0") Long cardID,
+			@RequestParam(required = false,defaultValue = "") String checkCode,Model model){
+		LoginUser user = super.getLoginUser();
+		long weiID =user.getWeiID();
+		BaseResultVO resultVO = new BaseResultVO();
+		resultVO.setState(BaseResultState.Failure);
+		resultVO.setMessage("参数错误！");
+		//参数校验
+		//银行卡
+		if(!Service.getIsMyBankCard(weiID, cardID)){
+			return JsonUtil.objectToJson(resultVO);
+		}
+		//金额
+		if(amount==null || amount <=0 || checkCode ==null || "".equals(checkCode)){
+			return JsonUtil.objectToJson(resultVO);
+		}
+			
+		resultVO = Service.saveTxInfo(weiID,amount,checkCode,cardID);
+		return JsonUtil.objectToJson(resultVO);
+	}
+	
+	@ResponseBody
+    @RequestMapping(value = "/checkTuizhu",method ={RequestMethod.POST,RequestMethod.GET})
+	public String checkTuizhu(Model model,Integer type){
+		LoginUser user = super.getLoginUser();
+		BaseResultVO resultVO = new BaseResultVO();
+		resultVO.setState(BaseResultState.Success);
+		resultVO.setMessage("");
+		//工厂号
+		if (Integer.valueOf(BondType.YunSupplier.toString()).equals(type)) {
+			UYunSupplier yun = Service.getById(UYunSupplier.class, user.getWeiID());
+			if (yun != null) {
+				if (Short.valueOf(SupplierStatusEnum.PayIn.toString()).equals(yun.getStatus())) {
+					if (yun.getPayTime() != null) {
+						Calendar c = Calendar.getInstance(); 
+						c.setTime(yun.getPayTime());
+						c.add(Calendar.DATE, 7);
+						int cp = Calendar.getInstance().compareTo(c);
+						if (cp != 1) {
+							resultVO.setState(BaseResultState.Failure);
+							resultVO.setMessage("入驻未满7天，不能申请提取保证金！");
+						}
+					} else {
+						resultVO.setState(BaseResultState.Failure);
+						resultVO.setMessage("进驻时间未知！");
+					}
+					if (yun.getBond() == null || yun.getBond() <= 0) {
+						resultVO.setState(BaseResultState.Failure);
+						resultVO.setMessage("保证金异常！");
+					}
+				} else {
+					resultVO.setState(BaseResultState.Failure);
+					resultVO.setMessage("您已经不是工厂号供应商！");
+				}
+			} else {
+				resultVO.setState(BaseResultState.Failure);
+				resultVO.setMessage("您已经不是工厂号供应商！");
+			}
+		}
+		//批发号
+		else if (Integer.valueOf(BondType.BatchSupplier.toString()).equals(type)) {
+			UBatchSupplyer batch = Service.getById(UBatchSupplyer.class, user.getWeiID());
+			if (batch != null) {
+				if (Short.valueOf(SupplierStatusEnum.PayIn.toString()).equals(batch.getStatus())) {
+					if (batch.getInTime() != null) {
+						Calendar c = Calendar.getInstance(); 
+						c.setTime(batch.getInTime());
+						c.add(Calendar.MONTH, +3);
+						int cp = Calendar.getInstance().compareTo(c);
+						if (cp != 1) {
+							resultVO.setState(BaseResultState.Failure);
+							resultVO.setMessage("入驻未满3个月，不能申请提取保证金！");
+						}
+					} else {
+						resultVO.setState(BaseResultState.Failure);
+						resultVO.setMessage("进驻时间未知！");
+					}
+					if (batch.getBond() == null || batch.getBond() <= 0) {
+						resultVO.setState(BaseResultState.Failure);
+						resultVO.setMessage("保证金异常！");
+					}
+				} else {
+					resultVO.setState(BaseResultState.Failure);
+					resultVO.setMessage("您已经不是批发号供应商！");
+				}
+			} else {
+				resultVO.setState(BaseResultState.Failure);
+				resultVO.setMessage("您已经不是批发号供应商！");
+			}
+		} 
+		else {
+			resultVO.setState(BaseResultState.Failure);
+			resultVO.setMessage("您已经不是供应商！");
+		}
+		return JsonUtil.objectToJson(resultVO);
+	}
+	
+	/**
+	 * 退驻提醒-供应商
+	 * @param model
+	 * @param type
+	 * @return
+	 */
+	@ResponseBody
+    @RequestMapping(value = "/tuizhuWarn",method ={RequestMethod.POST,RequestMethod.GET})
+	public String tuizhuWarn(Model model,Integer type){
+		LoginUser user = super.getLoginUser();
+		BaseResultVO resultVO = new BaseResultVO();
+		resultVO.setState(BaseResultState.Success);
+		Date intime = null;//进驻微店网的时间 批发号或者工厂号
+		StringBuffer sb = new StringBuffer();
+		if (Integer.valueOf(BondType.YunSupplier.toString()).equals(type)) {
+			UYunSupplier yun = Service.getById(UYunSupplier.class, user.getWeiID());
+			intime = yun.getPayTime();
+		} else if (Integer.valueOf(BondType.BatchSupplier.toString()).equals(type)) {
+			UBatchSupplyer batch = Service.getById(UBatchSupplyer.class, user.getWeiID());
+			intime = batch.getInTime();
+		}
+		if (intime != null) {
+			SimpleDateFormat sdf = new SimpleDateFormat("yyyy年MM月dd日");
+			if (intime != null) {
+				sb.append("<p class=\"f14 mt_20\">你在"+sdf.format(intime)+"进驻微店网</p>");
+			}
+			long lsc = Service.getLowerSupplyerCount(user.getWeiID());
+			long sc = Service.getSponsorCount(user.getWeiID());
+			long coc = Service.getCompletedOrderCount(user.getWeiID());
+			if (lsc > 0) {
+				sb.append("<p class=\"f14 mt_10\">发展了"+lsc+"个下游分销商</p>");
+			}
+			if (sc > 0) {
+				sb.append("<p class=\"f14 mt_10\">拥有"+sc+"个上游供应</p>");
+			}
+			if (coc > 0) {
+				sb.append("<p class=\"f14 mt_10\">成交了"+coc+"笔订单</p>");
+			}
+			sb.append("<p class=\"f14 mt_30\">确认要提取保证金并退驻？</p>");
+		} 
+		resultVO.setMessage(sb.toString());
+		return JsonUtil.objectToJson(resultVO);
+	}
+	
+	/**
+	 * 退驻提醒-认证服务点
+	 * @param model
+	 * @param type
+	 * @return
+	 */
+	@ResponseBody
+    @RequestMapping(value = "/tuizhuPortWarn",method ={RequestMethod.POST,RequestMethod.GET})
+	public String tuizhuPortWarn(Model model){
+		LoginUser user = super.getLoginUser();
+		BaseResultVO resultVO = new BaseResultVO();
+		resultVO.setState(BaseResultState.Success);
+		StringBuffer sb = new StringBuffer();
+		UBatchSupplyer batch = Service.getById(UBatchSupplyer.class, user.getWeiID());
+		long count1 = Service.getNotAuditByWeiId(user.getWeiID());
+		long count2 = Service.getAuditedNoPayInByWeiId(user.getWeiID());
+		if (batch != null) {
+			SimpleDateFormat sdf = new SimpleDateFormat("yyyy年MM月dd日");
+			if (batch.getInTime() != null) {
+				sb.append("<p class=\"f14 mt_20\">你在"+sdf.format(batch.getInTime())+"进驻微店网</p>");
+			}
+			if (count1 > 0) {
+				sb.append("<p class=\"f14 mt_20\">有"+count1+"个供应商还未审核</p>");
+			}
+			if (count2 > 0) {
+				sb.append("<p class=\"f14 mt_10\">有"+count2+"个供应商审核通过还未进驻</p>");
+			}
+			sb.append("<p class=\"f14 mt_20\">提取保证金申请提交后，将不能审核或跟进以上供应商，也无法获得他们进驻后的抽佣</p>");
+			sb.append("<p class=\"f14 mt_20\">确定要提取保证金并退驻？</p>");
+		} 
+		//无须弹窗
+		if (batch == null || (count1<=0 && count2<=0)) {
+			resultVO.setState(BaseResultState.Failure);
+		}
+		resultVO.setMessage(sb.toString());
+		return JsonUtil.objectToJson(resultVO);
+	}
+}
