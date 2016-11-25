@@ -1,0 +1,219 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:aop="http://www.springframework.org/schema/aop" xmlns:tx="http://www.springframework.org/schema/tx"
+	xmlns:p="http://www.springframework.org/schema/p"
+	xsi:schemaLocation="http://www.springframework.org/schema/beans 
+		http://www.springframework.org/schema/beans/spring-beans-4.1.xsd
+		http://www.springframework.org/schema/context 
+		http://www.springframework.org/schema/context/spring-context-4.1.xsd
+		http://www.springframework.org/schema/aop 
+		http://www.springframework.org/schema/aop/spring-aop-4.1.xsd
+	    http://www.springframework.org/schema/tx 
+	    http://www.springframework.org/schema/tx/spring-tx-4.1.xsd">
+
+	<context:property-placeholder location="classpath:jdbc.properties" />
+
+	<context:component-scan base-package="com.okwei.*">
+		<context:exclude-filter type="annotation"
+			expression="org.springframework.stereotype.Controller" />
+	</context:component-scan>
+
+	<!-- 采用atomioks来配置数据源 -->
+	<bean id="abstractXADataSource" class="com.atomikos.jdbc.AtomikosDataSourceBean"
+		init-method="init" destroy-method="close" abstract="true">
+		<property name="xaDataSourceClassName"
+			value="com.mysql.jdbc.jdbc2.optional.MysqlXADataSource" />
+		<property name="poolSize" value="10" />
+		<property name="minPoolSize" value="10" />
+		<property name="maxPoolSize" value="30" />
+		<property name="borrowConnectionTimeout" value="60" />
+		<property name="reapTimeout" value="200" />
+		<property name="maxIdleTime" value="60" />
+		<property name="maintenanceInterval" value="60" />
+		<property name="loginTimeout" value="60" />
+		<property name="logWriter" value="60" />
+		<property name="testQuery">
+			<value>select 1</value>
+		</property>
+	</bean>
+
+	<bean id="userMasterDataSource" parent="abstractXADataSource">
+		<property name="uniqueResourceName" value="userMasterDataSource" />
+		<property name="xaProperties">
+			<props>
+				<prop key="url">${usermasterjdbc.url}</prop>
+				<prop key="user">${usermasterjdbc.username}</prop>
+				<prop key="password">${usermasterjdbc.password}</prop>
+			</props>
+		</property>
+	</bean>
+	<bean id="userSlaveDataSource" parent="abstractXADataSource">
+		<property name="uniqueResourceName" value="userSlaveDataSource" />
+		<property name="xaProperties">
+			<props>
+				<prop key="url">${userslavejdbc.url}</prop>
+				<prop key="user">${userslavejdbc.username}</prop>
+				<prop key="password">${userslavejdbc.password}</prop>
+			</props>
+		</property>
+	</bean>
+	<bean id="productMasterDataSource" parent="abstractXADataSource">
+		<property name="uniqueResourceName" value="productMasterDataSource" />
+		<property name="xaProperties">
+			<props>
+				<prop key="url">${productmastejdbc.url}</prop>
+				<prop key="user">${productmastejdbc.username}</prop>
+				<prop key="password">${productmastejdbc.password}</prop>
+			</props>
+		</property>
+	</bean>
+	<bean id="productSlaveDataSource" parent="abstractXADataSource">
+		<property name="uniqueResourceName" value="productSlaveDataSource" />
+		<property name="xaProperties">
+			<props>
+				<prop key="url">${productslave.url}</prop>
+				<prop key="user">${productslave.username}</prop>
+				<prop key="password">${productslave.password}</prop>
+			</props>
+		</property>
+	</bean>
+	<bean id="orderMasterDataSource" parent="abstractXADataSource">
+		<property name="uniqueResourceName" value="orderMasterDataSource" />
+		<property name="xaProperties">
+			<props>
+				<prop key="url">${ordermasterjdbc.url}</prop>
+				<prop key="user">${ordermasterjdbc.username}</prop>
+				<prop key="password">${ordermasterjdbc.password}</prop>
+			</props>
+		</property>
+	</bean>
+	<bean id="orderSlaveDataSource" parent="abstractXADataSource">
+		<property name="uniqueResourceName" value="orderSlaveDataSource" />
+		<property name="xaProperties">
+			<props>
+				<prop key="url">${orderslavejdbc.url}</prop>
+				<prop key="user">${orderslavejdbc.username}</prop>
+				<prop key="password">${orderslavejdbc.password}</prop>
+			</props>
+		</property>
+	</bean>
+
+	<!-- 动态数据源 -->
+	<!-- <bean id="dataSource" class="com.okwei.datasource.DynamicDataSource">
+		<property name="targetDataSources">
+			<map key-type="java.lang.String">
+				<entry value-ref="userMasterDataSource" key="userMasterDataSource" />
+				<entry value-ref="userSlaveDataSource" key="userSlaveDataSource" />
+				<entry value-ref="productMasterDataSource" key="productMasterDataSource" />
+				<entry value-ref="productSlaveDataSource" key="productSlaveDataSource" />
+				<entry value-ref="orderMasterDataSource" key="orderMasterDataSource" />
+				<entry value-ref="productSlaveDataSource" key="productSlaveDataSource" />
+			</map>
+		</property>
+		<property name="defaultTargetDataSource" ref="userMasterDataSource" />
+	</bean> -->
+
+	<bean id="sessionFactory_user"
+		class="org.springframework.orm.hibernate4.LocalSessionFactoryBean"
+		p:dataSource-ref="userMasterDataSource">
+		<property name="packagesToScan" value="com.okwei.bean.domain" />
+		<property name="hibernateProperties">
+			<props>
+				<prop key="hibernate.dialect">${hibernate.dialect}</prop>
+				<prop key="hibernate.show_sql">${hibernate.show_sql}</prop>
+				<prop key="hibernate.format_sql">${hibernate.format_sql}</prop>
+				<prop key="hibernate.hbm2ddl.auto">${hibernate.hbm2ddl.auto}</prop>
+				<prop key="hibernate.autoReconnect">${hibernate.autoReconnect}</prop>
+				<prop key="hibernate.cache.use_second_level_cache">${hibernate.cache.use_second_level_cache}</prop>
+				<prop key="hibernate.cache.use_query_cache">${hibernate.cache.use_query_cache}</prop>
+				<prop key="hibernate.cache.region.factory_class">${hibernate.cache.region.factory_class}</prop>
+			</props>
+		</property>
+	</bean>
+	
+	<bean id="sessionFactory_product"
+		class="org.springframework.orm.hibernate4.LocalSessionFactoryBean"
+		p:dataSource-ref="productMasterDataSource">
+		<property name="packagesToScan" value="com.okwei.bean.domain" />
+		<property name="hibernateProperties">
+			<props>
+				<prop key="hibernate.dialect">${hibernate.dialect}</prop>
+				<prop key="hibernate.show_sql">${hibernate.show_sql}</prop>
+				<prop key="hibernate.format_sql">${hibernate.format_sql}</prop>
+				<prop key="hibernate.hbm2ddl.auto">${hibernate.hbm2ddl.auto}</prop>
+				<prop key="hibernate.autoReconnect">${hibernate.autoReconnect}</prop>
+				<prop key="hibernate.cache.use_second_level_cache">${hibernate.cache.use_second_level_cache}</prop>
+				<prop key="hibernate.cache.use_query_cache">${hibernate.cache.use_query_cache}</prop>
+				<prop key="hibernate.cache.region.factory_class">${hibernate.cache.region.factory_class}</prop>
+			</props>
+		</property>
+	</bean>
+	
+	<bean id="sessionFactory_order"
+		class="org.springframework.orm.hibernate4.LocalSessionFactoryBean"
+		p:dataSource-ref="orderMasterDataSource">
+		<property name="packagesToScan" value="com.okwei.bean.domain" />
+		<property name="hibernateProperties">
+			<props>
+				<prop key="hibernate.dialect">${hibernate.dialect}</prop>
+				<prop key="hibernate.show_sql">${hibernate.show_sql}</prop>
+				<prop key="hibernate.format_sql">${hibernate.format_sql}</prop>
+				<prop key="hibernate.hbm2ddl.auto">${hibernate.hbm2ddl.auto}</prop>
+				<prop key="hibernate.autoReconnect">${hibernate.autoReconnect}</prop>
+				<prop key="hibernate.cache.use_second_level_cache">${hibernate.cache.use_second_level_cache}</prop>
+				<prop key="hibernate.cache.use_query_cache">${hibernate.cache.use_query_cache}</prop>
+				<prop key="hibernate.cache.region.factory_class">${hibernate.cache.region.factory_class}</prop>
+			</props>
+		</property>
+	</bean>
+	
+
+	<bean id="hibernateTemplate" class="org.springframework.orm.hibernate4.HibernateTemplate"
+		p:sessionFactory-ref="sessionFactory_user" />
+		
+	<bean id="hibernateTemplate_product" class="org.springframework.orm.hibernate4.HibernateTemplate"
+		p:sessionFactory-ref="sessionFactory_product" />	
+
+	<bean id="hibernateTemplate_order" class="org.springframework.orm.hibernate4.HibernateTemplate"
+		p:sessionFactory-ref="sessionFactory_order" />
+
+	<!-- 配置数据库注解aop -->
+	<!-- <aop:aspectj-autoproxy />
+	<aop:config>
+		<aop:aspect id="c" ref="dataSourceAspect">
+			<aop:pointcut id="tx"
+				expression="execution(* com.okwei.dao.impl.distributeTran.*.*(..))" />
+			<aop:before pointcut-ref="tx" method="before" />
+		</aop:aspect>
+	</aop:config> -->
+	<!-- 配置数据库注解aop -->
+
+	<!-- atomikos事务管理器 -->
+	<bean id="atomikosTransactionManager" class="com.atomikos.icatch.jta.UserTransactionManager"
+		init-method="init" destroy-method="close">
+		<description>UserTransactionManager</description>
+		<property name="forceShutdown">
+			<value>true</value>
+		</property>
+	</bean>
+	<bean id="atomikosUserTransaction" class="com.atomikos.icatch.jta.UserTransactionImp">
+		<property name="transactionTimeout" value="300" />
+	</bean>
+
+	<!-- spring 事务管理器 -->
+	<bean id="transactionManager"
+		class="org.springframework.transaction.jta.JtaTransactionManager">
+		<property name="transactionManager" ref="atomikosTransactionManager" />
+		<property name="userTransaction" ref="atomikosUserTransaction" />
+		<property name="allowCustomIsolationLevels" value="true" />
+	</bean>
+
+	<tx:annotation-driven transaction-manager="transactionManager" />
+
+	<!-- 基于EHCache的系统缓存管理器 -->
+	<!-- <bean id="cacheManager" class="org.springframework.cache.ehcache.EhCacheManagerFactoryBean" 
+		p:configLocation="classpath:ehcache.xml"/> -->
+
+</beans>
+  

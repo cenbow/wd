@@ -1,0 +1,27 @@
+package com.okwei.service.agent;
+
+import java.util.List;
+
+import com.okwei.bean.domain.DBrandAgentInfo;
+import com.okwei.bean.vo.AgentProductVO;
+import com.okwei.bean.vo.AgentVO;
+
+
+public interface IAgentBrandService {
+
+	//获取数据 0独立分销号 1联合分销号
+	public List<AgentVO> getAgentList(int type);
+	
+	
+	public List<AgentProductVO> getTopAgentList();
+
+
+	/**create by zlp at 2016/10/11
+	 * 查询代理的制度说明
+	 * @param brandId
+	 * @return
+	 */
+	DBrandAgentInfo getDBrandAgentInfo(Integer brandId);
+	
+	
+}

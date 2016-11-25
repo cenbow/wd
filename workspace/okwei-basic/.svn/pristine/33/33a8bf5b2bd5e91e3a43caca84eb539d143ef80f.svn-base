@@ -1,0 +1,91 @@
+package com.okwei.service.impl.agent;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.okwei.bean.domain.DBrandSupplier;
+import com.okwei.bean.domain.DBrands;
+import com.okwei.bean.domain.PBrandShevle;
+import com.okwei.bean.domain.PProducts;
+import com.okwei.bean.enums.ProductStatusEnum;
+import com.okwei.bean.enums.UserIdentityType;
+import com.okwei.common.Limit;
+import com.okwei.common.PageResult;
+import com.okwei.dao.impl.BaseDAO;
+import com.okwei.dao.product.IBaseProductDao;
+import com.okwei.service.agent.IDAgentService;
+import com.okwei.util.BitOperation;
+
+@Service
+@Transactional(propagation = Propagation.REQUIRED, rollbackFor = { Exception.class })
+public class AgentServiceImpl extends BaseDAO implements IDAgentService{
+	@Autowired
+	private IBaseProductDao productDao;
+	
+	
+	public PageResult<PProducts> find_Productlist(Long weiid,Integer classID,Integer sysClassID, int pageIndex,int pageSize){
+		DBrandSupplier supplier=super.get(DBrandSupplier.class, weiid);
+		Limit limit=Limit.buildLimit(pageIndex, pageSize);
+		if(supplier!=null){
+			StringBuilder sb=new StringBuilder();
+			sb.append(" from PBrandShevle a where a.brandId=:brandid ");
+			Map<String, Object> map=new HashMap<String, Object>();
+			map.put("brandid", supplier.getBrandId());
+			if(classID!=null){
+				sb.append(" and a.classId=:classid ");
+				map.put("classid", classID);
+			}
+			if(sysClassID!=null){
+				sb.append(" and a.systemClassID=:systemClassID ");
+				map.put("systemClassID", sysClassID);
+			}
+			sb.append(" order by a.bid desc ");
+		    PageResult<PBrandShevle> result=super.findPageResultByMap(sb.toString(), limit, map);
+		    if(result!=null&&result.getList()!=null&&result.getList().size()>0){
+		    	List<Long> proidsList=new ArrayList<Long>();
+		    	for (PBrandShevle p : result.getList()) {
+					proidsList.add(p.getProductId());
+				}
+		    	List<PProducts> prolist=productDao.findProductlistByIds(proidsList, Short.parseShort(ProductStatusEnum.Showing.toString()));
+		    	return new PageResult<PProducts>(result.getTotalCount(), limit, prolist);
+		    }
+		    return new PageResult<PProducts>(result.getTotalCount(),limit,null);
+		}
+		return new PageResult<PProducts>(0,limit,null);
+	}
+	
+	public int verBrandSupplier(Long weiid){
+		DBrandSupplier supplier=super.get(DBrandSupplier.class, weiid);
+		if(supplier!=null){
+			return supplier.getType()==null?0:supplier.getType();
+		}
+		return -1;
+	}
+	
+	public DBrands getBrands(Long weiid){
+		DBrandSupplier supplier=super.get(DBrandSupplier.class, weiid);
+		if(supplier!=null){
+			return super.get(DBrands.class, supplier.getBrandId());
+		}
+		return null;
+	}
+	
+	public boolean canShelve(int useridentity){
+		if(BitOperation.isIdentity(useridentity, UserIdentityType.AgentBrandAgent)
+				||BitOperation.isIdentity(useridentity, UserIdentityType.AgentBrandSupplier)
+				||BitOperation.isIdentity(useridentity, UserIdentityType.AgentCaptain)
+				||BitOperation.isIdentity(useridentity, UserIdentityType.AgentDuke)
+				||BitOperation.isIdentity(useridentity, UserIdentityType.AgentDeputyDuke)){
+			return false;
+		}
+		return true;
+	}
+	
+}

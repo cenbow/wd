@@ -1,0 +1,300 @@
+package com.okwei.bean.domain;
+
+import static javax.persistence.GenerationType.IDENTITY;
+
+import java.util.Date;
+
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.Id;
+import javax.persistence.Table;
+
+/**
+ * TShoppingCar entity. @author MyEclipse Persistence Tools
+ */
+@Entity
+@Table(name = "T_ShoppingCar")
+public class TShoppingCar extends BaseEntity {
+
+	// Fields
+
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+	private Long scid;
+	private Long weiId;
+	private Long sellerWeiId;
+
+	@Column(name = "SellerWeiID")
+	public Long getSellerWeiId() {
+		return sellerWeiId;
+	}
+
+	public void setSellerWeiId(Long sellerWeiId) {
+		this.sellerWeiId = sellerWeiId;
+	}
+
+	private Long supplierWeiId;
+	private Long proNum;
+	private Integer count;
+	private Double price;
+	private String image;
+	private Long styleId;
+	private String proTitle;
+	private String property1;
+	private String property2;
+	private String property3;
+	private String property4;
+	private String property5;
+	private Integer classId;
+	private Short status;
+	private Short buyType;
+	private Date createTime;
+	private String remark1;
+	private String remark2;
+	private Long shopWeiID;
+	private Short source;
+	private Long makerWeiID;
+	private Long sharerWeiID;
+	private Long shareID;
+	
+	@Column(name="ShareID")
+	public Long getShareID() {
+		return shareID;
+	}
+
+
+	public void setShareID(Long shareID) {
+		this.shareID = shareID;
+	}
+	
+	@Column(name="ShopWeiID")
+	public Long getShopWeiID() {
+		return shopWeiID;
+	}
+
+
+	public void setShopWeiID(Long shopWeiID) {
+		this.shopWeiID = shopWeiID;
+	}
+
+	// Constructors
+
+	/** default constructor */
+	public TShoppingCar() {
+	}
+
+	@Id
+	@GeneratedValue(strategy = IDENTITY)
+	@Column(name = "SCID")
+	public Long getScid() {
+		return scid;
+	}
+
+	public void setScid(Long scid) {
+		this.scid = scid;
+	}
+
+	@Column(name = "WeiID")
+	public Long getWeiId() {
+		return weiId;
+	}
+
+	public void setWeiId(Long weiId) {
+		this.weiId = weiId;
+	}
+
+	@Column(name = "ProNum")
+	public Long getProNum() {
+		return this.proNum;
+	}
+
+	public void setProNum(Long proNum) {
+		this.proNum = proNum;
+	}
+
+	@Column(name = "Count")
+	public Integer getCount() {
+		return this.count;
+	}
+
+	public void setCount(Integer count) {
+		this.count = count;
+	}
+
+	@Column(name = "Price", precision = 18)
+	public Double getPrice() {
+		return this.price;
+	}
+
+	public void setPrice(Double price) {
+		this.price = price;
+	}
+
+	@Column(name = "Image", length = 50)
+	public String getImage() {
+		return this.image;
+	}
+
+	public void setImage(String image) {
+		this.image = image;
+	}
+
+	@Column(name = "ProTitle", length = 200)
+	public String getProTitle() {
+		return this.proTitle;
+	}
+
+	public void setProTitle(String proTitle) {
+		this.proTitle = proTitle;
+	}
+
+	@Column(name = "Property1", length = 50)
+	public String getProperty1() {
+		return this.property1;
+	}
+
+	public void setProperty1(String property1) {
+		this.property1 = property1;
+	}
+
+	@Column(name = "Property2", length = 50)
+	public String getProperty2() {
+		return this.property2;
+	}
+
+	public void setProperty2(String property2) {
+		this.property2 = property2;
+	}
+
+	@Column(name = "Property3", length = 50)
+	public String getProperty3() {
+		return this.property3;
+	}
+
+	public void setProperty3(String property3) {
+		this.property3 = property3;
+	}
+
+	@Column(name = "Property4", length = 50)
+	public String getProperty4() {
+		return this.property4;
+	}
+
+	public void setProperty4(String property4) {
+		this.property4 = property4;
+	}
+
+	@Column(name = "Property5", length = 50)
+	public String getProperty5() {
+		return this.property5;
+	}
+
+	public void setProperty5(String property5) {
+		this.property5 = property5;
+	}
+
+	@Column(name = "ClassID")
+	public Integer getClassId() {
+		return this.classId;
+	}
+
+	public void setClassId(Integer classId) {
+		this.classId = classId;
+	}
+
+	@Column(name = "Status")
+	public Short getStatus() {
+		return this.status;
+	}
+
+	public void setStatus(Short status) {
+		this.status = status;
+	}
+
+	@Column(name = "CreateTime", length = 50)
+	public Date getCreateTime() {
+		return this.createTime;
+	}
+
+	public void setCreateTime(Date createTime) {
+		this.createTime = createTime;
+	}
+
+	@Column(name = "Remark1", length = 50)
+	public String getRemark1() {
+		return this.remark1;
+	}
+
+	public void setRemark1(String remark1) {
+		this.remark1 = remark1;
+	}
+
+	@Column(name = "Remark2", length = 50)
+	public String getRemark2() {
+		return this.remark2;
+	}
+
+	public void setRemark2(String remark2) {
+		this.remark2 = remark2;
+	}
+
+	@Column(name = "SupplierWeiID")
+	public Long getSupplierWeiId() {
+		return supplierWeiId;
+	}
+
+	public void setSupplierWeiId(Long supplierWeiId) {
+		this.supplierWeiId = supplierWeiId;
+	}
+
+	@Column(name = "BuyType")
+	public Short getBuyType() {
+		return buyType;
+	}
+
+	public void setBuyType(Short buyType) {
+		this.buyType = buyType;
+	}
+
+	@Column(name = "StyleID")
+	public Long getStyleId() {
+		return styleId;
+	}
+
+	public void setStyleId(Long styleId) {
+		this.styleId = styleId;
+	}
+	
+	@Column(name = "Source")
+	public Short getSource() {
+		return this.source;
+	}
+
+	public void setSource(Short source) {
+		this.source = source;
+	}
+
+	@Column(name = "MakerWeiID")
+	public Long getMakerWeiID() {
+		return makerWeiID;
+	}
+
+	public void setMakerWeiID(Long makerWeiID) {
+		this.makerWeiID = makerWeiID;
+	}
+
+	@Column(name = "SharerWeiID")
+	public Long getSharerWeiID() {
+		return sharerWeiID;
+	}
+
+	public void setSharerWeiID(Long sharerWeiID) {
+		this.sharerWeiID = sharerWeiID;
+	} 
+	
+	
+
+}

@@ -1,0 +1,163 @@
+package com.okwei.service.shop;
+
+import java.util.List;
+
+import com.okwei.bean.domain.ADeals;
+import com.okwei.bean.domain.ADealsProducts;
+import com.okwei.bean.domain.AHomeMain;
+import com.okwei.bean.domain.AHomeProducts;
+import com.okwei.bean.vo.ADealsVO;
+import com.okwei.bean.vo.HomeMainVO;
+import com.okwei.bean.vo.ReturnModel;
+import com.okwei.bean.vo.activity.SaleActivityProductModel;
+import com.okwei.bean.vo.product.ProductInfo;
+import com.okwei.bean.vo.product.ProductModel;
+import com.okwei.common.Limit;
+import com.okwei.common.PageResult;
+import com.okwei.service.IBaseService;
+
+public interface IDealsService extends IBaseService {
+
+    /**
+     * 添加特卖
+     * 
+     * @param model
+     * @param list
+     * @param operator
+     * @return
+     */
+    public ReturnModel addDeals(ADeals model, List<ADealsProducts> list, String operator);
+
+    /**
+     * 获取实体
+     * 
+     * @param dealsid
+     * @return
+     */
+    public ADealsVO getADeals(int dealsid);
+
+    /**
+     * 获取今日特卖
+     * 
+     * @param dealsid
+     * @return
+     */
+    public ADeals getADeals();
+
+    /**
+     * 获取特卖的产品
+     * 
+     * @param dealsid
+     * @return
+     */
+    public List<ProductInfo> getDealsProducts(int dealsid);
+
+    /**
+     * 获取特卖的产品APP
+     * 
+     * @param dealsid
+     * @return
+     */
+    public PageResult<SaleActivityProductModel> getDealsProducts(int dealsid, Limit limit);
+
+    /**
+     * 获取每日特卖列表
+     * 
+     * @param title
+     * @param state
+     * @return
+     */
+    public PageResult<ADealsVO> getADeals(String title, short state, Limit limit);
+
+    /**
+     * 开启关闭每日特卖
+     * 
+     * @param dealsid
+     * @param state
+     * @return
+     */
+    public ReturnModel upOpenCancel(int dealsid, short state);
+
+    /**
+     * 设置每日特卖的产品排序
+     * 
+     * @param id
+     * @param sort
+     * @return
+     */
+    public ReturnModel upSetSort(int id, int sort);
+
+    /**
+     * 删除特卖的产品
+     * 
+     * @param id
+     * @return
+     */
+    public ReturnModel updeldealspro(int id);
+
+    /**
+     * 添加首页木块推荐pc
+     * 
+     * @param entity
+     * @param list
+     * @return
+     */
+    public ReturnModel addhomepc(AHomeMain entity, List<AHomeProducts> list);
+
+    /**
+     * 获取首页控制模板pc
+     * 
+     * @param homeId
+     * @param cid
+     * @return
+     */
+    public HomeMainVO getAHomeMain(int homeId,int cid);
+
+    /**
+     * 获取pc首页控制模板产品
+     * 
+     * @param homeId
+     * @return
+     */
+    public List<ProductInfo> getAHomeMainProducts(int homeId);
+
+    /**
+     * 获取pc控制模板
+     * 
+     * @param classId
+     * @param position
+     * @param state
+     * @param limit
+     * @return
+     */
+    public PageResult<HomeMainVO> getAHomeMain(int classId, int position, short state, Limit limit);
+
+    /**
+     * 修改pc控制模块
+     * 
+     * @param homeId
+     * @param state
+     * @return
+     */
+    public ReturnModel upOpenHome(int homeId, short state);
+
+    /**
+     * 获取二级页面的产品
+     * 
+     * @param homeId
+     * @return
+     */
+    public PageResult<ProductModel> getAHomeMainProducts(int homeId,Limit limit);
+
+    
+    public PageResult<ProductModel> getAHomeMainProducts(int homeId, int cid, Limit limit);
+    /**
+     * 获取专区爆款
+     * 
+     * @param homeId
+     * @param count
+     *            产品数量
+     * @return
+     */
+    public List<ProductModel> getHotMainProducts(int homeId);
+}

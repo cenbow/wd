@@ -1,0 +1,215 @@
+package com.okwei.bean.vo;
+
+import java.util.Date;
+
+
+public class SantoMgtVO {
+	private Integer brandId;//品牌号
+	private Long weiId;//微店号
+	private String logo;//logo图
+	private String companyName;//公司名称
+	private String headName;//负责人
+	private String brandName;//品牌名称
+	private String createTimes;//展示的入驻时间
+	private Date createTime;//数据库的入驻时间
+	private String phoneNumber;//手机号码
+	private String landLine;//公司电话
+	private String industry;//所属行业
+	private Integer province;//省
+	private Integer city;//市
+	private Integer district;//区
+	private String addressDetail;//详细地址
+	private String main;//主营
+	private Double securityDeposit;//保证金
+	private Double costs;//入场费
+	private Integer payedType;//支付方式
+	private String companyProfile;//公司简介
+	private String characteristics;//品牌特色
+	private String conditions;//招商条件
+	private Double agency;//代理费用
+	private String img;//合同附件图
+	
+	/**
+	 * @return the brandId
+	 */
+	public Integer getBrandId() {
+		return brandId;
+	}
+	
+	/**
+	 * @return the landLine
+	 */
+	public String getLandLine() {
+		return landLine;
+	}
+
+	/**
+	 * @param landLine the landLine to set
+	 */
+	public void setLandLine(String landLine) {
+		this.landLine = landLine;
+	}
+
+	/**
+	 * @param brandId the brandId to set
+	 */
+	public void setBrandId(Integer brandId) {
+		this.brandId = brandId;
+	}
+	public Long getWeiId() {
+		return weiId;
+	}
+	public void setWeiId(Long weiId) {
+		this.weiId = weiId;
+	}
+	public String getLogo() {
+		return logo;
+	}
+	public void setLogo(String logo) {
+		this.logo = logo;
+	}
+	public String getHeadName() {
+		return headName;
+	}
+	public void setHeadName(String headName) {
+		this.headName = headName;
+	}
+	public String getBrandName() {
+		return brandName;
+	}
+	public void setBrandName(String brandName) {
+		this.brandName = brandName;
+	}
+	
+	/**
+	 * @return the createTimes
+	 */
+	public String getCreateTimes() {
+		return createTimes;
+	}
+	/**
+	 * @param createTimes the createTimes to set
+	 */
+	public void setCreateTimes(String createTimes) {
+		this.createTimes = createTimes;
+	}
+	
+	/**
+	 * @return the createTime
+	 */
+	public Date getCreateTime() {
+		return createTime;
+	}
+	/**
+	 * @param createTime the createTime to set
+	 */
+	public void setCreateTime(Date createTime) {
+		this.createTime = createTime;
+	}
+	public String getPhoneNumber() {
+		return phoneNumber;
+	}
+	public void setPhoneNumber(String phoneNumber) {
+		this.phoneNumber = phoneNumber;
+	}
+	public String getIndustry() {
+		return industry;
+	}
+	public void setIndustry(String industry) {
+		this.industry = industry;
+	}
+	public Integer getProvince() {
+		return province;
+	}
+	public void setProvince(Integer province) {
+		this.province = province;
+	}
+	public Integer getCity() {
+		return city;
+	}
+	public void setCity(Integer city) {
+		this.city = city;
+	}
+	public Integer getDistrict() {
+		return district;
+	}
+	public void setDistrict(Integer district) {
+		this.district = district;
+	}
+	public String getAddressDetail() {
+		return addressDetail;
+	}
+	public void setAddressDetail(String addressDetail) {
+		this.addressDetail = addressDetail;
+	}
+	public String getMain() {
+		return main;
+	}
+	public void setMain(String main) {
+		this.main = main;
+	}
+	public Double getSecurityDeposit() {
+		return securityDeposit;
+	}
+	public void setSecurityDeposit(Double securityDeposit) {
+		this.securityDeposit = securityDeposit;
+	}
+	public Double getCosts() {
+		return costs;
+	}
+	public void setCosts(Double costs) {
+		this.costs = costs;
+	}
+	public Integer getPayedType() {
+		return payedType;
+	}
+	public void setPayedType(Integer payedType) {
+		this.payedType = payedType;
+	}
+	public String getCompanyProfile() {
+		return companyProfile;
+	}
+	public void setCompanyProfile(String companyProfile) {
+		this.companyProfile = companyProfile;
+	}
+	public String getCharacteristics() {
+		return characteristics;
+	}
+	public void setCharacteristics(String characteristics) {
+		this.characteristics = characteristics;
+	}
+	public String getConditions() {
+		return conditions;
+	}
+	public void setConditions(String conditions) {
+		this.conditions = conditions;
+	}
+	public Double getAgency() {
+		return agency;
+	}
+	public void setAgency(Double agency) {
+		this.agency = agency;
+	}
+	public String getImg() {
+		return img;
+	}
+	public void setImg(String img) {
+		this.img = img;
+	}
+
+	/**
+	 * @return the companyName
+	 */
+	public String getCompanyName() {
+		return companyName;
+	}
+
+	/**
+	 * @param companyName the companyName to set
+	 */
+	public void setCompanyName(String companyName) {
+		this.companyName = companyName;
+	}
+	
+	
+}

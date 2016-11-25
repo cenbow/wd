@@ -1,0 +1,95 @@
+package com.okwei.bean.vo.order;
+
+import com.okwei.bean.enums.OrderStatusEnum;
+import com.okwei.bean.enums.OrderTypeEnum;
+
+
+
+public class BOrderTypePower {
+	/**
+	 *  订单状态
+	 */
+    public OrderStatusEnum status = OrderStatusEnum.Payed;
+
+    /**
+     * 是否分配货款
+     */
+    public boolean isAllocateHuoKuan = false;
+
+    /**
+     *  是否扣除抽成
+     */
+    public boolean isDeductCut = false;
+
+    /**
+     * 是否扣除佣金
+     */
+    public boolean isDeductComminss = false;
+
+    /**
+     * 是否分配抽成
+     */
+    public boolean isAllocateCut = false;
+    
+    /**
+     * 是否分配佣金
+     */
+    public boolean isAllocateComminss = false;
+    
+    public BOrderTypePower(OrderTypeEnum orderType, OrderStatusEnum orderState)
+    {
+    	 switch (orderType)
+         {
+             case Pt://微店零售 分配货款 分配佣金
+             case RetailPTH://平台号、品牌号 零售
+                 isAllocateHuoKuan = true;
+                 isDeductComminss = true;
+                 isAllocateComminss = true;
+                 break;
+             case HalfTaste://半价试用
+            	 isAllocateHuoKuan =true;
+            	 break;
+             case BatchOrder://批发号批发订单 分配货款 扣除抽成 分抽成
+            	 isAllocateHuoKuan = true;
+                 isDeductComminss = true;
+                 isAllocateComminss = true;
+                 isDeductCut = true;
+                 isAllocateCut = true;
+                 break;
+             case BatchWholesale://批发号预定全额订单 分配货款 扣抽成 分抽成
+                 isAllocateHuoKuan = true;
+                 isDeductCut = true;
+                 isAllocateCut = true;
+                 break;
+             case BookFullOrder://批发号预定全额订单 分配货款 扣抽成 分抽成
+                 isAllocateHuoKuan = true;
+                 isDeductCut = true;
+                 isAllocateCut = true;
+                 break;
+             case BookHeadOrder://批发号预定订单首款  分配抽成
+                 isAllocateCut = true;
+                 status = OrderStatusEnum.PayedDeposit;
+                 break;
+             case BookTailOrder://批发号预定订单尾款 分配货款 扣除抽成
+                 isAllocateHuoKuan = true;
+                 isDeductCut = true;
+                 if(orderState==OrderStatusEnum.Accepted)
+                	 status=OrderStatusEnum.Completed;
+                 break;
+             case Jinhuo://进货单
+             case PuhuoFull://铺货单全款支付
+            	 isAllocateHuoKuan = true;
+            	 break;
+             case PuhuoHeader:
+            	 status = OrderStatusEnum.PayedDeposit;
+            	 break;
+             case PuhuoTail:
+            	 isAllocateHuoKuan = true;
+            	 if(orderState==OrderStatusEnum.Accepted)
+                	 status=OrderStatusEnum.Completed;
+            	 break;
+             default: break;
+         }
+    }
+    
+}

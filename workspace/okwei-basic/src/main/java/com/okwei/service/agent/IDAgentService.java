@@ -1,0 +1,143 @@
+package com.okwei.service.agent;
+
+import java.util.List;
+
+import com.okwei.bean.domain.DAgentInfo;
+import com.okwei.bean.domain.DBrandSupplier;
+import com.okwei.bean.domain.DBrands;
+import com.okwei.bean.domain.PProducts;
+import com.okwei.bean.vo.agent.BrandAgentInfo;
+import com.okwei.bean.vo.product.ProductModel;
+import com.okwei.common.PageResult;
+
+public interface IDAgentService {
+
+	/**
+	 * 获取品牌商产品列表（个人品牌商、联合品牌商）
+	 * zy
+	 * @param weiid 商家微店号（个人品牌商weiid，联合品牌子供应商weiid,联合品牌管理员）
+	 * @param classID
+	 * @param pageIndex
+	 * @param pageSize
+	 * @return
+	 */
+	 PageResult<PProducts> find_Productlist(Long weiid,Integer classID,Integer sysClassID,int pageIndex,int pageSize);
+	 /**
+	  * 验证用户是否是 品牌号供应商
+	  * @param weiid
+	  * @return (-1:普通用户(原来的店铺信息，跟代理区没有关系的用户)，0个人品牌，1联合品牌子供应商，2联合品牌,3 代理商)
+	  */
+	 public int verBrandSupplier(Long weiid);
+	 /**
+	  * 根据供应商是微店号 获取品牌信息
+	  * zy
+	  * @param weiid
+	  * @return
+	  */
+	 public DBrands getBrands(Long weiid);
+	 /**
+	  * 是否是受 限制上架用户（代理商、代理区供应商、城主等等）
+	  * @param useridentity
+	  * @return true表示有上架权利，false没有
+	  */
+	 public boolean canShelve(int useridentity);
+	/**
+	 * 代理商可能代理多个店铺。获取多个店铺信息
+	 * wly
+	 * @param wid
+	 * @return
+	 */
+	List<DBrands> find_listDBrands(Long wid);
+	/**
+	 * 获取品牌weiid
+	 * wly
+	 * @param long1
+	 * @return
+	 */
+	Long getwei(Integer long1);
+	/**
+	 * zlp
+	 * 根据weiid获取他代理品牌信息，一个人可以代理多个品牌
+	 * @param wid
+	 * @return
+	 */
+	List<DBrands> findBrandIds(Long wid);
+	
+	/**
+	 * 获取品牌代理商商品列表
+	 * @author zlp
+	 * @param weiid 品牌商weiid
+	 * @param classID
+	 * @param sysClassID
+	 * @param pageIndex
+	 * @param pageSize
+	 * @return
+	 */
+	PageResult<ProductModel> findAgentShopProductlist(Long weiid,Long loginedWeiid,
+			Integer classID, Integer sysClassID, int pageIndex, int pageSize);
+	/**
+	 * 根据供应商是微店号 获取品牌供应商信息
+	 * @author zlp
+	 * @param weiid
+	 * @return
+	 */
+	DBrandSupplier getBrandSupplier(Long weiid);
+	/**
+	 * 供app端获取代理商店铺商品
+	 * @param weiid 代理人weiid或品牌商weiid
+	 * @param brandid 品牌商id 
+	 * @param classID
+	 * @param sysClassID
+	 * @param pageIndex
+	 * @param pageSize
+	 * @return
+	 */
+	PageResult<ProductModel> findAgentShopProductlist(Long weiid,Long loginedWeiid,
+			Integer brandid, Integer classID, Integer sysClassID,
+			int pageIndex, int pageSize);
+	/**
+	 * IBS 品牌商 功能
+	 *  获取品牌代理列表（）
+	 * @param weiid
+	 * @return
+	 */
+	public List<DAgentInfo> find_DAgents(Long weiid);
+	/**
+	 * IBS 品牌商 功能
+	 * @param weiid
+	 * @param pageindex
+	 * @param pagesize
+	 * @return
+	 */
+	 public PageResult<DAgentInfo> find_DAgents(Long weiid,Long agentweiid, int pageindex,int pagesize);
+	/**
+	 * IBS 代理管理（普通代理用户）
+	 * @param weiid
+	 * @return
+	 */
+	public List<BrandAgentInfo> find_BrandAgents(Long weiid) ;
+	/**
+	 * @author created by zlp at 2016/10/11
+	 * 根据代理身份得到相应的产品代理价
+	 * @param agentinfo
+	 * @param product
+	 * @return
+	 */
+	Double getBrandAgentPrice(DAgentInfo agentinfo, PProducts product);
+	
+	/**
+	 * @author created by zy at 2016/10/13
+	 *  根据买家身份得到相应的产品零售价
+	 * @param weiid
+	 * @param styleId
+	 * @return
+	 */
+	Double getProductPriceByWeiid(Long weiid,Long styleId);
+	/**
+	 * 获取缴费订单号
+	 * @param weiid
+	 * @param brandid
+	 * @return
+	 */
+	String getDAgentInfoPayOrderId(Long weiid,Integer brandid);
+}

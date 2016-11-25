@@ -1,0 +1,103 @@
+package com.okwei.service.impl;
+
+import java.io.Serializable;
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.okwei.common.Limit;
+import com.okwei.common.PageResult;
+import com.okwei.dao.IBaseDAO;
+import com.okwei.dao.impl.BaseDAO;
+import com.okwei.service.IBaseService;
+import com.okwei.util.ObjectUtil;
+
+/**
+ * 
+ * @ClassName: BaseService
+ * @Description: service基础类，所有service类继承它
+ * @author xiehz
+ * @date 2015年5月5日 下午4:06:30
+ *
+ */
+@Service("baseService")
+@Transactional(propagation = Propagation.REQUIRED, rollbackFor = { Exception.class })
+public class BaseService implements IBaseService {
+
+	@Autowired
+	private IBaseDAO baseDAO;
+
+	@Override
+	public <T> boolean add(T obj) {
+		baseDAO.save(obj);
+		return true;
+	}
+
+	@Override
+	public <T> boolean delete(T obj) {
+		baseDAO.delete(obj);
+		return true;
+	}
+
+	@Override
+	public <T> boolean deleteById(Class<T> objClass, Serializable id) {
+		baseDAO.delete(objClass, id);
+		return true;
+	}
+
+	@Override
+	public <T> int deleteAll(Class<T> objClass) {
+		return baseDAO.deleteAll(objClass);
+	}
+
+	@Override
+	public <T> boolean update(T obj) {
+		baseDAO.update(obj);
+		return true;
+	}
+
+	@Override
+	public <T> T getById(Class<T> objClass, Serializable id) {
+		return baseDAO.get(objClass, id);
+	}
+
+	@Override
+	public <T> T findOneByExample(T obj) {
+		List<T> list = baseDAO.findByExample(obj);
+		if (ObjectUtil.isNotEmpty(list)) {
+			return list.get(0);
+		} else {
+			return null;
+		}
+	}
+
+	@Override
+	public void update(Object entity, String entityName) {
+		baseDAO.update(entity, entityName);
+	}
+
+	@Override
+	public <T> List<T> getAll(Class<T> objClass) {
+		return (List<T>) baseDAO.find("from " + objClass.getName());
+	}
+
+	@Override
+	public <T> List<T> findByExample(T obj) {
+		return baseDAO.findByExample(obj);
+	}
+
+	@Override
+	public <T> int countAll(Class<T> objClass) {
+		return (Integer) baseDAO.getUniqueResultByHql("select count(*) from " + objClass.getName());
+	}
+
+	@Override
+	public <T> PageResult<T> findPage(Class<T> objClass, Limit limit) {
+		return baseDAO.findPageResult("From " + objClass.getName(), limit);
+	}
+
+}

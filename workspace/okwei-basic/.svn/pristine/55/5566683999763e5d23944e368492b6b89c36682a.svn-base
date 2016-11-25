@@ -1,0 +1,156 @@
+package com.okwei.dao.impl.agent;
+
+import java.util.Date;
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.okwei.bean.domain.DAgentApply;
+import com.okwei.bean.domain.DAgentInfo;
+import com.okwei.bean.domain.DAgentMembers;
+import com.okwei.bean.domain.DAgentTasks;
+import com.okwei.bean.domain.DAgentTeam;
+import com.okwei.bean.domain.DBrands;
+import com.okwei.bean.domain.DBrandsInfo;
+import com.okwei.bean.domain.DCastellans;
+import com.okwei.bean.enums.agent.AgentType;
+import com.okwei.common.Limit;
+import com.okwei.common.PageResult;
+import com.okwei.dao.IBaseDAO;
+import com.okwei.dao.agent.IDAgentMgtDao;
+
+@Repository
+@Transactional(propagation = Propagation.REQUIRED, rollbackFor = { Exception.class })
+public class DAgentMgtDao implements IDAgentMgtDao {
+	@Autowired
+	private IBaseDAO baseDAO;
+	
+	public DAgentInfo getDAgentInfo(Long weiid,Integer brandid){
+		return baseDAO.getNotUniqueResultByHql(" from DAgentInfo a where a.weiId=? and a.brandId=?", weiid,brandid);
+	}
+	
+	public long add_DAgentInfo(Long weiid,Long supweiid,Integer brandid){
+		DAgentInfo model=new DAgentInfo();
+		model.setWeiId(weiid);
+		model.setSuperWeiid(supweiid);
+		model.setBrandId(brandid);
+		model.setType(Integer.parseInt(AgentType.out.toString()));
+		model.setStatus(1);
+		baseDAO.save(model);
+		return model.getAgentId();
+	}
+	
+	public PageResult<DAgentMembers> find_DAgentMembers(Long weiid, Integer brandid,int pageIndex,int pageSize){
+		String hql = " from DAgentMembers a where a.brandId=? and a.superWeiid=? order by a.memberId desc ";
+		Limit limit=Limit.buildLimit(pageIndex, pageSize);
+		return baseDAO.findPageResult(hql, limit, brandid, weiid);
+	}
+	
+	public List<DAgentMembers> find_DAgentMembers(Long weiid, Integer brandid){
+		String hql = " from DAgentMembers a where a.brandId=? and a.superWeiid=? order by a.memberId desc ";
+		return baseDAO.find(hql,  brandid, weiid);
+	}
+	
+	public DAgentMembers get_DAgentMembers(Long weiid, Integer brandid){
+		String hql = " from DAgentMembers a where a.brandId=? and a.weiId=?  ";
+		return baseDAO.getNotUniqueResultByHql(hql,  brandid, weiid);
+	}
+	
+	public long count_DAgentMembers(Long weiid, Integer brandid){
+		String hql = " select count(*) from DAgentMembers a where a.brandId=? and a.superWeiid=?  ";
+		return baseDAO.count(hql, brandid, weiid);
+	}
+	
+	public boolean add_DAgentMembers(Long agentid, Long weiid,Long supweiid,Integer brandid){
+		DAgentMembers aa=new DAgentMembers();
+		aa.setAgentId(agentid);
+		aa.setBrandId(brandid);
+		aa.setWeiId(weiid);
+		aa.setSuperWeiid(supweiid);
+		aa.setCreateTime(new Date());
+		baseDAO.save(aa);
+		return true;
+	}
+	
+	public PageResult<DAgentTasks> find_DAgentTasks(Long weiid,Integer brandid,int pageIndex,int pageSize){
+		return baseDAO.findPageResult(" from DAgentTasks d where d.weiId=? and d.brandId=? order by d.taskId desc ", Limit.buildLimit(pageIndex, pageSize), weiid,brandid);
+	}
+	
+	public boolean add_DAgentTasks(Long weiid,Integer brandid,String content){
+		DAgentTasks tasks=new DAgentTasks();
+		tasks.setWeiId(weiid);
+		tasks.setBrandId(brandid);
+		tasks.setCreateTime(new Date());
+		tasks.setContent(content);
+		baseDAO.save(tasks);
+		return true;
+	}
+	
+	public List<DAgentTeam> find_DAgentTeams(Integer brandid,Integer province,Integer city,Integer district){
+		return baseDAO.find(" from DAgentTeam a where a.brandId=? and a.province=? and a.city=? and a.district=?", brandid,province,city,district);
+	}
+	
+	public DAgentTeam getDAgentTeam(Integer brandid,Long weiid){
+		return baseDAO.getNotUniqueResultByHql(" from DAgentTeam a where a.brandId=? and a.weiId=?", brandid,weiid);
+	}
+	
+	public DAgentTeam getDAgentTeamMaxNum(Integer brandid,Integer province,Integer city,Integer district){
+		List<DAgentTeam>list= baseDAO.find(" from DAgentTeam a where a.brandId=? and a.province=? and a.city=? and a.district=? order by a.memberCount desc ", brandid,province,city,district);
+		if(list!=null&&list.size()>0)
+			return list.get(0);
+		return null;
+	}
+	
+	public long count_DAgentTeams(Integer brandid,Integer province,Integer city,Integer district){
+		return baseDAO.count("select count(*) from DAgentTeam a where a.brandId=? and a.province=? and a.city=? and a.district=?", brandid,province,city,district);
+	}
+	
+	public List<DCastellans> find_DCastellans(Integer brandid,Integer province,Integer city,Integer district){
+		return baseDAO.find(" from DCastellans a where a.brandId=? and a.province=? and a.city=? and a.district=?", brandid,province,city,district);	
+	}
+
+	@Override
+	public long count_DAgentApplys(Integer brandid, Integer province,
+			Integer city, Integer district) {
+		return baseDAO.count("select count(*) from DAgentApply a where a.brandId=? and a.province=? and a.city=? and a.district=?", brandid,province,city,district);
+	}
+
+	@Override
+	public String BrandName(Integer brandid) {
+		return baseDAO.getUniqueResultByHql("select brandName from DBrands a where a.brandId=?", brandid);
+	}
+
+	@Override
+	public Double BrandCost(Integer brandid) {
+		return baseDAO.getUniqueResultByHql("select costs from DBrandsInfo a where a.brandId=?", brandid);
+	}
+
+	@Override
+	public long add_DAgentTasks(Long weiid, Long supweiid, Integer brandid) {
+		// TODO Auto-generated method stub
+		return 0;
+	}
+
+	@Override
+	public void add_DAgentMembers(long agentid, Long weiid, Long supweiid,
+			Integer brandid) {
+		// TODO Auto-generated method stub
+		
+	}
+
+	@Override
+	public DCastellans find_DCastellan(Integer brandid, Integer province,
+			Integer city, Integer district) {
+		return baseDAO.getUniqueResultByHql(" from DCastellans a where a.brandId=? and a.province=? and a.city=? and a.district=? and a.porN=?", brandid,province,city,district,1);
+	}
+
+	@Override
+	public List<DAgentTeam> find_DAgentTeams1(Integer brandid) {
+		List<DAgentTeam> list=baseDAO.find("from DAgentTeam a where a.brandId=?", brandid);
+		return list;
+	}
+	
+}

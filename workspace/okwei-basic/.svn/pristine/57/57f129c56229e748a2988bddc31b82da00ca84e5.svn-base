@@ -1,0 +1,10 @@
+package com.okwei.bean.dto.shoppingcart;
+import com.okwei.bean.domain.TShoppingCar;
+/**
+ * 加入购物车输入参数
+ * @author chenhaitao
+ *
+ */
+public class ShopCarDTO extends TShoppingCar{
+
+}

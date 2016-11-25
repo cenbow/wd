@@ -1,0 +1,19 @@
+package com.okwei.company.service;
+
+import com.okwei.company.bean.vo.HeadInfo;
+
+public interface ICommonService {
+    /**
+     * 获取购物车数量
+     * 
+     * @param weiid
+     * @return
+     */
+    public long getCartCount(long weiid);
+
+    /**
+     * 获取头部公共信息
+     * @return
+     */
+    public HeadInfo getHeadInfo();
+}

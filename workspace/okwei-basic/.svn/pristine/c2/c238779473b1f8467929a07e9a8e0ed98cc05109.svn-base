@@ -1,0 +1,600 @@
+package com.okwei.dao.impl.agent;
+
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.okwei.bean.domain.DAgentApply;
+import com.okwei.bean.domain.DAgentInfo;
+import com.okwei.bean.domain.DAgentMembers;
+import com.okwei.bean.domain.DAgentTasks;
+import com.okwei.bean.domain.DAgentTeam;
+import com.okwei.bean.domain.DBrandsExt;
+import com.okwei.bean.domain.DCastellans;
+import com.okwei.bean.enums.UserIdentityType;
+import com.okwei.bean.enums.agent.AgentAddType;
+import com.okwei.bean.enums.agent.AgentType;
+import com.okwei.bean.enums.agent.CastellanType;
+import com.okwei.common.Limit;
+import com.okwei.common.PageResult;
+import com.okwei.dao.IBaseDAO;
+import com.okwei.dao.agent.IDAgentMgtDao;
+import com.okwei.dao.user.IUUserAssistMgtDAO;
+import com.okwei.util.ParseHelper;
+
+@Repository
+@Transactional(propagation = Propagation.REQUIRED, rollbackFor = { Exception.class })
+public class DAgentMgtDao implements IDAgentMgtDao {
+	@Autowired
+	private IBaseDAO baseDAO;
+	@Autowired
+	private IUUserAssistMgtDAO userService;
+	
+	
+	public DAgentInfo getDAgentInfo(Long weiid,Integer brandid){
+		if(weiid==null||weiid<=0||brandid==null||brandid<=0)
+			return null;
+		return baseDAO.getNotUniqueResultByHql(" from DAgentInfo a where a.weiId=? and a.brandId=?", weiid,brandid);
+	}
+	@Override
+	public DAgentApply getDAgentApply(Long weiid,Integer brandid){
+		return baseDAO.getNotUniqueResultByHql(" from DAgentApply a where a.weiId=? and a.brandId=?", weiid,brandid);
+	}
+	
+	
+	public List<DAgentInfo> findDagentInfoByWeiid(Long weiid){
+		if(weiid==null||weiid<=0)
+			return null;
+		return baseDAO.find(" from DAgentInfo a where a.weiId=? ", weiid);
+	}
+	
+	public List<DAgentInfo> find_DAgentInfoBySuperWeiid(Long weiid,Integer brandid){
+		if(weiid==null||weiid<=0||brandid==null||brandid<=0)
+			return null;
+		return baseDAO.find(" from DAgentInfo a where a.superWeiid=? and  a.brandId=?", weiid,brandid);
+	}
+	
+	public long add_DAgentInfo(Long weiid,Long supweiid,Integer brandid){
+		if(weiid==null||weiid<=0||brandid==null||brandid<=0)
+			return 0;
+		DAgentTeam parent=getDAgentTeam(brandid, supweiid);
+		if(parent!=null){
+			DAgentInfo model=new DAgentInfo();
+			model.setWeiId(weiid);
+			model.setSuperWeiid(supweiid);
+			model.setBrandId(brandid);
+			model.setType(Integer.parseInt(AgentAddType.unactivein.toString()));
+			model.setStatus(1);
+			model.setProvince(parent.getProvince());
+			model.setCity(parent.getCity());
+			model.setDistrict(parent.getDistrict());
+			model.setCreateTime(new Date()); 
+			baseDAO.save(model);
+			return model.getAgentId();
+		}
+		return 0;
+	}
+	
+	public PageResult<DAgentMembers> find_DAgentMembers(Long weiid, Integer brandid,int pageIndex,int pageSize){
+		String hql = " from DAgentMembers a where a.brandId=? and a.superWeiid=? order by a.memberId desc ";
+		Limit limit=Limit.buildLimit(pageIndex, pageSize);
+		return baseDAO.findPageResult(hql, limit, brandid, weiid);
+	}
+	
+	public List<DAgentMembers> find_DAgentMembers(Long weiid, Integer brandid){
+		String hql = " from DAgentMembers a where a.brandId=? and a.superWeiid=? order by a.memberId desc ";
+		return baseDAO.find(hql,  brandid, weiid);
+	}
+	
+	public DAgentMembers get_DAgentMembers(Long weiid, Integer brandid){
+		String hql = " from DAgentMembers a where a.brandId=? and a.weiId=?  ";
+		return baseDAO.getNotUniqueResultByHql(hql,  brandid, weiid);
+	}
+	
+	public long count_DAgentMembers(Long weiid, Integer brandid){
+		String hql = " select count(*) from DAgentMembers a where a.brandId=? and a.superWeiid=?  ";
+		return baseDAO.count(hql, brandid, weiid);
+	}
+	
+	public boolean add_DAgentMembers(Long agentid, Long weiid,Long supweiid,Integer brandid){
+		if(agentid==null||agentid<=0||weiid==null||weiid<=0)
+			return false;
+		DAgentMembers aa=new DAgentMembers();
+		aa.setAgentId(agentid);
+		aa.setBrandId(brandid);
+		aa.setWeiId(weiid);
+		aa.setSuperWeiid(supweiid);
+		aa.setCreateTime(new Date());
+		baseDAO.save(aa);
+		return true;
+	}
+	
+	public int add_DAgentTeam(Integer brandid,Long weiid,Integer province,Integer city,Integer district){
+		if(weiid==null||weiid<=0||brandid==null||brandid<=0||city==null||city<=0)
+			return 0;
+		DAgentTeam dateam = new DAgentTeam();
+		dateam.setBrandId(brandid);
+		dateam.setWeiId(weiid);
+		dateam.setProvince(province);
+		dateam.setCity(city);
+		dateam.setDistrict(district);
+		dateam.setCreateTime(new Date());
+		baseDAO.save(dateam);
+		return dateam.getAteamId()==null?0:dateam.getAteamId();
+	}
+	
+	public PageResult<DAgentTasks> find_DAgentTasks(Long weiid,Integer brandid,int pageIndex,int pageSize){
+		return baseDAO.findPageResult(" from DAgentTasks d where d.weiId=? and d.brandId=? order by d.taskId desc ", Limit.buildLimit(pageIndex, pageSize), weiid,brandid);
+	}
+	
+	public boolean add_DAgentTasks(Long weiid,Integer brandid,String content){
+		DAgentTasks tasks=new DAgentTasks();
+		tasks.setWeiId(weiid);
+		tasks.setBrandId(brandid);
+		tasks.setCreateTime(new Date());
+		tasks.setContent(content);
+		baseDAO.save(tasks);
+		return true;
+	}
+	
+	public void edit_CastellanInfo(Long weiid,Integer brandid,Integer province,Integer city,Integer district){
+		DAgentInfo agent=getDAgentInfo(weiid, brandid);
+		if(agent==null)
+			return ;
+		//团队人数+1
+		DAgentTeam myTeam= getDAgentTeam(brandid, weiid);
+		myTeam.setMemberCount((myTeam.getMemberCount()==null?0:myTeam.getMemberCount())+1);
+		baseDAO.update(myTeam);
+		//=================
+		List<DCastellans> list=find_DCastellans(brandid, province, city, district);
+		DCastellans castellan=null;//城主
+		int countZ=0,countF=0;
+		int memberCount=myTeam.getMemberCount();
+		DCastellans selfCastellans=null;
+		if(list!=null&&list.size()>0){
+			for (DCastellans dd : list) {
+				if(dd.getPorN()==Integer.parseInt(CastellanType.castellan.toString())){
+					castellan=dd;
+					countZ++;
+				}else {
+					countF++;
+				}
+				if(dd.getWeiId().longValue()==weiid){
+					selfCastellans=dd;
+				}
+			}
+		}
+		DCastellans selfCastellansNew=new DCastellans();
+		selfCastellansNew.setAgentId(agent.getAgentId());
+		selfCastellansNew.setWeiId(weiid);
+		selfCastellansNew.setBrandId(brandid);
+		selfCastellansNew.setContact(agent.getName());
+		selfCastellansNew.setContactPhone(agent.getContactPhone());
+		selfCastellansNew.setOutOrIn(Integer.parseInt(AgentType.out.toString()));
+		selfCastellansNew.setStatus(1);
+		selfCastellansNew.setProvince(myTeam.getProvince());
+		selfCastellansNew.setCity(myTeam.getCity());
+		selfCastellansNew.setDistrict(myTeam.getDistrict());
+		selfCastellansNew.setCreateTime(new Date());
+		if(countZ>0&&castellan!=null&&castellan.getWeiId().longValue()==weiid){
+			//自己已经是城主了
+			edit_DBrandsExt(brandid, null,Integer.parseInt(AgentType.out.toString()) , 1);	
+		}
+		else if(countZ>0){//城主已经产生
+			if(countF<9&&memberCount>=30){//副城主还未满
+				if(selfCastellans==null){//我还不是副城主
+					selfCastellansNew.setPorN(Integer.parseInt(CastellanType.viceCastellan.toString()));
+					baseDAO.save(selfCastellansNew); 
+					userService.addIdentity(weiid, UserIdentityType.AgentDeputyDuke);
+					//新增一位副城主
+					edit_DBrandsExt(brandid, Integer.parseInt(CastellanType.viceCastellan.toString()),selfCastellansNew.getOutOrIn() , 1);	
+				}else {
+					edit_DBrandsExt(brandid, null,Integer.parseInt(AgentType.out.toString()) , 1);
+				}
+			}else {
+				edit_DBrandsExt(brandid, null,Integer.parseInt(AgentType.out.toString()) , 1);
+			}
+		}else{//城主还未产生
+			if(countF<9) {//副城主还未满人数
+				if(memberCount>=30) {//人数满足副城主
+					if(selfCastellans==null){//还不是副城主,新增副城主
+						selfCastellansNew.setPorN(Integer.parseInt(CastellanType.viceCastellan.toString()));
+						baseDAO.save(selfCastellansNew);
+						userService.addIdentity(weiid, UserIdentityType.AgentDeputyDuke);
+						edit_DBrandsExt(brandid, Integer.parseInt(CastellanType.viceCastellan.toString()),selfCastellansNew.getOutOrIn() , 1);	
+						
+					}else {//自己已经是副城主
+						if(memberCount>=100){//副城主晋升为城主
+							selfCastellans.setPorN(Integer.parseInt(CastellanType.castellan.toString()));
+							baseDAO.update(selfCastellans);
+							userService.addIdentity(weiid, UserIdentityType.AgentDuke);
+							edit_DBrandsExt(brandid, Integer.parseInt(CastellanType.castellan.toString()),selfCastellans.getOutOrIn() , 1);	
+							edit_DBrandsExt(brandid, Integer.parseInt(CastellanType.viceCastellan.toString()),selfCastellans.getOutOrIn() , -1);			
+						}else {
+							edit_DBrandsExt(brandid, null,Integer.parseInt(AgentType.out.toString()) , 1);
+						}
+					}
+				}else {
+					edit_DBrandsExt(brandid, null,Integer.parseInt(AgentType.out.toString()) , 1);
+				}
+			}else {//副城主已经满员
+				if(memberCount>=100){//直接成为 城主
+					selfCastellansNew.setPorN(Integer.parseInt(CastellanType.castellan.toString()));
+					baseDAO.save(selfCastellansNew);
+					userService.addIdentity(weiid, UserIdentityType.AgentDuke);
+					edit_DBrandsExt(brandid, Integer.parseInt(CastellanType.castellan.toString()),selfCastellansNew.getOutOrIn() , 1);		
+				}else {
+					edit_DBrandsExt(brandid, null,Integer.parseInt(AgentType.out.toString()) , 1);
+				}
+			}
+		}
+	}
+	
+	@Override
+	public PageResult<DAgentTeam> find_DAgentTeamsPage(Integer brandid,Integer province,Integer city,Integer district,Limit limit){
+		if(brandid==null||brandid<=0)
+			return null;
+		Map<String, Object> map=new HashMap<String, Object>();
+		StringBuilder sb=new StringBuilder();
+		sb.append(" from DAgentTeam a where a.brandId=:brandid ");
+		map.put("brandid", brandid);
+		if (province == 0 && city == 0 && district == 0) {
+		}else{
+			if(province!=null&&province != 0 ){
+				sb.append(" and a.province=:province ");
+				map.put("province", province);
+			}
+			if(city!=null&&city != 0 ){
+				sb.append(" and a.city=:city ");
+				map.put("city", city);
+			}
+			if(district!=null&&district != 0){
+				sb.append(" and a.district=:district ");
+				map.put("district", district);
+			}
+		}
+
+		return baseDAO.findPageResultByMap(sb.toString(), limit, map);
+	}
+	
+	public List<DAgentTeam> find_DAgentTeams(Integer brandid,Integer province,Integer city,Integer district){
+		if(brandid==null||brandid<=0)
+			return null;
+		Map<String, Object> map=new HashMap<String, Object>();
+		StringBuilder sb=new StringBuilder();
+		sb.append(" from DAgentTeam a where a.brandId=:brandid ");
+		map.put("brandid", brandid);
+		if(province!=null){
+			sb.append(" and a.province=:province ");
+			map.put("province", province);
+		}
+		if(city!=null){
+			sb.append(" and a.city=:city ");
+			map.put("city", city);
+		}
+		if(district!=null){
+			sb.append(" and a.district=:district ");
+			map.put("district", district);
+		}
+		return baseDAO.findByMap(sb.toString(), map); 
+	}
+	
+	public DAgentTeam getDAgentTeam(Integer brandid,Long weiid){
+		return baseDAO.getNotUniqueResultByHql(" from DAgentTeam a where a.brandId=? and a.weiId=?", brandid,weiid);
+	}
+	
+	public DAgentTeam getDAgentTeamMaxNum(Integer brandid,Integer province,Integer city,Integer district){
+		if(brandid==null||brandid<=0)
+			return null;
+		Map<String, Object> map=new HashMap<String, Object>();
+		StringBuilder sb=new StringBuilder();
+		sb.append(" from DAgentTeam a where a.brandId=:brandid ");
+		map.put("brandid", brandid);
+		if(province!=null){
+			sb.append(" and a.province=:province ");
+			map.put("province", province);
+		}
+		if(city!=null){
+			sb.append(" and a.city=:city ");
+			map.put("city", city);
+		}
+		if(district!=null){
+			sb.append(" and a.district=:district ");
+			map.put("district", district);
+		}
+		sb.append(" order by a.memberCount desc ");
+		List<DAgentTeam>list=  baseDAO.findByMap(sb.toString(), map);// baseDAO.find(" from DAgentTeam a where a.brandId=? and a.province=? and a.city=? and a.district=? order by a.memberCount desc ", brandid,province,city,district);
+		if(list!=null&&list.size()>0)
+			return list.get(0);
+		return null;
+	}
+	
+	public long count_DAgentTeams(Integer brandid,Integer province,Integer city,Integer district){
+		if(brandid==null||brandid<=0)
+			return 0;
+		Map<String, Object> map=new HashMap<String, Object>();
+		StringBuilder sb=new StringBuilder();
+		sb.append(" select count(*) from DAgentTeam a where a.brandId=:brandid ");
+		map.put("brandid", brandid);
+		if(province!=null){
+			sb.append(" and a.province=:province ");
+			map.put("province", province);
+		}
+		if(city!=null){
+			sb.append(" and a.city=:city ");
+			map.put("city", city);
+		}
+		if(district!=null){
+			sb.append(" and a.district=:district ");
+			map.put("district", district);
+		}
+		return baseDAO.countByMap(sb.toString(), map);// baseDAO.count("select count(*) from DAgentTeam a where a.brandId=? and a.province=? and a.city=? and a.district=?", brandid,province,city,district);
+	}
+	
+	public List<DCastellans> find_DCastellans(Integer brandid,Integer province,Integer city,Integer district){
+		if(brandid==null||brandid<=0)
+			return null;
+		Map<String, Object> map=new HashMap<String, Object>();
+		StringBuilder sb=new StringBuilder();
+		sb.append(" from DCastellans a where a.brandId=:brandid ");
+		map.put("brandid", brandid);
+		if(province!=null){
+			sb.append(" and a.province=:province ");
+			map.put("province", province);
+		}
+		if(city!=null){
+			sb.append(" and a.city=:city ");
+			map.put("city", city);
+		}
+		if(district!=null){
+			sb.append(" and a.district=:district ");
+			map.put("district", district);
+		}
+		return  baseDAO.findByMap(sb.toString(), map);// baseDAO.find(" from DCastellans a where a.brandId=? and a.province=? and a.city=? and a.district=?", brandid,province,city,district);	
+	}
+	
+
+	public List<DCastellans> find_DCastellans(Integer brandid,List<Long> weiids){
+		if(brandid==null||brandid<=0)
+			return null;
+		Map<String, Object> map=new HashMap<String, Object>();
+		StringBuilder sb=new StringBuilder();
+		sb.append(" from DCastellans a where a.brandId=:brandid ");
+		map.put("brandid", brandid);
+		if(weiids!=null&&weiids.size()>0){
+			sb.append(" and a.weiId in(:weiids) ");
+			map.put("weiids", weiids);
+		}
+		return  baseDAO.findByMap(sb.toString(), map);// baseDAO.find(" from DCastellans a where a.brandId=? and a.province=? and a.city=? and a.district=?", brandid,province,city,district);	
+	}
+	
+	public List<DAgentInfo> find_DAgentInfos(Integer brandid,List<Long> weiids){
+		if(brandid==null||brandid<=0)
+			return null;
+		Map<String, Object> map=new HashMap<String, Object>();
+		StringBuilder sb=new StringBuilder();
+		sb.append(" from DAgentInfo a where a.brandId=:brandid ");
+		map.put("brandid", brandid);
+		if(weiids!=null&&weiids.size()>0){
+			sb.append(" and a.weiId in(:weiids) ");
+			map.put("weiids", weiids);
+		}
+		return  baseDAO.findByMap(sb.toString(), map);// baseDAO.find(" from DCastellans a where a.brandId=? and a.province=? and a.city=? and a.district=?", brandid,province,city,district);	
+	}
+	
+	public List<DAgentInfo> find_DAgentInfos(Long weiid,Integer brandid){
+		if(weiid==null||weiid<=0)
+			return null;
+		Map<String, Object> map=new HashMap<String, Object>();
+		StringBuilder sb=new StringBuilder();
+		sb.append(" from DAgentInfo a where a.weiId=:weiId ");
+		map.put("weiId", weiid);
+		if(brandid!=null){
+			sb.append(" and a.brandId =:brandId ");
+			map.put("brandId", brandid);
+		}
+		return  baseDAO.findByMap(sb.toString(), map);
+	}
+	
+	public List<DAgentInfo> find_DAgentInfosByBrandId(Integer brandid,Integer level){
+		if(brandid==null||brandid<=0)
+			return null;
+		Map<String, Object> map=new HashMap<String, Object>();
+		StringBuilder sb=new StringBuilder();
+		sb.append(" from DAgentInfo a where a.brandId =:brandId ");
+		map.put("brandId", brandid);
+		if(level!=null){
+			sb.append(" and a.level=:level ");
+			map.put("level", level);
+		}
+		return  baseDAO.findByMap(sb.toString(), map);
+	}
+	
+	@Override
+	public long count_DAgentApplys(Integer brandid, Integer province,
+			Integer city, Integer district) {
+		Map<String, Object> map=new HashMap<String, Object>();
+		StringBuilder sb=new StringBuilder();
+		sb.append("select count(*) from DAgentApply a where a.brandId=:brandid");
+		map.put("brandid", brandid);
+		
+		if(province!=null){
+			sb.append(" and a.province=:province ");
+			map.put("province", province);
+		}
+		if(city!=null){
+			sb.append(" and a.city=:city ");
+			map.put("city", city);
+		}
+		if(district!=null){
+			sb.append(" and a.district=:district ");
+			map.put("district", district);
+		}
+		return baseDAO.countByMap(sb.toString(), map);
+		//return baseDAO.count("select count(*) from DAgentApply a where a.brandId=? and a.province=? and a.city=? and a.district=?", brandid,province,city,district);
+	}
+
+	@Override
+	public String BrandName(Integer brandid) {
+		return baseDAO.getUniqueResultByHql("select brandName from DBrands a where a.brandId=?", brandid);
+	}
+
+	@Override
+	public Double BrandCost(Integer brandid) {
+		return baseDAO.getUniqueResultByHql("select costs from DBrandsInfo a where a.brandId=?", brandid);
+	}
+
+	@Override
+	public DCastellans get_DCastellan(Integer brandid, Integer province,
+			Integer city, Integer district) {
+		Map<String, Object> map=new HashMap<String, Object>();
+		StringBuilder sb=new StringBuilder();
+		sb.append("from DCastellans a  where a.brandId=:brandid and a.porN=:proN ");
+		map.put("brandid", brandid);
+		map.put("proN", Integer.parseInt(CastellanType.castellan.toString()));
+		
+		if(province!=null){
+			sb.append(" and a.province=:province ");
+			map.put("province", province);
+		}
+		if(city!=null){
+			sb.append(" and a.city=:city ");
+			map.put("city", city);
+		}
+		if(district!=null){
+			sb.append(" and a.district=:district ");
+			map.put("district", district);
+		}
+		List<DCastellans> list=baseDAO.findByMap(sb.toString(), map);
+		if(list!=null&&list.size()>0){
+			return list.get(0);
+		}
+		return null;
+	}
+	
+	@Override
+	public DCastellans get_DCastellan(Integer brandid, long weiid) {
+		Map<String, Object> map=new HashMap<String, Object>();
+		StringBuilder sb=new StringBuilder();
+		sb.append("from DCastellans a  where a.brandId=:brandid and a.weiId=:weiId");
+		map.put("brandid", brandid);
+		map.put("weiId", weiid);
+		List<DCastellans> list=baseDAO.findByMap(sb.toString(), map);
+		if(list!=null&&list.size()>0){
+			return list.get(0);
+		}
+		return null;
+	}
+
+	@Override
+	public List<DAgentTeam> find_DAgentTeams1(Integer brandid) {
+		List<DAgentTeam> list=baseDAO.find("from DAgentTeam a where a.brandId=?", brandid);
+		return list;
+	}
+	
+	
+	@Override
+	public long count_DAgentTeamsDistrict(Integer brandid){
+		return baseDAO.countBySql("select count(*) from (select  DISTINCT  a.District from D_AgentTeam a where a.brandId=?  ) as b", brandid);
+	}
+	
+	@Override
+	public long count_DAgentTeamsByBrand(Integer brandid){
+		long l=0L;
+		List<Object> li= baseDAO.queryBySql("select count(*) from D_AgentTeam a where a.brandId=?", brandid);
+//		return baseDAO.count("select sum(a.memberCount) from DAgentTeam a where a.brandId=? ", brandid);
+		if(li!=null && li.size()>0)
+		{
+			Object ob=li.get(0);
+			if(ob!=null)
+				l=ParseHelper.toLong(li.get(0).toString());
+		}
+		return l;
+				
+	}
+	
+	@Override
+	public DCastellans find_DCastellans(Integer brandid, Integer province,
+			Integer city, Integer district,Integer outOrIn){
+		Map<String, Object> map = new HashMap<String, Object>();
+
+		map.put("brandId", brandid);
+		map.put("outOrIn", outOrIn);
+		StringBuilder sb=new StringBuilder();
+		sb.append("from DCastellans a where a.porN="+ParseHelper.toInt(CastellanType.castellan.toString())+" and a.brandId=:brandId  and a.outOrIn=:outOrIn ");
+		if(province!=null){
+			sb.append(" and a.province=:province ");
+			map.put("province", province);
+		}
+		if(city!=null){
+			sb.append(" and a.city=:city ");
+			map.put("city", city);
+		}
+		if(district!=null){
+			sb.append(" and a.district=:district ");
+			map.put("district", district);
+		}
+		List<DCastellans> list =baseDAO.findByMap(sb.toString(), map);
+		if (list!= null &&list.size()> 0) {
+			return list.get(0);
+		}
+		return null;
+	}
+	
+	public boolean edit_DBrandsExt(Integer brandid){
+		return true;
+	}
+	
+	public void edit_DBrandsExt(Integer brandid,Integer castllantype, Integer agentType,int count){
+		DBrandsExt brandsExt=baseDAO.get(DBrandsExt.class, brandid);
+		boolean isnew=false;
+		if(brandsExt==null) {
+			isnew=true;
+			brandsExt=new DBrandsExt();
+			brandsExt.setBrandId(brandid);
+			brandsExt.setCreateTime(new Date());
+		}
+		if(agentType.intValue()==Integer.parseInt(AgentType.in.toString())){//编内
+			if(castllantype!=null){
+				if(castllantype.intValue()==Integer.parseInt(CastellanType.castellan.toString())){
+					brandsExt.setCastellanInCount((brandsExt.getCastellanInCount()==null?0:brandsExt.getCastellanInCount())+count);
+				}else {
+					brandsExt.setCastellanOutCount((brandsExt.getCastellanOutCount()==null?0:brandsExt.getCastellanOutCount())+count);
+				}
+			}else {
+				brandsExt.setAgentInCount((brandsExt.getAgentInCount()==null?0:brandsExt.getAgentInCount())+count);
+			}
+		}else {
+			brandsExt.setAgentOutCount((brandsExt.getAgentOutCount()==null?0:brandsExt.getAgentOutCount())+count);
+		}
+		if(!isnew)
+			baseDAO.update(brandsExt);
+		else {
+			baseDAO.save(brandsExt);
+		}
+	}
+	
+	public int getUserIdentityForBrand(Long weiid,Integer brandid){
+		int identity=0;
+		DCastellans castellan= get_DCastellan(brandid, weiid);
+		if(castellan!=null){//是城主
+			if(castellan.getPorN()!=null&&castellan.getPorN().intValue()==Integer.parseInt(CastellanType.castellan.toString())){
+				identity+=Integer.parseInt(UserIdentityType.AgentDuke.toString());
+			}else {
+				identity+=Integer.parseInt(UserIdentityType.AgentDeputyDuke.toString());
+			}
+		}else{
+			DAgentInfo agentInfo=getDAgentInfo(weiid, brandid);
+			if(agentInfo!=null){//品牌代理
+				identity+=Integer.parseInt(UserIdentityType.AgentBrandAgent.toString());
+			}
+		}
+		return identity;
+	}
+}

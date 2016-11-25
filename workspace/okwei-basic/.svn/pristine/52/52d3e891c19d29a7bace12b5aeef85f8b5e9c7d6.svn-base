@@ -1,0 +1,27 @@
+package com.okwei.bean.enums.agent;
+/**
+ * 品牌类型
+ * @author Administrator
+ *
+ */
+public enum BrandType {
+	/**
+     * 联合品牌
+     */
+	in(1),
+	/**
+     * 个人品牌
+     */
+    out(0);
+    private final int Type;
+
+    private BrandType(int step)
+    {
+        this.Type = step;
+    }
+
+    public String toString()
+    {
+        return String.valueOf(this.Type);
+    }
+}

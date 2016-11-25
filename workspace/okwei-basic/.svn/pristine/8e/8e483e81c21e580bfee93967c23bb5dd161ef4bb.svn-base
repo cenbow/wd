@@ -1,0 +1,41 @@
+package com.okwei.bean.vo;
+
+import java.io.Serializable;
+import java.util.List;
+
+public class AgentVO implements Serializable {
+	
+	private Integer brandid;
+	private AgentUserInfoVO user;
+	private String agenturl;
+	private List<AgentProductVO> product;
+	
+	
+	public Integer getBrandid() {
+		return brandid;
+	}
+	public void setBrandid(Integer brandid) {
+		this.brandid = brandid;
+	}
+	public AgentUserInfoVO getUser() {
+		return user;
+	}
+	public void setUser(AgentUserInfoVO user) {
+		this.user = user;
+	}
+	public String getAgenturl() {
+		return agenturl;
+	}
+	public void setAgenturl(String agenturl) {
+		this.agenturl = agenturl;
+	}
+	public List<AgentProductVO> getProduct() {
+		return product;
+	}
+	public void setProduct(List<AgentProductVO> product) {
+		this.product = product;
+	}
+	
+	
+
+}

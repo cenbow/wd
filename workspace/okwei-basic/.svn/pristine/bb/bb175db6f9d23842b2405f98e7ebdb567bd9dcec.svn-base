@@ -1,0 +1,61 @@
+package com.okwei.service.product;
+
+import java.util.List;
+
+import com.okwei.bean.domain.PShopClass;
+import com.okwei.bean.domain.UChildrenUser;
+import com.okwei.bean.dto.ProductDTO;
+import com.okwei.bean.vo.LoginUser;
+import com.okwei.bean.vo.ProductMgtVO;
+import com.okwei.bean.vo.ReturnModel;
+import com.okwei.bean.vo.product.ShelveProductParam;
+import com.okwei.common.Limit;
+import com.okwei.common.PageResult;
+import com.okwei.service.IBaseService;
+
+public interface IBasicProductMgtService extends IBaseService {
+
+	PageResult<ProductMgtVO> getProducts(ProductDTO dto, Limit limit,LoginUser user) throws Exception;
+	
+	public  PageResult<ProductMgtVO> find_myProducts(Long weiid,Integer systemClassId,Integer shopClassID,int  pageIndex,int pageSie);
+	
+	List<PShopClass> getSubShopClassByid(Integer parentId);
+
+	// 产品置顶
+	boolean topProduct(Long productId, Integer shopClassId, LoginUser user);
+
+	// 产品上架
+	boolean raiseProduct(String[] productIds, LoginUser user);
+
+	// 产品下架
+	boolean dropProduct(String[] productIds, LoginUser user);
+
+	// 产品删除
+	boolean deleteProduct(String[] productIds, LoginUser user);
+
+	// 产品移动
+	boolean moveProduct(String[] productIds, Integer shopClassId, LoginUser user);
+
+	// 获取子供应商列表
+	List<UChildrenUser> getChildSupplyer(Long parentId);
+
+	// 获取上架商品信息
+	ReturnModel onGetShelvesProduct(ShelveProductParam shelveProduct, LoginUser loginUser) throws Exception;
+
+	// 产品上架
+	ReturnModel onShelvesProduct(ShelveProductParam shelveProduct, LoginUser loginUser) throws Exception;
+
+	// 产品下架
+	ReturnModel offShelvesProduct(ShelveProductParam shelveProduct, LoginUser loginUser) throws Exception;
+
+	// 产品删除
+	ReturnModel deleteShelvesProduct(ShelveProductParam shelveProduct, LoginUser loginUser) throws Exception;
+
+	/**
+	 * 获取产品图片
+	 * @param productId
+	 * @return
+	 */
+	List<String> getPictureImg(Long productId);
+
+}

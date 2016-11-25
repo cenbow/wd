@@ -1,0 +1,738 @@
+package com.okwei.dao.impl.product;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.stereotype.Repository;
+
+import com.okwei.bean.domain.DBrandSupplier;
+import com.okwei.bean.domain.PAgentStock;
+import com.okwei.bean.domain.PBrandShevle;
+import com.okwei.bean.domain.PClassProducts;
+import com.okwei.bean.domain.PProductAssist;
+import com.okwei.bean.domain.PProductBatchPrice;
+import com.okwei.bean.domain.PProductImg;
+import com.okwei.bean.domain.PProducts;
+import com.okwei.bean.domain.PShelverCount;
+import com.okwei.bean.domain.PShevleBatchPrice;
+import com.okwei.bean.domain.PShopClass;
+import com.okwei.bean.domain.UAttention;
+import com.okwei.bean.domain.UChildrenUser;
+import com.okwei.bean.domain.UMessage;
+import com.okwei.bean.domain.UUserAssist;
+import com.okwei.bean.domain.UWeiSeller;
+import com.okwei.bean.dto.ProductDTO;
+import com.okwei.bean.enums.ProductShelveStatu;
+import com.okwei.bean.enums.ProductStatusEnum;
+import com.okwei.bean.enums.ShelveType;
+import com.okwei.bean.vo.ProductMgtVO;
+import com.okwei.bean.vo.product.BatchPriceM;
+import com.okwei.bean.vo.product.ShelveProduct;
+import com.okwei.common.JsonUtil;
+import com.okwei.common.Limit;
+import com.okwei.common.PageResult;
+import com.okwei.dao.impl.BaseDAO;
+import com.okwei.dao.product.IBasicProductMgtDAO;
+import com.okwei.util.ObjectUtil;
+import com.okwei.util.RedisUtil;
+
+@Repository
+public class BasicProductMgtDAO extends BaseDAO implements IBasicProductMgtDAO {
+
+	@Override
+	public PAgentStock getPAgentStock(Long productId, Long weiId) {
+		String hql = "from PAgentStock where productId = ? and weiId = ?";
+		return super.getUniqueResultByHql(hql, productId, weiId);
+	}
+
+	@Override
+	public PageResult<ProductMgtVO> getProducts(ProductDTO dto, Limit limit) {
+		PageResult<ProductMgtVO> result = new PageResult<ProductMgtVO>();
+		if (null != dto && null != dto.getStatus()) {
+			if (!dto.isPTZ()) 
+			{// 当前用户为非子供应商时(包括子员工)
+				if (dto.getStatus() == ProductStatusEnum.Showing || dto.getStatus() == ProductStatusEnum.Drop) {
+					StringBuilder sb_ShowOrDrop = new StringBuilder(
+										"SELECT a.PublishType publishType,a.ProductID productId,a.defaultImg defaultImg,a.productTitle productTitle,a.OriginalPrice originalPrice,"
+									+ "a.defaultPrice defaultPrice,a.bookPrice bookPrice,a.defaultConmision defaultConmision,a.Count stockCount,a.SID sid,"
+									+ "b.ClassID classId,b.ID sjId,b.Type type,a.brandId brandId,a.supplierWeiId supplierWeiId,a.Tag tag,c.MinProxyPrice agentPrice,c.MinFloorPrice storePrice,c.DefaultPrice factoryPrice,c.AdvicePrice advicePrice "
+									+ "From P_Products a join (select * from P_ClassProducts where WeiID=:weiId) b on a.ProductID=b.ProductID");
+					Map<String, Object> params_ShowOrDrop = new HashMap<String, Object>();
+					sb_ShowOrDrop.append(" and b.State = :state");
+					if (dto.getStatus() == ProductStatusEnum.Showing) {
+						params_ShowOrDrop.put("state", Short.parseShort(ProductShelveStatu.OnShelf.toString()));
+					} else {
+						params_ShowOrDrop.put("state", Short.parseShort(ProductShelveStatu.OffShelf.toString()));
+					}
+					if (ObjectUtil.isNotEmpty(dto.getTitle())) {
+						sb_ShowOrDrop.append(" and a.ProductTitle like :title");
+						params_ShowOrDrop.put("title", "%" + dto.getTitle() + "%");
+					}
+					if (ObjectUtil.isNotEmpty(dto.getWeiId())) {
+						sb_ShowOrDrop.append(" and b.WeiID = :weiId");
+						params_ShowOrDrop.put("weiId", dto.getWeiId());
+					}
+					if (ObjectUtil.isNotEmpty(dto.getType()) && dto.getType() >= 0) { // 过滤"全部"-1,0表示分销；1、2、3表示自营;4表示代理;5表示落地分销
+						sb_ShowOrDrop.append(" and b.Type in (:type)"); // 排序
+						List<Short> types = new ArrayList<Short>();
+						if (dto.getType() == ShelveType.Self.getNo()) {// 1、2、3表示自营
+							types.add((short) 1);
+							types.add((short) 2);
+							types.add((short) 3);
+						} else if (dto.getType() == 6) {// 6表示过滤代理跟落地分销
+							types.add((short) 0);
+							types.add((short) 1);
+							types.add((short) 2);
+							types.add((short) 3);
+						} else {
+							types.add(dto.getType());
+						}
+						params_ShowOrDrop.put("type", types);
+					}
+					/*if (ObjectUtil.isNotEmpty(dto.getShopClassId()) && dto.getShopClassId() > 0) {// 当页面"全部"店铺分类时，不加此过滤条件
+						sb_ShowOrDrop.append(" and b.ClassID = :sid");
+						params_ShowOrDrop.put("sid", Long.parseLong(dto.getShopClassId().toString()));
+					}*/
+					if (dto.getShopClassIds().size() > 0) {
+						sb_ShowOrDrop.append(" and b.ClassID in (:sids)");
+						params_ShowOrDrop.put("sids", dto.getShopClassIds());
+					}
+
+					if (ObjectUtil.isNotEmpty(dto.getSubWeiId()) && !dto.getSubWeiId().equals("-1")) {// 页面传递了子供应商id，用于过滤获取当前平台号下的指定子供应商的产品(只有销售中/已下架才传递subWeiId)
+						sb_ShowOrDrop.append(" JOIN P_ProductRelation c ON a.ProductID = c.ProductID and c.SubWeiId = :subWeiId");
+						params_ShowOrDrop.put("subWeiId", dto.getSubWeiId());
+					} else {
+						sb_ShowOrDrop.append(" LEFT JOIN P_ProductRelation c ON a.ProductID = c.ProductID");
+					}
+//					if (ObjectUtil.isNotEmpty(dto.getSupShopClassId()) && dto.getSupShopClassId() > 0) {// 当页面"全部"店铺分类时，不加此过滤条件
+//						sb_ShowOrDrop.append(" ORDER BY b.sort DESC,b.createTime DESC"); // 按sort排序
+//					} else {// 选中"全部"店铺分类时，按updatetime倒序排
+					//先取消按createTime排序
+						sb_ShowOrDrop.append(" ORDER BY a.ProductID DESC");
+//					}
+						//改变一下不做统计，统计用另外一种方式
+					
+					Integer totalCount=0;
+					String keynum=RedisUtil.getString(ProductMgtVO.class+JsonUtil.objectToJson(dto));
+					if(!ObjectUtil.isEmpty(keynum)){
+						totalCount=Integer.parseInt(keynum);
+					}
+					else
+					{					  
+						StringBuilder countSql = new StringBuilder( "select count(1) from P_Products a where 1=1");
+						Map<String, Object> params_count = new HashMap<String, Object>();
+						if (ObjectUtil.isNotEmpty(dto.getTitle())) {
+							countSql.append(" and a.ProductTitle like :title");
+							params_count.put("title", "%" + dto.getTitle() + "%");
+						}
+						countSql.append(" and a.ProductID in ( select ProductID from P_ClassProducts b where 1=1");
+						countSql.append(" and b.State = :state");
+						if (dto.getStatus() == ProductStatusEnum.Showing) {
+							params_count.put("state", Short.parseShort(ProductShelveStatu.OnShelf.toString()));
+						} else {
+							params_count.put("state", Short.parseShort(ProductShelveStatu.OffShelf.toString()));
+						}
+						if (ObjectUtil.isNotEmpty(dto.getWeiId())) {
+							countSql.append(" and b.WeiID = :weiId");
+							params_count.put("weiId", dto.getWeiId());
+						}
+						if (ObjectUtil.isNotEmpty(dto.getType()) && dto.getType() >= 0) { // 过滤"全部"-1,0表示分销；1、2、3表示自营;4表示代理;5表示落地分销
+							countSql.append(" and b.Type in (:type)"); // 排序
+							List<Short> types = new ArrayList<Short>();
+							if (dto.getType() == ShelveType.Self.getNo()) {// 1、2、3表示自营
+								types.add((short) 1);
+								types.add((short) 2);
+								types.add((short) 3);
+							} else if (dto.getType() == 6) {// 6表示过滤代理跟落地分销
+								types.add((short) 0);
+								types.add((short) 1);
+								types.add((short) 2);
+								types.add((short) 3);
+							} else {
+								types.add(dto.getType());
+							}
+							params_count.put("type", types);
+						}
+						/*if (ObjectUtil.isNotEmpty(dto.getShopClassId()) && dto.getShopClassId() > 0) {// 当页面"全部"店铺分类时，不加此过滤条件
+							sb_ShowOrDrop.append(" and b.ClassID = :sid");
+							params_ShowOrDrop.put("sid", Long.parseLong(dto.getShopClassId().toString()));
+						}*/
+						if (dto.getShopClassIds().size() > 0) {
+							countSql.append(" and b.ClassID in (:sids)");
+							params_count.put("sids", dto.getShopClassIds());
+						}
+						countSql.append(")");
+						totalCount = (int)super.countBySqlMap(countSql.toString(), params_count);
+						RedisUtil.setString(keynum, totalCount.toString(), 300);
+					}
+					result = super.queryPageResultByMapWithCount(sb_ShowOrDrop.toString(), ProductMgtVO.class, limit,totalCount, params_ShowOrDrop);
+				} else if (dto.getStatus() == ProductStatusEnum.OutLine) {
+					StringBuilder sb_OutLine = new StringBuilder(
+							"SELECT a.PublishType publishType,a.ProductID productId,a.defaultImg defaultImg,a.productTitle productTitle,a.defaultPrice defaultPrice,a.bookPrice bookPrice,a.defaultConmision defaultConmision,a.sid sid,a.brandId brandId,a.supplierWeiId supplierWeiId,a.Count stockCount,b.MinProxyPrice agentPrice,b.MinFloorPrice storePrice,b.DefaultPrice factoryPrice,b.AdvicePrice advicePrice,a.OriginalPrice originalPrice "
+									+ "from (SELECT ProductID,defaultImg,productTitle,defaultPrice,bookPrice,defaultConmision,sid,brandId,supplierWeiId,Count,OriginalPrice,PublishType FROM P_Products where 1=1");
+					Map<String, Object> params_OutLine = new HashMap<String, Object>();
+					sb_OutLine.append(" and State = :state");
+					params_OutLine.put("state", Short.parseShort(dto.getStatus().toString()));
+					if (ObjectUtil.isNotEmpty(dto.getWeiId())) {
+						sb_OutLine.append(" and SupplierWeiID = :weiId");
+						params_OutLine.put("weiId", dto.getWeiId());
+					}
+					/*if (ObjectUtil.isNotEmpty(dto.getShopClassId()) && dto.getShopClassId() > 0) {// 当页面"全部"时，不加此过滤条件
+						sb_OutLine.append(" and SID = :sid"); // 草稿箱用p_products的sid作为店铺分类id处理
+						params_OutLine.put("sid", dto.getShopClassId());
+					}*/
+					if (dto.getShopClassIds().size() > 0) {
+						sb_OutLine.append(" and SID in (:sids)");
+						params_OutLine.put("sids", dto.getShopClassIds());
+					}
+					
+					if (ObjectUtil.isNotEmpty(dto.getTitle())) {
+						sb_OutLine.append(" and ProductTitle like :title");
+						params_OutLine.put("title", "%" + dto.getTitle() + "%");
+					}
+					sb_OutLine.append(" order by updateTime desc) a LEFT JOIN P_ProductRelation b ON a.ProductID = b.ProductID");
+					result = super.queryPageResultByMap(sb_OutLine.toString(), ProductMgtVO.class, limit, params_OutLine);
+				} 
+				else if (dto.getStatus() == ProductStatusEnum.Audit && dto.isPTH()) 
+				{// 平台号可以看到待审核
+					StringBuilder sb_audit = new StringBuilder(
+							"SELECT temp.*,b.MinProxyPrice agentPrice,b.MinFloorPrice storePrice FROM("
+									+ "SELECT a.ProductID productId,a.DefaultImg defaultImg,a.ProductTitle productTitle,a.DefaultPrice defaultPrice,a.sid sid,a.WeiID supplierWeiId,a.Stock stockCount,a.State status,a.Reason statusIntro,a.DefaultPrice factoryPrice,a.AdvicePrice advicePrice "
+									+ "FROM P_ProductSup a where a.State in(1,2)");
+					Map<String, Object> params_Audit = new HashMap<String, Object>();
+					if (ObjectUtil.isNotEmpty(dto.getWeiId())) {
+						sb_audit.append(" and a.WeiID = :weiId");
+						params_Audit.put("weiId", dto.getWeiId());
+					}
+					/*if (ObjectUtil.isNotEmpty(dto.getShopClassId()) && dto.getShopClassId() > 0) {// 当页面"全部"时，不加此过滤条件
+						sb_audit.append(" and a.SID = :sid");// 待处理用P_ProductSup的sid作为店铺分类id处理
+						params_Audit.put("sid", dto.getShopClassId());
+					}*/
+					if (dto.getShopClassIds().size() > 0) {
+						sb_audit.append(" and a.SID in (:sids)");
+						params_Audit.put("sids", dto.getShopClassIds());
+					}
+					
+					if (ObjectUtil.isNotEmpty(dto.getTitle())) {
+						sb_audit.append(" and a.ProductTitle like :title");
+						params_Audit.put("title", "%" + dto.getTitle() + "%");
+					}
+					sb_audit.append(" order by a.UpdateTime desc) temp left JOIN P_ProductRelation b ON temp.productId = b.SubProductID");
+					result = super.queryPageResultByMap(sb_audit.toString(), ProductMgtVO.class, limit, params_Audit);
+				}
+			} else { // 当前用户为子供应商时
+				if (dto.getStatus() == ProductStatusEnum.Showing || dto.getStatus() == ProductStatusEnum.Drop) {
+					StringBuilder sb_ShowOrDrop = new StringBuilder(
+							"SELECT a.PublishType publishType,a.ProductID productId,a.defaultImg defaultImg,a.productTitle productTitle,"
+									+ "a.defaultPrice defaultPrice,a.bookPrice bookPrice,a.defaultConmision defaultConmision,a.Count stockCount,a.SID sid,"
+									+ "b.ClassID classId,b.ID sjId,b.Type type,a.brandId brandId,a.supplierWeiId supplierWeiId,a.Tag tag,c.MinProxyPrice agentPrice,c.MinFloorPrice storePrice,c.DefaultPrice factoryPrice,c.AdvicePrice advicePrice "
+									+ "From P_Products a join P_ClassProducts b on a.ProductID=b.ProductID");
+					Map<String, Object> params_ShowOrDrop = new HashMap<String, Object>();
+					sb_ShowOrDrop.append(" and b.State = :state");
+					if (dto.getStatus() == ProductStatusEnum.Showing) {
+						params_ShowOrDrop.put("state", Short.parseShort(ProductShelveStatu.OnShelf.toString()));
+					} else {
+						params_ShowOrDrop.put("state", Short.parseShort(ProductShelveStatu.OffShelf.toString()));
+					}
+					if (ObjectUtil.isNotEmpty(dto.getTitle())) {
+						sb_ShowOrDrop.append(" and a.ProductTitle like :title");
+						params_ShowOrDrop.put("title", "%" + dto.getTitle() + "%");
+					}
+					if (ObjectUtil.isNotEmpty(dto.getSupWeiId())) {
+						sb_ShowOrDrop.append(" and b.WeiID = :supWeiId");
+						params_ShowOrDrop.put("supWeiId", dto.getSupWeiId());
+					}
+					if (ObjectUtil.isNotEmpty(dto.getType()) && dto.getType() >= 0) { // 过滤"全部"-1,0表示分销；1、2、3表示自营
+						sb_ShowOrDrop.append(" and b.Type in (:type)"); // 排序
+						List<Short> types = new ArrayList<Short>();
+						if (dto.getType() == ShelveType.Self.getNo()) {// 1、2、3表示自营
+							types.add((short) 1);
+							types.add((short) 2);
+							types.add((short) 3);
+						} else if (dto.getType() == 6) {// 过滤代理跟落地分销的
+							types.add((short) 0);
+							types.add((short) 1);
+							types.add((short) 2);
+							types.add((short) 3);
+						} else {
+							types.add(dto.getType());
+						}
+						params_ShowOrDrop.put("type", types);
+					}
+					/*if (ObjectUtil.isNotEmpty(dto.getShopClassId()) && dto.getShopClassId() > 0) {// 当页面"全部"店铺分类时，不加此过滤条件
+						sb_ShowOrDrop.append(" and b.ClassID = :sid");
+						params_ShowOrDrop.put("sid", Long.parseLong(dto.getShopClassId().toString()));
+					}*/
+					if (dto.getShopClassIds().size() > 0) {
+						sb_ShowOrDrop.append(" and b.ClassID in (:sids)");
+						params_ShowOrDrop.put("sids", dto.getShopClassIds());
+					}
+					
+					sb_ShowOrDrop.append(" JOIN P_ProductRelation c ON a.ProductID = c.ProductID");
+					if (ObjectUtil.isNotEmpty(dto.getWeiId())) {
+						sb_ShowOrDrop.append(" and c.SubWeiId = :weiId");
+						params_ShowOrDrop.put("weiId", dto.getWeiId());
+					}
+//					if (ObjectUtil.isNotEmpty(dto.getSupShopClassId()) && dto.getSupShopClassId() > 0) {// 当页面"全部"店铺分类时，不加此过滤条件
+//						sb_ShowOrDrop.append(" ORDER BY b.sort DESC,b.createTime DESC"); // 按sort排序
+//					} else {// 选中"全部"店铺分类时，按updatetime倒序排
+						sb_ShowOrDrop.append(" ORDER BY a.ProductID DESC");
+//					}
+					result = super.queryPageResultByMap(sb_ShowOrDrop.toString(), ProductMgtVO.class, limit, params_ShowOrDrop);
+				} else if (dto.getStatus() == ProductStatusEnum.OutLine) {
+					StringBuilder sb_OutLine = new StringBuilder(
+							"SELECT a.ProductID productId,a.DefaultImg defaultImg,a.ProductTitle productTitle,a.DefaultPrice defaultPrice,a.sid sid,a.WeiID supplierWeiId,a.DefaultPrice factoryPrice,a.AdvicePrice advicePrice "
+									+ "FROM P_ProductSup a WHERE a.State=0");
+					Map<String, Object> params_OutLine = new HashMap<String, Object>();
+					if (ObjectUtil.isNotEmpty(dto.getWeiId())) {
+						sb_OutLine.append(" and a.ChildrenID = :weiId");
+						params_OutLine.put("weiId", dto.getWeiId());
+					}
+					/*if (ObjectUtil.isNotEmpty(dto.getShopClassId()) && dto.getShopClassId() > 0) {// 当页面"全部"时，不加此过滤条件
+						sb_OutLine.append(" and a.SID = :sid");
+						params_OutLine.put("sid", dto.getShopClassId());
+					}*/
+					if (dto.getShopClassIds().size() > 0) {
+						sb_OutLine.append(" and a.SID in (:sids)");
+						params_OutLine.put("sids", dto.getShopClassIds());
+					}
+					
+					if (ObjectUtil.isNotEmpty(dto.getTitle())) {
+						sb_OutLine.append(" and a.ProductTitle like :title");
+						params_OutLine.put("title", "%" + dto.getTitle() + "%");
+					}
+					sb_OutLine.append(" order by a.UpdateTime desc");
+					result = super.queryPageResultByMap(sb_OutLine.toString(), ProductMgtVO.class, limit, params_OutLine);
+				} else if (dto.getStatus() == ProductStatusEnum.Audit) {// 子供应商可以看到待处理
+					StringBuilder sb_audit = new StringBuilder(
+							"SELECT temp.*,b.MinProxyPrice agentPrice,b.MinFloorPrice storePrice FROM("
+									+ " SELECT a.ProductID productId,a.DefaultImg defaultImg,a.ProductTitle productTitle,a.DefaultPrice defaultPrice,a.sid sid,a.WeiID supplierWeiId,a.Stock stockCount,a.State status,a.Reason statusIntro,a.DefaultPrice factoryPrice,a.AdvicePrice advicePrice"
+									+ " FROM P_ProductSup a where a.State in(1,2)");
+					Map<String, Object> params_Audit = new HashMap<String, Object>();
+					if (ObjectUtil.isNotEmpty(dto.getWeiId())) {
+						sb_audit.append(" and a.ChildrenID = :weiId");
+						params_Audit.put("weiId", dto.getWeiId());
+					}
+					/*if (ObjectUtil.isNotEmpty(dto.getShopClassId()) && dto.getShopClassId() > 0) {// 当页面"全部"时，不加此过滤条件
+						sb_audit.append(" and a.SID = :sid");// 待处理用P_ProductSup的sid作为店铺分类id处理
+						params_Audit.put("sid", dto.getShopClassId());
+					}*/
+					if (dto.getShopClassIds().size() > 0) {
+						sb_audit.append(" and a.SID in (:sids)");
+						params_Audit.put("sids", dto.getShopClassIds());
+					}
+					
+					if (ObjectUtil.isNotEmpty(dto.getTitle())) {
+						sb_audit.append(" and a.ProductTitle like :title");
+						params_Audit.put("title", "%" + dto.getTitle() + "%");
+					}
+					sb_audit.append(" order by a.UpdateTime desc) temp left JOIN P_ProductRelation b ON temp.productId = b.SubProductID");
+					result = super.queryPageResultByMap(sb_audit.toString(), ProductMgtVO.class, limit, params_Audit);
+				}
+			}
+		}
+		return result;
+	}
+
+	@Override
+	public Short getMaxSort(Integer shopClassId, Long weiId) {
+		String sql = "select max(PP.sort) from P_ClassProducts PP where PP.WeiID = ? and PP.ClassID = ? ";
+		return super.getUniqueSQLResult(sql, weiId, shopClassId);
+	}
+
+	@Override
+	public List<PClassProducts> getClassProducts(List<Long> ids, Long weiId) {
+		String hql = "from PClassProducts where weiId = :weiId and productId in(:productIds)";
+		Map<String, Object> params = new HashMap<String, Object>();
+		params.put("weiId", weiId);
+		params.put("productIds", ids);
+		return super.findByMap(hql, params);
+	}
+
+	@Override
+	public List<PClassProducts> getClassProducts_other(Long productId, Long weiId) {
+		String hql = "from PClassProducts where productId =:productId and weiId <> :weiId";
+		Map<String, Object> params = new HashMap<String, Object>();
+		params.put("productId", productId);
+		params.put("weiId", weiId);
+		return super.findByMap(hql, params);
+	}
+
+	@Override
+	public List<PProducts> getPProducts(List<Long> ids, Long weiId) {
+		String hql = "from PProducts where supplierWeiId = :weiId and productId in(:productIds)";
+		Map<String, Object> params = new HashMap<String, Object>();
+		params.put("weiId", weiId);
+		params.put("productIds", ids);
+		return super.findByMap(hql, params);
+	}
+
+	@Override
+	public PClassProducts GetShelveProductByWeiid(Long weiid, Long productid, Short statu) {
+		if (statu.equals(1)) {
+			String hql = " from PClassProducts p where p.weiId=? and p.productId=? and p.state=1";
+			Object[] b = new Object[2];
+			b[0] = weiid;
+			b[1] = productid;
+			return super.getUniqueResultByHql(hql, b);
+		} else {
+			String hql = " from PClassProducts p where p.weiId=? and p.productId=?";
+			Object[] b = new Object[2];
+			b[0] = weiid;
+			b[1] = productid;
+			return getUniqueResultByHql(hql, b);
+		}
+	}
+
+	@Override
+	public UAttention getattentionModle(Long attener, Long attento) {
+		String hql = " from UAttention p where p.attentioner=? and p.attTo=? and p.status=1";
+		Object[] b = new Object[2];
+		b[0] = attener;
+		b[1] = attento;
+		return getUniqueResultByHql(hql, b);
+	}
+
+	@Override
+	public PShopClass getShopClassByid(Integer sid) {
+		String hql = " from PShopClass p where p.sid=? and p.state=1";
+		List<PShopClass> list = find(hql, sid);
+		if (list != null && list.size() > 0) {
+			return list.get(0);
+		}
+		return null;
+	}
+
+	@Override
+	public List<PShopClass> getSubShopClassByid(Integer parentId) {
+		String hql = " from PShopClass p where p.state=1 and paretId=? order by sort";
+		return find(hql, parentId);
+	}
+
+	@Override
+	public List<PShevleBatchPrice> GetShevleBatchPriceByID(Long shelveID) {
+		String hql = " from PShevleBatchPrice p where p.id=? order by p.price desc";
+		Object[] b = new Object[1];
+		b[0] = shelveID;
+		return find(hql, b);
+	}
+
+	@Override
+	public List<PProductBatchPrice> GetBatchPriceByID(Long productid) {
+		String hql = " from PProductBatchPrice p where p.productId=? order by p.pirce desc";
+		Object[] b = new Object[1];
+		b[0] = productid;
+		return getUniqueResultByHql(hql, b);
+	}
+
+	@Override
+	public PClassProducts getShevleProductByWeiidAndProductID(Long weiid, Long productid) {
+		String hql = " from PClassProducts p where p.weiId = ? and p.productId=?";
+		Object[] b = new Object[2];
+		b[0] = weiid;
+		b[1] = productid;
+		List<PClassProducts> list = find(hql, b);
+		if (list != null && list.size() > 0) {
+			return list.get(0);
+		}
+		return null;
+	}
+
+	@Override
+	public List<PProductBatchPrice> getBatchPrice(Long productId) {
+		String hql = "from PProductBatchPrice where productId =:productId order by pirce";
+		Map<String, Object> params = new HashMap<String, Object>();
+		params.put("productId", productId);
+		return super.findByMap(hql, params);
+	}
+
+	@Override
+	public List<PShevleBatchPrice> getMyBatchPrice(Long sjId) {
+		String hql = "from PShevleBatchPrice where id =:sjId order by price";
+		Map<String, Object> params = new HashMap<String, Object>();
+		params.put("sjId", sjId);
+		return super.findByMap(hql, params);
+	}
+
+	@Override
+	public List<UChildrenUser> getChildSupplyer(Long parentId) {
+		String hql = "from UChildrenUser where state=1 and type=2 and parentId = ?";
+		return super.find(hql, parentId);
+	}
+
+	@Override
+	public void deleteShevleProductByWeiidAndProductID(Long weiid, Long productid, Long batchid) {
+		// 只删除批发价格数据
+		String hql0 = "delete from PShevleBatchPrice p where p.id=?";
+		Object[] b0 = new Object[1];
+		b0[0] = batchid;
+		executeHql(hql0, b0);
+		return;
+	}
+
+	@Override
+	public UUserAssist updateUserAssist(Long weiid) {
+		//通过微店号查询辅助表
+		String hql=" from UUserAssist p where p.weiId=?";
+		Object[] b=new Object[1];
+		b[0]=weiid;
+		UUserAssist userassit = getUniqueResultByHql(hql, b);
+		//如果改微店还没上架，就想辅助表添加改用户使用上架功能时的个人排序
+		hql = " from PShelverCount";
+		PShelverCount psc = getUniqueResultByHql(hql,null);
+		if(psc == null)
+		{
+			psc = new PShelverCount();
+			psc.setCount(0L);
+		}
+		if(userassit==null){
+			UUserAssist ua = new UUserAssist();
+			ua.setWeiId(weiid);
+			ua.setWeiIdSort(psc.getCount()+1);
+			save(ua);
+		} else {
+			userassit.setWeiId(weiid);
+			userassit.setWeiIdSort(psc.getCount()+1);
+			update(userassit);
+		}
+		psc.setCount(psc.getCount()+1);
+		//更新记录表，数量加1
+		saveOrUpdate(psc);
+		return userassit;
+	}
+
+	@Override
+	public Long InsertShevleProduct(PClassProducts classproduct, ShelveProduct sproduct, Long WeiID, Long WeiIDsort) {
+		// PClassProducts classproduct = new PClassProducts();
+		classproduct.setProductId(sproduct.getProductID());
+		classproduct.setClassId(sproduct.getClassID());
+		classproduct.setIsSendMyself(sproduct.getIsSendMyself());
+		classproduct.setSort((short) -1);
+		classproduct.setReason(sproduct.getShevleDes());
+		classproduct.setState((short) 1);
+		classproduct.setCreateTime(new Date());
+		classproduct.setWeiId(WeiID);
+		classproduct.setSupplierweiId(sproduct.getSupplierWeiid());
+		classproduct.setShelvweiId(sproduct.getShelveWeiid());
+		classproduct.setSendweiId(sproduct.getSendWeiid());
+		classproduct.setWeiIdsort(WeiIDsort);
+		classproduct.setType(sproduct.getType());
+
+		boolean falg = false;
+		Long pcpid = (long) 0;
+		if (classproduct.getId() == null || classproduct.getId().equals(0)) {
+			// 初次上架
+			pcpid = (Long) save(classproduct);
+			falg = true;
+		} else {
+			// 修改
+			update(classproduct);
+			pcpid = classproduct.getId();
+		}
+
+		// 批发价格
+		List<BatchPriceM> batchList = sproduct.getBatchList();
+		if (batchList != null && batchList.size() > 0) {
+			for (BatchPriceM bpm : batchList) {
+				PShevleBatchPrice batchprice = new PShevleBatchPrice();
+				batchprice.setWeiIdsort(WeiIDsort);
+				batchprice.setId(pcpid);
+				batchprice.setCount(bpm.getCount());
+				batchprice.setPrice(bpm.getPrice());
+				save(batchprice);
+			}
+		}
+
+		// 插入消息通知
+		// 不应该通知自己插自己的数据
+		if (!WeiID.equals(sproduct.getSupplierWeiid())) {
+			UMessage m = new UMessage();
+			m.setWeiId(WeiID);
+			m.setToWeiId(sproduct.getSupplierWeiid());
+			UWeiSeller w = get(UWeiSeller.class, WeiID);
+			;
+			m.setMessage(w.getWeiName() + "上架了您的产品！");
+			m.setType((short) 8);
+			m.setState((short) 1);
+			m.setKeyValue(sproduct.getProductID());
+			m.setCreateTime(new Date());
+			save(m);
+
+			// 增加上架数
+			PProductAssist pAssist = get(PProductAssist.class, sproduct.getProductID());
+			if (pAssist != null) {
+				if (pAssist.getShelvesCount() != null && falg)
+					pAssist.setShelvesCount(pAssist.getShelvesCount() + 1);
+				else
+					pAssist.setShelvesCount(1);
+			} else {
+				pAssist = new PProductAssist();
+				pAssist.setProductId(sproduct.getProductID());
+				pAssist.setSupplierId(sproduct.getSupplierWeiid());
+				pAssist.setShelvesCount(1);
+			}
+
+			saveOrUpdate(pAssist);
+		}
+
+		String hql = "select count(*) from UAttentioned p where p.attTo=?";
+		Object[] b = new Object[1];
+		b[0] = WeiID;
+		Long count = count(hql, b);
+		return count;
+	}
+
+	@Override
+	public List<PClassProducts> getPClassProducts(Long weiid, Long shopClassId, Short state) {
+		if (weiid == null) {
+			return null;
+		}
+		StringBuilder sb = new StringBuilder();
+		Map<String, Object> map = new HashMap<String, Object>();
+		sb.append("from PClassProducts p where p.weiId=:weiid");
+		map.put("weiid", weiid);
+		if (shopClassId != null && shopClassId.longValue() > 0) {
+			sb.append(" and p.classId=:shopClassId ");
+			map.put("shopClassId", shopClassId);
+		}
+		if (state != null) {
+			sb.append(" and p.state=:state ");
+			map.put("state", state);
+		}
+		return findByMap(sb.toString(), map);
+	}
+
+	@Override
+	public void UP_PClassProductsByProIds(Long weiid, Long[] productIdS, Short state, boolean isDelete) {
+		if (weiid == null || productIdS == null || productIdS.length <= 0)
+			return;
+		Map<String, Object> map = new HashMap<String, Object>();
+		map.put("proIds", productIdS);
+		map.put("weiid", weiid);
+		String hql = "";
+		if (isDelete) {
+			hql = " delete from PClassProducts p  where p.weiId=:weiid and p.productId in (:proIds)";
+		} else {
+			hql = " update PClassProducts p set p.state=:states  where p.weiId=:weiid and p.productId in (:proIds)";
+			map.put("states", state);
+		}
+		executeHqlByMap(hql, map);
+
+	}
+
+	@Override
+	public void UP_PClassProductsByProId(Long weiid, Long productId, Short state, boolean isDelete) {
+		if (weiid == null || productId == null || productId <= 0)
+			return;
+		Map<String, Object> map = new HashMap<String, Object>();
+		map.put("proId", productId);
+		map.put("weiid", weiid);
+		String hql = "";
+		if (isDelete) {
+			hql = " delete from PClassProducts p  where p.weiId=:weiid and p.productId = :proId";
+		} else {
+			hql = " update PClassProducts p set p.state=:states where p.weiId=:weiid and p.productId = :proId";
+			map.put("states", state);
+		}
+		executeHqlByMap(hql, map);
+
+	}
+
+	@Override
+	public void UP_ProductByProductIDS(Long weiid, Long[] productIdS, Short state) {
+		if (weiid == null || productIdS == null || productIdS.length <= 0)
+			return;
+		Map<String, Object> map = new HashMap<String, Object>();
+		String hql = " update PProducts p set p.state=:states  where p.supplierWeiId=:weiid and p.productId in (:proIds)";
+		map.put("proIds", productIdS);
+		map.put("weiid", weiid);
+		map.put("states", state);
+		executeHqlByMap(hql, map);
+	}
+	
+	@Override
+	public void UP_ProductSubByProductIDS(String weiid, Long[] productIdS, Short state) {
+		if (weiid == null || productIdS == null || productIdS.length <= 0)
+			return;
+		Map<String, Object> map = new HashMap<String, Object>();
+		String hql = " update PProductSup p set p.state=:states  where p.childrenID=:weiid and p.productId in (:proIds)";
+		map.put("proIds", productIdS);
+		map.put("weiid", weiid);
+		map.put("states", state);
+		executeHqlByMap(hql, map);
+	}
+	
+	@Override
+	public void UP_SubProductByProductIDS(String weiid, Long[] productIdS, Short state) {
+		if (productIdS == null || productIdS.length <= 0)
+			return;
+		Map<String, Object> map = new HashMap<String, Object>();
+		String hql = " update PProductSup p set p.state=:state  where p.productId in (:proIds)";
+		map.put("proIds", productIdS);
+		map.put("state", state);
+		executeHqlByMap(hql, map);
+	}
+
+	@Override
+	public void UP_ProductByProductID(Long weiid, Long productId, Short state) {
+		if (weiid == null || productId == null || productId <= 0)
+			return;
+		Map<String, Object> map = new HashMap<String, Object>();
+		String hql = " update PProducts p set p.state=:states  where p.supplierWeiId=:weiid and p.productId = :proId";
+		map.put("proId", productId);
+		map.put("weiid", weiid);
+		map.put("states", state);
+		executeHqlByMap(hql, map);
+		
+		DBrandSupplier supplier=super.get(DBrandSupplier.class, weiid);
+		if(supplier!=null){
+			String hql_sh="from PBrandShevle p where p.productId=? and p.supplyerId=? ";
+			PBrandShevle bra=super.getNotUniqueResultByHql(hql_sh, productId,weiid);
+			if(bra!=null){
+				bra.setType(state);
+				super.update(bra);
+			}
+//			else {
+//				if(state==Short.parseShort(ProductStatusEnum.Showing.toString())){
+//					PProducts products=super.get(PProducts.class, productId);
+//					bra=new PBrandShevle();
+//					bra.setBrandId(supplier.getBrandId());
+//					bra.setClassId(products.getSid());
+//					bra.setProductId(productId);
+//					bra.setSystemClassID(products.getClassId());
+//					
+//				}
+//			}
+		}
+	}
+
+	@Override
+	public boolean UP_UOwnerMessagesDelByProIds(Long[] proIds, Long weiid) {
+		String hqlString = "delete from  UOwnerMessage m  where  m.weiId=:weiid and m.keyValue in(:productids) ";
+		Map<String, Object> map = new HashMap<String, Object>();
+		map.put("weiid", weiid);
+		map.put("productids", proIds);
+		executeHqlByMap(hqlString, map);
+		return true;
+	}
+
+	@Override
+	public List<String> getPictureImg(Long productId) {
+		if(productId==null||productId<=0)
+			return null;
+		List<String> imglist=super.find("select imgPath from PProductImg where productId=?", productId);
+		PProducts products=super.get(PProducts.class, productId);
+		if(products!=null&& !ObjectUtil.isEmpty(products.getDefaultImg()) ){
+			if(imglist!=null){
+				imglist.add(products.getDefaultImg());
+			}else {
+				imglist=new ArrayList<String>();
+				imglist.add(products.getDefaultImg());
+			}
+		}
+		return imglist;
+	}
+}

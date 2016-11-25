@@ -1,0 +1,314 @@
+<%@ page language="java" contentType="text/html; charset=UTF-8"
+    pageEncoding="UTF-8"%>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c"%>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/functions" prefix="fn"%>
+<%@ page import="java.util.ResourceBundle"%>
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+<%
+String path = request.getContextPath();
+String productdomain = ResourceBundle.getBundle("domain").getString("productdomain");
+String okweidomain = ResourceBundle.getBundle("domain").getString("okweidomain");
+%>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>代理区首页</title>
+<link rel="stylesheet" type="text/css" href="../statics/css/pc-base.css" />
+<link rel="stylesheet" type="text/css" href="../statics/css/mzh_dd.css" />
+<script src="../statics/js/jquery-1.7.1.min.js"></script>
+<script type="text/javascript" src="/statics/js/common/share.js?v=2"></script>
+
+<script>
+$(function(){
+  function zishiying(){
+    var aHeight = $(".mzh_dldp_sqdl").height();
+    var aWidth= $(document).width();
+    aWidth= (aWidth-1200)/2-50;
+    var aOffsetTop = $(window).height();
+    aOffsetTop= (aOffsetTop/2)-(aHeight/2);
+    $(".mzh_dldp_sqdl").css({right:aWidth+"px",top:aOffsetTop+"px"});
+  }
+  zishiying();
+  $(window).resize(function(){
+    zishiying();
+  })
+  
+  $(".mzh_dldp_sqdl").hover(function(){
+		$(".fx_WKX").show();
+	},function(){
+		$(".fx_WKX").hide();
+	})
+	
+	$("#delu").click(function(){
+		  window.location.href="http://port.okwei.com/login.aspx?back="+window.location.href;
+	  });
+})
+function shareto(ftype,brandid,weiID){
+		var title="";
+		var pageurl="http://www.<%=okweidomain %>/castellan/rdl?brandid="+brandid+"&tuiweiId="+weiID;
+		var source="普通网民可以在这里免费注册开微店，做代理，供应商可以从这里提交资料，把产品发到云端产品库，让像我一样的无数网民为他销售产品。";
+		switch(ftype)
+		{
+			case 0:{
+				ShareToQzone(title, pageurl, source);
+				break;}
+			case 1:{
+				ShareToTencent(title, pageurl, source);
+				break;}
+			case 2:{
+				ShareToSina(title, pageurl, source);
+				break;}
+			default:{
+				alert("分享类型错误！");
+				break;
+			}
+		}
+	}
+	
+</script>
+</head>
+<style>
+  .mzh_dlq_r_1{float: left;width: 100%;margin-bottom: 10px;border: 1px solid #eee;background: #fff;}
+  .mzh_dlq_r_1_xx{float: left;width: 100%;padding-bottom: 10px;background: #fdf1db;}
+  .mzh_dlq_r_1_xx ul li{float: left;width: 33.33%;text-align: center;}
+  .mzh_dlq_r_1_xx ul li p{color: #cba973;}
+  .mzh_dlq_r_1_dlsqlc{float: left;width: 215px;padding:0px 0px 40px;background:#fdf1db;}
+  .mzh_dlq_r_1_dlsqlc ul{float: left;width: 190px;padding: 15px 13px 0px;background: url("http://base1.okwei.com/images/img_cz_64.png") repeat-y;}
+  .mzh_dlq_r_1_dlsqlc ul li{float: left;width:100%}
+  .mzh_dlq_r_1_dlsqlc ul li b{float: left;width:26px;background: url("http://base1.okwei.com/images/img_cz_65.png") repeat-y;line-height: 26px;text-align: center;color: #fff;font-weight: normal;}
+  .mzh_dlq_r_1_dlsqlc ul li span{float: left;width:150px;color: #c39e63;}
+</style>
+<body style="background: #f5f5f5;">
+<header>
+</header>
+
+
+<article>
+  <div class="fl w">
+    <div class="line3 mar1200">当前位置： <a href="#" class="c3">首页</a> &gt; <span class="tb">代理区</span></div>
+  </div>
+  <div class="fl w">
+    <div class="mar1200">
+      <div class="fl w"><img src="http://base1.okwei.com/images/img_cz_30.jpg" class="fl w"/></div>
+
+      <!-- 代理区 -->
+      <div class="mzh_dlq mt20">
+      <div class="mzh_dlq_l">
+        <div class="mzh_dlq_l_xx">
+          <div class="mzh_dldp_bl cR">营养保健</div>
+          <div class="fl w tc c6 line2 f14">
+            <p>要财富，更要健康！有健康才能创造财富！</p>
+            <p>每一个人都渴望健康，我们只做健康产品！</p>
+          </div>
+          <div class="mzh_dlq_l_xx_r">
+            <div class="fr w">
+              <!--<a class="fr cB" href="http://1.okwei.com/">更多&gt;&gt;</a>-->
+            </div>
+            <ul>
+            <c:forEach var="yybj" items="${yybj0}">
+             <li>
+             	<a href="<%=productdomain%>/product?pid=${yybj.productid }&source=0">
+                <img src="${yybj.imgurl }" width="170" height="170" class="fl"/>
+                <b class="cR f18 fl w mb5 mt5">￥${yybj.price }</b>
+                <div  class="mzh_dlq_l_xx_r_a">${yybj.title }</div>
+             	</a>
+              </li>
+             </c:forEach>
+            <c:forEach var="yybj" items="${yybj}">
+             <li>
+                <a href="<%=productdomain%>/product?pid=${yybj.productid }&source=0">
+                <img src="${yybj.imgurl }" width="170" height="170" class="fl"/>
+                <b class="cR f18 fl w mb5 mt5">￥${yybj.price }</b>
+                <div class="mzh_dlq_l_xx_r_a">${yybj.title }</div>
+                </a>
+              </li>
+             </c:forEach>
+            </ul>
+          </div>
+        </div>
+        <div class="mzh_dlq_l_xx">
+          <div class="mzh_dldp_bl cR">化妆美容</div>
+          <div class="fl w tc c6 line2 f14">
+            <p>爱美是天性，你也可以为美代言！</p>
+            <p>美丽妆容，呵护有加！</p>
+          </div>
+          <div class="mzh_dlq_l_xx_r">
+            <div class="fr w">
+              <!--<a class="fr cB" href="http://1.okwei.com/">更多&gt;&gt;</a>-->
+            </div>
+            <ul>
+               <c:forEach var="yybj" items="${hzmr}">
+             <li>
+                <a href="<%=productdomain %>/product?pid=${yybj.productid }&source=0" >
+                <img src="${yybj.imgurl }" width="170" height="170" class="fl"/>
+                <b class="cR f18 fl w mb5 mt5">￥${yybj.price }</b>
+                <div class="mzh_dlq_l_xx_r_a">${yybj.title }</div>
+                </a>
+              </li>
+             </c:forEach>
+
+            </ul>
+          </div>
+        </div>
+        <div class="mzh_dlq_l_xx">
+          <div class="mzh_dldp_bl cR">生活日用</div>
+          <div class="fl w tc c6 line2 f14">
+            <p>生活日用好产品，让生活更有趣！</p>
+            <p> 日用百货，好货享不停！</p>
+          </div>
+          <div class="mzh_dlq_l_xx_r">
+            <div class="fr w">
+              <!--<a class="fr cB" href="http://1.okwei.com/">更多&gt;&gt;</a>-->
+            </div>
+            <ul>
+              <c:forEach var="shry" items="${shry }">
+              <li>
+               <a href="<%=productdomain%>/product?pid=${shry.productid }&source=0" class="fl w">
+                <img src="${shry.imgurl }" width="170" height="170" class="fl"/>
+                <b class="cR f18 fl w mb5 mt5">￥${shry.price }</b>
+                <div  class="mzh_dlq_l_xx_r_a">${shry.title }</div>
+               </a>
+              </li>
+              </c:forEach>
+            </ul>
+          </div>
+        </div>
+        <div class="mzh_dlq_l_xx">
+          <div class="mzh_dldp_bl cR">生活电器</div>
+          <div class="fl w tc c6 line2 f14">
+            <p>环保节能、安全便捷新选择！</p>
+            <p>安全家用生活电器，好品质！</p>
+          </div>
+          <div class="mzh_dlq_l_xx_r">
+            <div class="fr w">
+              <!--<a class="fr cB" href="http://1.okwei.com/">更多&gt;&gt;</a>-->
+            </div>
+            <ul>
+              <c:forEach var="shry" items="${shdq }">
+              <li>
+                <a href="<%=productdomain%>/product?pid=${shry.productid }&source=0">
+                <img src="${shry.imgurl }" width="170" height="170" class="fl"/>
+                <b class="cR f18 fl w mb5 mt5">￥${shry.price }</b>
+                <div class="mzh_dlq_l_xx_r_a">${shry.title }</div>
+                </a>
+              </li>
+              </c:forEach>
+            </ul>
+          </div>
+        </div>
+        <div class="mzh_dlq_l_xx">
+          <div class="mzh_dldp_bl cR">家纺</div>
+          <div class="fl w tc c6 line2 f14">
+            <p>品牌家纺，实力说话！</p>
+            <p>极致美好的家，少不了精品家纺！</p>
+          </div>
+          <div class="mzh_dlq_l_xx_r">
+            <div class="fr w">
+              <!--<a class="fr cB" href="http://1.okwei.com/">更多&gt;&gt;</a>-->
+            </div>
+            <ul>
+              <c:forEach var="shry" items="${jjjf }">
+              <li>
+                <a href="<%=productdomain%>/product?pid=${shry.productid }&source=0">
+                <img src="${shry.imgurl }" width="170" height="170" class="fl"/>
+                <b class="cR f18 fl w mb5 mt5">￥${shry.price }</b>
+                <div  class="mzh_dlq_l_xx_r_a">${shry.title }</div>
+                </a>
+              </li>
+              </c:forEach>
+              
+            </ul>
+          </div>
+        </div>
+        <div class="mzh_dlq_l_xx">
+          <div class="mzh_dldp_bl cR">粮油调味</div>
+          <div class="fl w tc c6 line2 f14">
+            <p>生活哪能离得了调味品，怎么调你来选！</p>
+            <p>粮油调味，一日三餐都有它！</p>
+          </div>
+          <div class="mzh_dlq_l_xx_r">
+            <div class="fr w">
+              <!--<a class="fr cB" href="http://1.okwei.com/">更多&gt;&gt;</a>-->
+            </div>
+            <ul>
+              <c:forEach var="shry" items="${lytw }">
+              <li>
+                <a href="<%=productdomain%>/product?pid=${shry.productid }&source=0">
+                <img src="${shry.imgurl }" width="170" height="170" class="fl"/>
+                <b class="cR f18 fl w mb5 mt5">￥${shry.price }</b>
+                <div class="mzh_dlq_l_xx_r_a">${shry.title }</div>
+                </a>
+              </li>
+              </c:forEach>
+              
+            </ul>
+          </div>
+        </div>
+
+        <!-- 分页 -->
+        <div class="pull-right">
+          <div class="pagination" size="4">
+          </div>
+        </div>
+      </div>
+
+      <div class="mzh_dlq_r">
+        <div class="mzh_dlq_r_1">
+          <div class="mzh_dlq_r_1_xx">
+            <ul>
+              <li><img src="http://base2.okwei.com/images/img_cz_31.png" class="mt10 mb5"/><p>稳定货源</p></li>
+              <li><img src="http://base2.okwei.com/images/img_cz_32.png" class="mt10 mb5"/><p>价格专享</p></li>
+              <li><img src="http://base2.okwei.com/images/img_cz_33.png" class="mt10 mb5"/><p>服务保障</p></li>
+            </ul>
+          </div>
+        </div>
+        <div class="mzh_dlq_r_1">
+          <div class="fl w pt10 pb10 line-b"><img src="http://base1.okwei.com/images/img_cz_34.jpg" class="fl ml10 mr5" style="margin-top: 4px;"/><span class="f16">代理申请流程</span></div>
+          <div class="mzh_dlq_r_1_dlsqlc f14">
+            <ul>
+              <li class="mt10"><b>1</b><span class="ml5">筛选中意品牌商</span></li>
+              <li class="mt10"><b>2</b><span class="ml5">完善代理资料，选择代理级别</span></li>
+              <li class="mt10"><b>3</b><span class="ml5">支付代理金额</span></li>
+              <li class="mt10"><b>4</b><span class="ml5">申请成功后，销售产品盈利</span></li>
+            </ul>
+          </div>
+        </div>
+        
+
+      </div>
+    </div>
+
+    </div>
+  </div>
+</article>
+<c:if test="${stype==1 }">
+<div class="mzh_dldp_sqdl">
+	<span>推荐他人</span>
+    <div class="fx_WKX" style="display: none;">
+      <div class="ZF">
+        <div style="width: 22px; height: 21px; margin: 10px 0 0 12px; text-indent: 0;">
+          <a href="javascript:shareto(0,1,${user.weiID });"><img src="http://base1.okwei.com/images/TX_kj.gif"></a>
+        </div>
+        <div style="width: 22px; height: 21px; margin: 10px 0 0 12px; text-indent: 0;">
+          <a href="javascript:shareto(1,1,${user.weiID });"><img src="http://base2.okwei.com/images/TX_wb.gif"></a>
+        </div>
+        <div style="float: left; width: 22px; height: 21px; margin: 10px 0 0 12px; text-indent: 0;">
+          <a href="javascript:shareto(2,1,${user.weiID });"><img src="http://base3.okwei.com/images/XL_wb.gif"></a>
+        </div>
+      </div>
+    </div>
+</div>
+</c:if>
+<c:if test="${stype==3 }">
+<a href="http://www.<%=okweidomain%>/agentmgt/applyAgent?brandid=1" class="mzh_dldp_sqdl">申请代理</a>
+</c:if>
+<c:if test="${stype==2 }">
+<a href="http://www.<%=okweidomain%>/agentmgt/applySuccess?brandid=1" class="mzh_dldp_sqdl">申请代理</a>
+</c:if>
+<c:if test="${stype==0 }">
+<a href="#" id="delu" class="mzh_dldp_sqdl">申请代理</a>
+</c:if>
+</body>
+</html>

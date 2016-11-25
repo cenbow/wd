@@ -1,0 +1,256 @@
+package com.okwei.service.impl;
+
+import java.math.BigInteger;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.okwei.bean.domain.DAgentInfo;
+import com.okwei.bean.domain.DAgentTeam;
+import com.okwei.bean.domain.DCastellans;
+import com.okwei.bean.domain.TCountStat;
+import com.okwei.bean.domain.TFansApply;
+import com.okwei.bean.domain.TTasteApply;
+import com.okwei.bean.domain.TTasteSummer;
+import com.okwei.bean.domain.UShopInfo;
+import com.okwei.bean.dto.TFansApplyDTO;
+import com.okwei.bean.enums.FansStatusEnum;
+import com.okwei.bean.enums.agent.CastellanType;
+import com.okwei.bean.vo.CodeAreaAllVo;
+import com.okwei.bean.vo.CodeAreaVo;
+import com.okwei.bean.vo.FansApplyVO;
+import com.okwei.bean.vo.ReturnModel;
+import com.okwei.bean.vo.ReturnStatus;
+import com.okwei.bean.vo.activity.AActivityProductVo;
+import com.okwei.common.Limit;
+import com.okwei.common.PageResult;
+import com.okwei.dao.IBaseDAO;
+import com.okwei.service.IFansApplyCommonService;
+import com.okwei.util.DateUtils;
+import com.okwei.util.ImgDomain;
+import com.okwei.util.ObjectUtil;
+import com.okwei.util.ParseHelper;
+import com.okwei.util.RedisUtil;
+import com.okwei.util.StringHelp;
+
+@Service
+public class FansApplyCommonService extends BaseService implements IFansApplyCommonService {
+	@Autowired
+	private IBaseDAO baseDAO;
+
+	 @Override
+    public TFansApply getTFansApply(Long weiid){
+		TFansApply fansapply=baseDAO.getNotUniqueResultByHql(" from TFansApply a where a.fansId=? ", weiid);
+    	return fansapply;
+    }
+	 
+	@Override
+    public long count_TFansDistrict(){
+		return baseDAO.countBySql("select count(*) from (select  DISTINCT  a.city from T_FansApply a ) as b");
+    }
+	
+	@Override
+    public long count_TFansNumber(){
+		long l=0L;
+		List<Object> li= baseDAO.queryBySql("select count(*) from T_FansApply ");
+		if(li!=null && li.size()>0)
+		{
+			Object ob=li.get(0);
+			if(ob!=null)
+				l=ParseHelper.toLong(li.get(0).toString());
+		}
+		return l;
+    }
+	
+	@Override
+	public long count_TFansPassNumber(){
+			long l=0L;
+			List<Object> li= baseDAO.queryBySql("select count(*) from T_FansApply where status=? ",ParseHelper.toDouble(FansStatusEnum.Pass.toString()));
+			if(li!=null && li.size()>0)
+			{
+				Object ob=li.get(0);
+				if(ob!=null)
+					l=ParseHelper.toLong(li.get(0).toString());
+			}
+			return l;
+	    }
+	@Override
+	public ReturnModel saveTfansApply(TFansApplyDTO ta){
+		ReturnModel rm=new ReturnModel();
+		TFansApply tapply=new TFansApply();
+		tapply.setAge(ta.getAge());
+		tapply.setDegree(ta.getDegree());
+		tapply.setCreateTime(new Date());
+		tapply.setCity(ta.getCity());
+		tapply.setProvince(ta.getProvince());
+		tapply.setDistrict(ta.getDistrict());
+		tapply.setFansId(ta.getFansId());
+		tapply.setHeadImg(ta.getHeadImg());
+		tapply.setHomeTown(ta.getHomeTown());
+		tapply.setIntroduce(ta.getIntroduce());
+		tapply.setQq(ta.getQq());
+		tapply.setWeiBo(ta.getWeiBo());
+		tapply.setWeiXin(ta.getWeiXin());
+		tapply.setName(ta.getName());
+		tapply.setPhone(ta.getPhone());
+		
+		tapply.setStatus(ParseHelper.toInt(FansStatusEnum.Applying.toString()));
+		
+		baseDAO.save(tapply);
+		rm.setStatu(ReturnStatus.Success);
+		rm.setStatusreson("提交资料成功");
+		return rm;
+	}
+	
+	
+	@Override
+	public ReturnModel getFansRegionalForPcode(int level, long parent, int codeType,int status) {
+		ReturnModel rm = new ReturnModel();
+		try {
+			String hql = null;
+			String wherePart="";
+			if(status==ParseHelper.toInt(FansStatusEnum.Pass.toString())){
+				wherePart+=" where status= "+FansStatusEnum.Pass.toString();
+			}
+			else{
+				wherePart+=" ";
+			}	
+			
+			switch (level) {
+			case 2:
+				hql = "select  A.`Code`,A.`Name`, IFNULL(B.Total,0) AS Total  from (  " + " select `Code`,`Name` from T_Regional where `Level`=2) AS A INNER JOIN " + "	 (select  IFNULL(Province,city) AS Province, COUNT(IFNULL(Province,city)) AS Total from T_FansApply "+wherePart+""
+						+ "	 group by Province) AS B ON A.Code=B.Province ORDER BY Total DESC ";
+				break;
+			case 3:								
+				hql = "select    A.`Code`,A.`Name`, IFNULL(B.Total,0) AS Total from (  " + "select `Code`,`Name` from T_Regional where `Level`=3  " + (parent > 0 ? " and parent = " + parent : "") + " ) AS A INNER JOIN " + "	 (select City, COUNT(City) AS Total from T_FansApply "+wherePart+""
+							+ "		 group by City) AS B ON A.Code=B.City ORDER BY Total DESC ";		
+				break;
+
+			case 4:
+				hql = "select    A.`Code`,A.`Name`, IFNULL(B.Total,0) AS Total  from ( " + "select `Code`,`Name` from T_Regional where `Level`=4 " + (parent > 0 ? " and parent = " + parent : "") + " ) AS A INNER JOIN "
+						+ "	 (select District, COUNT(District) AS Total from T_FansApply "+wherePart+"  group by District) AS B ON A.Code=B.District ORDER BY Total DESC ";
+				break;
+			default:
+				level = 4;
+				hql = " select   A.`Code`,A.`Name`, IFNULL(B.Total,0) AS Total   from (  " + " select `Code`,`Name` from T_Regional where `Level`=4 " + (parent > 0 ? " and code = " + parent : "") + "  ) AS A INNER JOIN  "
+						+ "	 (select District, COUNT(District) AS Total from T_FansApply  "+wherePart+"	 group by District) AS B ON A.Code=B.District ORDER BY Total DESC ";
+				break;
+			}
+			@SuppressWarnings("unchecked")
+			List<Object[]> obList = baseDAO.queryBySql(hql);
+			int total = 0;
+			if (obList != null && obList.size() > 0) {
+				List<CodeAreaVo> ammList = new ArrayList<CodeAreaVo>();
+				for (Object[] ob : obList) {
+					CodeAreaVo amm = new CodeAreaVo();
+					amm.setCode(ob[0] == null ? 0 : (int) ob[0]);
+					amm.setName(ob[1] == null ? "" : (String) ob[1]);
+					amm.setCount(ob[2] == null ? 0 : Integer.parseInt(ob[2].toString()));
+					total += amm.getCount();
+					ammList.add(amm);
+				}
+
+				CodeAreaAllVo ama = new CodeAreaAllVo();
+				if (parent == 0)
+					ama.setHasChildArea(true);
+				else {
+					// 不太合理，随便取了当前区域列表中的第一个判断是否还有下级区域，实际上应该对每个区域都做判断
+					String hql2 = " select count(code) from T_Regional where parent =   " + ammList.get(0).getCode();
+					List<Object> areaCount = baseDAO.queryBySql(hql2);
+					ama.setHasChildArea(((BigInteger) areaCount.get(0)).intValue() == 0 ? false : true);
+				}
+				// 总数
+				CodeAreaVo all = new CodeAreaVo();
+				all.setCode(0);
+				all.setName("全部");
+				if(status==ParseHelper.toInt(FansStatusEnum.Pass.toString())){
+					all.setCount((int)this.count_TFansPassNumber());	
+				}else{
+					all.setCount((int)this.count_TFansNumber());	
+				}
+				
+				
+				//if (codeType != 1) {
+					ammList.add(0, all);
+				//}
+				
+				ama.setAmmList(ammList);
+				rm.setStatu(ReturnStatus.Success);
+				rm.setStatusreson("成功！");
+
+				rm.setBasemodle(ama);
+				
+			} else {
+				rm.setStatu(ReturnStatus.DataError);
+				rm.setStatusreson("木有数据啊！");
+			}
+		} catch (Exception e) {
+			rm.setStatu(ReturnStatus.DataError);
+			rm.setStatusreson(e.getMessage());
+			rm.setBasemodle(e);
+		}
+		return rm;
+	}
+	
+	
+	@Override
+    public PageResult<FansApplyVO> findFansInfolistBydistrict(Integer province,
+			Integer city, Integer district , int pageIndex, int pageSize,int status){
+    	//String keyname="FansInfolist_"+status+province+city+district+"_index_"+pageIndex+"_size_"+pageSize;
+    	PageResult<FansApplyVO> listResult=null;//(PageResult<FansApplyVO>)RedisUtil.getObject(keyname);
+    	Limit limit=Limit.buildLimit(pageIndex, pageSize);
+    	//if(listResult==null||listResult.getList()==null||listResult.getList().size()<=0){		
+    		Map<String, Object> map=new HashMap<String, Object>();
+    		StringBuilder sb=new StringBuilder();
+    		sb.append("select a.headImg as headImg,a.name as name,a.phone as phone,a.qq as qq,a.weiXin as weiXin  from TFansApply a ");
+    		if(status==ParseHelper.toInt(FansStatusEnum.Pass.toString())){
+    			sb.append("  where a.status="+ParseHelper.toInt(FansStatusEnum.Pass.toString()) ); 
+    		}else{
+    			sb.append("  where 1=1 ");
+    		}		
+    		if (province == 0 && city == 0 && district == 0) {
+    		}else{
+    			if(province!=null&&province != 0 ){
+    				sb.append(" and a.province=:province ");
+    				map.put("province", province);
+    			}
+    			if(city!=null&&city != 0 ){
+    				sb.append(" and a.city=:city ");
+    				map.put("city", city);
+    			}
+    			if(district!=null&&district != 0){
+    				sb.append(" and a.district=:district ");
+    				map.put("district", district);
+    			}
+    		}
+    		PageResult<FansApplyVO> page =baseDAO.findPageResultTransByMap(sb.toString(), FansApplyVO.class, limit, map);
+    		//PageResult<TFansApply> page=baseDAO.findPageResultByMap(sb.toString(), limit, map);
+			//List<FansApplyVO> arrList=new ArrayList<FansApplyVO>();
+			if(page!=null&&page.getList().size()>0){
+				List<FansApplyVO> fanslist=page.getList();
+				for (FansApplyVO tt : fanslist) {
+					if(status!=ParseHelper.toInt(FansStatusEnum.Pass.toString())){
+						if(ObjectUtil.isNotEmpty(tt.getPhone()))
+							tt.setPhone((tt.getPhone().length()>=2)?tt.getPhone().substring(0,2)+"*********":tt.getPhone()+"*********");
+						if(ObjectUtil.isNotEmpty(tt.getName()))
+							tt.setName((tt.getName().length()>=1)?tt.getName().substring(0,1)+"**":tt.getName()+"**");
+						if(ObjectUtil.isNotEmpty(tt.getQq()))
+							tt.setQq("****"+tt.getQq().substring((tt.getQq().length()-4)>0?tt.getQq().length()-4:0,tt.getQq().length()));
+						if(ObjectUtil.isNotEmpty(tt.getWeiXin()))
+							tt.setWeiXin("****"+tt.getWeiXin().substring((tt.getQq().length()-4)>0?tt.getQq().length()-4:0,tt.getWeiXin().length()));	
+					}					
+					tt.setHeadImg(ObjectUtil.isEmpty(tt.getHeadImg())?"http://base3.okimgs.com/images/logo.jpg":ImgDomain.GetFullImgUrl(tt.getHeadImg()));
+				}				
+				listResult=new PageResult<FansApplyVO>(page.getTotalCount(), limit, fanslist);
+				//RedisUtil.setObject(keyname, listResult, 600); 				
+			}			
+    	//}
+		return listResult;
+	}
+	
+}

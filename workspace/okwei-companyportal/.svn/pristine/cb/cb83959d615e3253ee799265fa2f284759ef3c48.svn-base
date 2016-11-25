@@ -1,0 +1,607 @@
+package com.okwei.company.service.Impl;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.apache.commons.lang.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.okwei.bean.domain.PBrand;
+import com.okwei.bean.domain.PProductClass;
+import com.okwei.bean.domain.PProducts;
+import com.okwei.bean.domain.TRegional;
+import com.okwei.bean.domain.UAttention;
+import com.okwei.bean.domain.UAttentioned;
+import com.okwei.bean.domain.UShopInfo;
+import com.okwei.bean.domain.USupplyer;
+import com.okwei.bean.domain.UWallet;
+import com.okwei.bean.domain.UWeiSeller;
+import com.okwei.bean.domain.UYunSupplier;
+import com.okwei.bean.enums.ProductStatusEnum;
+import com.okwei.bean.enums.SupplierStatusEnum;
+import com.okwei.common.Limit;
+import com.okwei.common.PageResult;
+import com.okwei.company.bean.vo.AreaVo;
+import com.okwei.company.bean.vo.BusKeyValue;
+import com.okwei.company.bean.vo.YHpageMainVO;
+import com.okwei.company.bean.vo.YsquerParam;
+import com.okwei.company.bean.vo.YunSupParam;
+import com.okwei.company.bean.vo.YunSupProductVO;
+import com.okwei.company.bean.vo.YunSupVo;
+import com.okwei.company.dao.IYunSupDao;
+import com.okwei.company.service.IYContentService;
+import com.okwei.company.service.IYStateService;
+import com.okwei.company.service.IYunsupService;
+import com.okwei.company.util.LocalRedisUtil;
+import com.okwei.service.IRegionService;
+import com.okwei.service.impl.BaseService;
+import com.okwei.util.ImgDomain;
+import com.okwei.util.RedisUtil;
+@Service
+public class YunsupService extends BaseService implements IYunsupService {
+
+	@Autowired
+	private IYStateService state;
+	@Autowired
+	private IYContentService content;
+	@Autowired
+	private IYunSupDao yunsupDao;
+	@Autowired
+    private IRegionService tBatchMarket;
+	
+	@Override
+	public YHpageMainVO getMainVO(YsquerParam param) {
+		// TODO Auto-generated method stub
+		//以下方法用到了状态模式（设计模式中得一种）
+        content.setState(state);
+		state.setState(param.getType());
+		state.setClassid(param.getC());
+		state.setPageindex(param.getPid());
+		state.setPagesize(param.getPsize());
+		return content.method();
+	}
+
+	@Override
+	public List<BusKeyValue> getProductClassOne(Integer parentId) throws Exception {
+    	@SuppressWarnings("unchecked")
+    	String keyName="web_productclass_"+parentId;
+		List<BusKeyValue> allkv = (List<BusKeyValue>) RedisUtil.getObject(keyName);
+    	if(allkv==null)
+    	{
+    		allkv = new ArrayList<BusKeyValue>();
+    		List<PProductClass> pcList = yunsupDao.getProductClassByUpID(parentId);
+        	if(pcList!=null && pcList.size()>0)
+        	{
+        		for(PProductClass pc:pcList)
+        		{
+        			BusKeyValue bkv = new BusKeyValue();
+        			bkv.setTypeid(pc.getClassId());
+        			bkv.setTypename(pc.getClassName());
+        			if(parentId==1)
+        			{
+        				switch(pc.getClassName().trim())
+        				{
+        				case "衣":bkv.setCssclass("spn_red1");break;
+        				case "食":bkv.setCssclass("spn_red2");break;
+        				case "住":bkv.setCssclass("spn_red3");break;
+        				case "行":bkv.setCssclass("spn_red4");break;
+        				case "用":bkv.setCssclass("spn_red5");break;
+        				case "玩":bkv.setCssclass("spn_red6");break;
+        				case "学":bkv.setCssclass("spn_red7");break;
+        				default:break;
+        				}
+        			}
+        			allkv.add(bkv);
+        		}
+        		RedisUtil.setObject(keyName, allkv, 3600);
+        	}
+    	}
+    	return allkv;
+    }
+
+	@Override
+	public List<PProductClass> getHotClasstwoList() throws Exception {
+		String keyName="HotClasstwo";
+		List<PProductClass> list = (List<PProductClass>) RedisUtil.getObject(keyName);
+		if (list == null) {
+			list = new ArrayList<PProductClass>();
+			String sql = "SELECT classID,parentID,className,step "
+					+ "FROM P_ProductClass WHERE classid IN (SELECT classID FROM (SELECT classID,COUNT(1) AS ct FROM P_Products GROUP BY classID ORDER BY ct DESC LIMIT 20) AS temp)";
+			List<Object[]> pclassList = yunsupDao.queryBySql(sql);
+			if (pclassList != null && pclassList.size() > 0) {
+				for (Object[] obj :pclassList) {
+					PProductClass pclass = new PProductClass();
+					pclass.setClassId(obj[0]==null?-1:Integer.valueOf(obj[0].toString()));
+					pclass.setParentId(obj[1]==null?-1:Integer.valueOf(obj[1].toString()));
+					pclass.setClassName(obj[2]==null?"":obj[2].toString());
+					pclass.setStep(obj[3]==null?-1:Short.valueOf(obj[3].toString()));
+					list.add(pclass);
+				}
+			}
+			RedisUtil.setObject(keyName, list,10800);//热门类目缓存3小时
+		}
+		return list;
+	}
+
+	@Override
+	public List<PBrand> getHotBrandList()  throws Exception{
+		List<PBrand> list = null;
+		try {
+			list = (List<PBrand>) LocalRedisUtil.getObject("HotBrand");
+		} catch (Exception e) {
+		}
+		if (list == null) {
+			list = new ArrayList<PBrand>();
+			String sql = "SELECT brandID,brandName FROM P_Brand "
+					+ "WHERE status = 1 and  brandID IN (SELECT brandID FROM (SELECT brandID,COUNT(1) AS ct FROM P_Products GROUP BY brandID ORDER BY ct DESC LIMIT 20) AS temp)";
+			List<Object[]> pbrandList = yunsupDao.queryBySql(sql);
+			if (pbrandList != null && pbrandList.size() > 0) {
+				for (Object[] obj :pbrandList) {
+					PBrand brand = new PBrand();
+					brand.setBrandId(obj[0]==null?-1:Integer.valueOf(obj[0].toString()));
+					brand.setBrandName(obj[1]==null?"":obj[1].toString());
+					list.add(brand);
+				}
+			}
+			LocalRedisUtil.setObject("HotBrand", list,10800);//热门品牌缓存3小时
+		}
+		return list;
+	}
+
+	@Override
+	public List<PProductClass> getRelevantClassList(YunSupParam queryparam)  throws Exception{
+		List<PProductClass> clist=find_PProductClassAll();
+		List<PProductClass> result=new ArrayList<PProductClass>();
+		if(clist!=null&&clist.size()>0){
+			if (queryparam.getClassone() != null && queryparam.getClassone() > 0) {
+				if (queryparam.getClasstwo() != null && queryparam.getClasstwo() > 0) {
+					for (PProductClass pp : clist) {
+						if(pp.getParentId().equals(queryparam.getClasstwo())){
+							result.add(pp);
+						}
+					}
+				}else {
+					for (PProductClass pp : clist) {
+						if(pp.getParentId().equals(queryparam.getClassone())){
+							result.add(pp);
+						}
+					}
+				}
+			}else {
+				if (queryparam.getClasstwo() != null && queryparam.getClasstwo() > 0) {
+					for (PProductClass pp : clist) {
+						if(pp.getParentId().equals(queryparam.getClasstwo())){
+							result.add(pp);
+						}
+					}
+				}
+			}
+		}
+//		String hql = "from PProductClass where parentId = ? and step = ?";
+//		Object[] params = new Object[2];
+//		if (queryparam.getClassone() != null && queryparam.getClassone() > 0) {
+//			//查询三级目录
+//			if (queryparam.getClasstwo() != null && queryparam.getClasstwo() > 0) {
+//				params[0] = queryparam.getClasstwo();
+//				params[1] = Short.valueOf("3");
+//			} 
+//			//查询二级目录
+//			else {
+//				params[0] = queryparam.getClassone();
+//				params[1] = Short.valueOf("2");
+//			}
+//		} else {
+//			//查询三级目录
+//			if (queryparam.getClasstwo() != null && queryparam.getClasstwo() > 0) {
+//				params[0] = queryparam.getClasstwo();
+//				params[1] = Short.valueOf("3");
+//			}
+//		}
+		return result;
+	}
+	
+	public List<PProductClass> find_PProductClassAll() {
+		String classKey = "ProClasslist";
+		List<PProductClass> list = null;
+		try {
+			list = (List<PProductClass>) RedisUtil.getObject(classKey);
+			if (list == null || list.size() <= 0) {
+				String hql = " from PProductClass w where w.step>0 ";
+				list = yunsupDao.find(hql);
+				if (list != null && list.size() > 0) {
+					RedisUtil.setObject(classKey, list, 6000);
+				}
+			}
+			return list;
+		} catch (Exception e) {
+			String hql = " from PProductClass w where w.step>0 ";
+			list = yunsupDao.find(hql);
+		}
+		return list;
+	}
+
+	@Override
+	public List<PBrand> getRelevantBrandList(YunSupParam queryparam)  throws Exception{
+		StringBuffer sbHql = new StringBuffer();
+		sbHql.append("from PBrand p where p.status =1 and p.brandId in ");
+		Map<String,Object> map = new HashMap<String,Object>();
+		if (queryparam.getClassthree() != null && queryparam.getClassthree() > 0) {
+			sbHql.append("(select brandId from PClassForBrand q where q.typeId in ( ");
+			sbHql.append("select parentId from PProductClass where step = 3 and ClassID=:typeId))");
+			map.put("typeId",queryparam.getClassthree());
+		} else if(queryparam.getClasstwo() != null && queryparam.getClasstwo() > 0){
+			sbHql.append("(select brandId from PClassForBrand q where q.typeId =:parentId )");
+			map.put("parentId", queryparam.getClasstwo());
+		} else if(queryparam.getClassone() != null && queryparam.getClassone() > 0){
+			sbHql.append("(select brandId from PClassForBrand q where q.typeId in ( ");
+			sbHql.append("select classId from PProductClass where step = 2 and parentId=:parentId))");
+			map.put("parentId", queryparam.getClassone());
+		} else if(queryparam.getClassone() == null || queryparam.getClassone() == 0){
+			return getHotBrandList();
+		} else {
+			return null;
+		}
+		return yunsupDao.findByMap(sbHql.toString(), map);
+	}
+
+	@Override
+	public List<AreaVo> getAreaListByCondition(YunSupParam queryparam) throws Exception{
+		List<TRegional> provinceList = null;
+		try {
+			provinceList = (List<TRegional>) LocalRedisUtil.getObject("getAllProvinceList");
+		} catch (Exception e) {
+		}
+		if (provinceList == null) {
+			provinceList = tBatchMarket.getProvinceList();
+			LocalRedisUtil.setObject("getAllProvinceList", provinceList, 1800);
+		}
+		List<AreaVo> areaList = new ArrayList<AreaVo>();
+		List<AreaVo> areaTempList = null;
+		if (provinceList != null && provinceList.size() > 0) {
+			try {
+				areaTempList = (List<AreaVo>) LocalRedisUtil.getObject("getAreaVoList");
+			} catch (Exception e) {
+			}
+			if (areaTempList == null) {
+				areaTempList = new ArrayList<AreaVo>();
+				for (TRegional reg : provinceList) {
+					AreaVo area = new AreaVo();
+					area.setProvinceCode(reg.getCode());
+					area.setProvinceName(reg.getName());
+					List<TRegional> cityList = tBatchMarket.getRegionalsByParent(reg.getCode());
+					area.setCityList(cityList);
+					areaTempList.add(area);
+				}
+				LocalRedisUtil.setObject("getAreaVoList", areaTempList, 1800);
+			}
+		}
+		if (areaTempList != null && areaTempList.size() > 0) {
+			StringBuffer sb = new StringBuffer();
+			sb.append("SELECT distinct province,city FROM APP_PScoreStatics WHERE TYPE=3 and SupplyType=2 ");
+			Object[] params = new Object[4];
+			if (queryparam.getClassone()!=null && queryparam.getClassone()>0) {
+				sb.append(" AND ClassOneID=? ");
+				params[0] = queryparam.getClassone();
+			} else {
+				sb.append(" AND 1=? ");
+				params[0] = 1;
+			}
+			if (queryparam.getClasstwo()!=null && queryparam.getClasstwo()>0) {
+				sb.append(" AND ClassTwoId=? ");
+				params[1] = queryparam.getClasstwo();
+			} else {
+				sb.append(" AND 1=? ");
+				params[1] = 1;
+			}
+			if (queryparam.getClassthree()!=null && queryparam.getClassthree()>0) {
+				sb.append(" AND ClassThreeID=? ");
+				params[2] = queryparam.getClassthree();
+			} else {
+				sb.append(" AND 1=? ");
+				params[2] = 1;
+			}
+			if (queryparam.getBrandid()!=null && queryparam.getBrandid()>0) {
+				sb.append(" AND brandID=? ");
+				params[3] = queryparam.getBrandid();
+			} else {
+				sb.append(" AND 1=? ");
+				params[3] = 1;
+			}
+			List<Object[]> areaObjList = yunsupDao.queryBySql(sb.toString(), params);
+			if (areaObjList != null && areaObjList.size() > 0) {
+				AreaVo areaVo = null;
+				for (AreaVo temp : areaTempList) {
+					for (Object[] area : areaObjList) {
+						if (area[0] != null) {
+							if (temp.getProvinceCode().equals(area[0])) {
+								areaVo = new AreaVo();
+								areaVo.setProvinceCode(temp.getProvinceCode());
+								areaVo.setProvinceName(temp.getProvinceName());
+								break;
+							}
+						}
+					}
+					if (areaVo != null) {
+						if (temp.getCityList() != null && temp.getCityList().size() > 0) {
+							List<TRegional> cityList = new ArrayList<TRegional>();
+							for (TRegional tempCity : temp.getCityList()) {
+								for (Object[] area : areaObjList) {
+									if (area[1] != null) {
+										if (tempCity.getCode().equals(area[1])) {
+											cityList.add(tempCity);
+											break;
+										}
+									}
+								}
+							}
+							areaVo.setCityList(cityList);
+						}
+						areaList.add(areaVo);
+						areaVo = null;
+					}
+				}
+			}
+		}
+		return areaList;
+	}
+
+	@Override
+	public PageResult<YunSupVo> getUBatchSupplyerList(Limit buildLimit,
+			YunSupParam queryparam,Long weiId) throws Exception{
+		PageResult<YunSupVo> yunsupPage = null;
+		String keyName="yunSupplyerPage_"+buildLimit.getPageId();
+		if(queryparam.getType()!=null){
+			keyName+="t_"+queryparam.getType();
+		}
+		if(queryparam.getClassone()!=null){
+			keyName+="o_"+queryparam.getClassone();
+		}
+		if(queryparam.getClasstwo()!=null){
+			keyName+="ot_"+queryparam.getClasstwo();
+		}
+		if(queryparam.getClassthree() !=null){
+			keyName+="or_"+queryparam.getClassthree();
+		}
+		if(queryparam.getBrandid()!=null){
+			keyName+="b_"+queryparam.getBrandid();
+		}
+		if(queryparam.getCity()!=null){
+			keyName+="c_"+queryparam.getCity();
+		}
+		yunsupPage = (PageResult<YunSupVo>) RedisUtil.getObject(keyName);
+//		boolean iscache = false;
+//		if ((queryparam.getType() == 0 && queryparam.getClassone() == 0
+//					&& queryparam.getClasstwo()==null && queryparam.getClassthree() == null
+//					&& queryparam.getCity()==null && queryparam.getBrandid()==null)
+//				|| (queryparam.getType()==0 && queryparam.getClassone() == 0
+//					&& queryparam.getClasstwo()==0 && queryparam.getClassthree() == 0
+//					&& queryparam.getCity()==0 && queryparam.getBrandid()==0)) {
+//			iscache = true;
+//			try {
+//				yunsupPage = (PageResult<YunSupVo>) RedisUtil.getObject(keyName);
+//			} catch (Exception e) {
+//			}
+//		}
+		if (yunsupPage == null||yunsupPage.getList()==null||yunsupPage.getList().size()<=0) {
+			StringBuffer sb = new StringBuffer();
+			sb.append(" WHERE TYPE=3 and SupplyType=2 ");
+			Object[] params = new Object[6];
+			if (queryparam.getClassone()!=null && queryparam.getClassone()>0) {
+				sb.append(" AND ClassOneID=? ");
+				params[0] = queryparam.getClassone();
+			} else {
+				sb.append(" AND 1=? ");
+				params[0] = 1;
+			}
+			if (queryparam.getClasstwo()!=null && queryparam.getClasstwo()>0) {
+				sb.append(" AND ClassTwoId=? ");
+				params[1] = queryparam.getClasstwo();
+			} else {
+				sb.append(" AND 1=? ");
+				params[1] = 1;
+			}
+			if (queryparam.getClassthree()!=null && queryparam.getClassthree()>0) {
+				sb.append(" AND ClassThreeID=? ");
+				params[2] = queryparam.getClassthree();
+			} else {
+				sb.append(" AND 1=? ");
+				params[2] = 1;
+			}
+			if (queryparam.getBrandid()!=null && queryparam.getBrandid()>0) {
+				sb.append(" AND brandID=? ");
+				params[3] = queryparam.getBrandid();
+			} else {
+				sb.append(" AND 1=? ");
+				params[3] = 1;
+			}
+			if (queryparam.getCity()!=null && queryparam.getCity()>0) {
+				sb.append(" AND (province=? OR city=?) ");
+				params[4] = queryparam.getCity();
+				params[5] = queryparam.getCity();
+			} else {
+				sb.append(" AND 1=? AND 2=? ");
+				params[4] = 1;
+				params[5] = 2;
+			}
+			String querySql = "SELECT supplyweiid,SUM(score) scores,province,city,district FROM (SELECT sc.supplyweiid,sc.score,sc.province,sc.city,sc.district,sc.productId FROM APP_PScoreStatics sc "
+					+ "JOIN  U_YunSupplier yun ON yun.weiid=sc.SupplyWeiid AND yun.Status=4 LEFT JOIN P_Products p ON p.ProductID=sc.productID "+sb.toString()+" and p.State=1) t  GROUP BY t.supplyweiid ORDER BY scores DESC LIMIT "+buildLimit.getStart() + "," + buildLimit.getSize();
+			List<Object[]> yunObjList = yunsupDao.queryBySql(querySql, params);
+			if (yunObjList != null && yunObjList.size() > 0) {
+				int totalCount = (int) yunsupDao.countBySql("SELECT count(1) FROM (select sc.productId FROM APP_PScoreStatics sc JOIN U_YunSupplier yun ON yun.weiid=sc.SupplyWeiid AND yun.Status=4 LEFT JOIN P_Products p ON p.ProductID = sc.productID " + sb.toString() + " AND p.State = 1 GROUP BY supplyweiid) t",params);
+				List<YunSupVo> yunlist = new ArrayList<YunSupVo>();
+				for (Object[] sup : yunObjList) {
+					YunSupVo yun = new YunSupVo();
+					yun.setWeiId(sup[0] == null ? 0l : Long.valueOf(sup[0].toString()));
+					yun.setProvince(sup[2] == null ? 0 : Integer.valueOf(sup[2].toString()));
+					yun.setCity(sup[3] == null ? 0 : Integer.valueOf(sup[3].toString()));
+					yun.setDistrict(sup[4] == null ? 0 : Integer.valueOf(sup[4].toString()));
+					if (yun.getWeiId() != null && yun.getWeiId() > 0) {
+						UWeiSeller weiSeller = yunsupDao.get(UWeiSeller.class, yun.getWeiId());
+						if (weiSeller != null) {
+							UYunSupplier yunsup = yunsupDao.get(UYunSupplier.class, yun.getWeiId());
+							if (yunsup != null) {
+								//qq列表
+								if (StringUtils.isNotEmpty(yunsup.getServiceQq())) {
+									List<String> qqlist = new ArrayList<String>();
+									for (String qq : yunsup.getServiceQq().split("\\|")) {
+										qqlist.add(qq);
+									}
+									yun.setQqList(qqlist);
+								}
+								//供应商名称
+								USupplyer suplyer = yunsupDao.get(USupplyer.class, yun.getWeiId());
+								if (suplyer != null) {
+									yun.setSupName(suplyer.getCompanyName());
+								}
+								//地区
+								yun.setShowArea(tBatchMarket.getNameByCode(yun.getProvince()==null?0:yun.getProvince())+" "+tBatchMarket.getNameByCode(yun.getCity()==null?0:yun.getCity())+" "+tBatchMarket.getNameByCode(yun.getDistrict()==null?0:yun.getDistrict()));
+								// 判断是否实名验证
+								UWallet wallet = yunsupDao.get(UWallet.class, yun.getWeiId());
+								if (wallet != null) {
+									if (wallet.getStatus() != null && wallet.getStatus() == 1 && StringUtils.isNotEmpty(wallet.getRealName()) && StringUtils.isNotEmpty(wallet.getIdCard())) {
+										yun.setSmrz(true);
+									}
+								}
+								//企业认证
+								yun.setSjrz(true);
+								//缴纳保证金
+								if (Short.valueOf(SupplierStatusEnum.PayIn.toString()).equals(yunsup.getStatus())) {
+									yun.setJzrz(true);
+									yun.setBond(yunsup.getBond());//保证金
+								}
+								//上架次数，产品数量
+								UShopInfo shopinfo = yunsupDao.get(UShopInfo.class, yun.getWeiId());
+								if (shopinfo != null) {
+									yun.setShelvesCount(shopinfo.getShelveCount()==null?0:shopinfo.getShelveCount());
+									yun.setProductCount(shopinfo.getProductCount()==null?0:shopinfo.getProductCount());
+								} else {
+									yun.setShelvesCount(0);
+									yun.setProductCount(0);
+								}
+								//被关注的人数
+								yun.setAttentionPerson(yunsupDao.count("SELECT count(*) FROM UAttentioned where AttTo=?",new Object[]{yun.getWeiId()}));
+								//主营
+								String sql = "SELECT B.ClassName FROM (SELECT CategoryID FROM U_SupplierBusCategory WHERE WeiID = ?) AS A "
+										+ "LEFT JOIN P_ProductClass AS B ON A.CategoryID=B.ClassID";
+								List<Object> classNameList = yunsupDao.queryBySql(sql,new Object[]{yun.getWeiId()});
+								if (classNameList != null && classNameList.size() > 0) {
+									String bus = "";
+									for (Object obj : classNameList) {
+										if (obj != null && obj.toString() != "") {
+											bus += obj.toString() + "、";
+										}									
+									}
+									if (bus != "") {
+										yun.setMainbus(bus.substring(0,bus.length()-1));
+										if (yun.getMainbus().length() > 20) {
+											yun.setMainbus(yun.getMainbus().substring(0,20)+"...");
+										}
+									} 
+								}
+								//是否关注
+								if (weiId != null && weiId > 0) {
+									yun.setIsgz(yunsupDao.getIsAttention(weiId, yun.getWeiId()));
+								}
+								//工厂号最新发布的5个商品
+								List<YunSupProductVO> productList = new ArrayList<YunSupProductVO>();
+								StringBuffer sb2 = new StringBuffer();
+								sb2.append("SELECT p.ProductID FROM P_Products p WHERE p.State=? AND p.SupplierWeiID=? ");
+								Object[] params3 = new Object[4];
+								params3[0] = Short.valueOf(ProductStatusEnum.Showing.toString());
+								params3[1] = yun.getWeiId();
+								if (queryparam.getClassthree()!=null && queryparam.getClassthree()>0) {
+									sb2.append(" AND p.ClassID=? ");
+									params3[2] = queryparam.getClassthree();
+								} else  if (queryparam.getClasstwo()!=null && queryparam.getClasstwo()>0) {
+									sb2.append(" AND p.ClassID in (select classID FROM P_ProductClass WHERE step = 3 AND parentID=?) ");
+									params3[2] = queryparam.getClasstwo();
+								} else  if (queryparam.getClassone()!=null && queryparam.getClassone()>0) {
+									sb2.append(" AND p.ClassID in (select classID FROM P_ProductClass WHERE step = 3 AND parentID IN (SELECT classID FROM P_ProductClass WHERE step = 2 AND parentID=?)) ");
+									params3[2] = queryparam.getClassone();
+								} else {
+									sb2.append(" AND 1=? ");
+									params3[2] = 1;
+								}
+								if (queryparam.getBrandid()!=null && queryparam.getBrandid()>0) {
+									sb2.append(" AND p.BrandID = ? ");
+									params3[3] = queryparam.getBrandid();
+								} else {
+									sb2.append(" AND 1=? ");
+									params3[3] = 1;
+								}
+								sb2.append("ORDER BY p.CreateTime DESC LIMIT 5");
+								List<Object> prodObjList2 = yunsupDao.queryBySql(sb2.toString(), params3);
+								if (prodObjList2 != null && prodObjList2.size() > 0) {
+									List<Long> prodIdList = new ArrayList<Long>();
+									for (Object obj : prodObjList2) {
+										prodIdList.add(Long.valueOf(obj.toString()));
+									}
+									Map<String, Object> param = new HashMap<String, Object>();
+									param.put("productId", prodIdList.toArray());
+									List<PProducts> products = yunsupDao.findByMap("from PProducts where productId in (:productId)", param);
+									if (products != null && products.size() > 0) {
+										for (PProducts product : products) {
+											YunSupProductVO prodVO = new YunSupProductVO();
+											prodVO.setProductId(product.getProductId());
+											prodVO.setProductTitle(product.getProductTitle());
+											prodVO.setDefaultPrice(product.getDefaultPrice());				
+											prodVO.setOriginalPrice(product.getOriginalPrice()!=null?product.getOriginalPrice():product.getDefaultPrice());	
+											if (StringUtils.isNotEmpty(product.getDefaultImg())) {
+												prodVO.setDefaultImg(ImgDomain.GetFullImgUrl(product.getDefaultImg(), 24));
+											}
+											//商品评论次数
+											String hql = "select count(1) from PProductComment where productId = ?";
+											prodVO.setCommentCount(yunsupDao.count(hql, product.getProductId()));
+											productList.add(prodVO);
+										}
+										yun.setProductList(productList);
+										yunlist.add(yun);
+									}
+								}
+							}
+						}
+					}
+					
+				}
+				yunsupPage = new PageResult<YunSupVo>(totalCount, buildLimit, yunlist);
+//				if (iscache) {
+					RedisUtil.setObject(keyName, yunsupPage, 3600);
+//				}
+			} else {
+				yunsupPage = new PageResult<YunSupVo>();
+			}
+		}
+		return yunsupPage;
+	}
+
+	@Override
+	public void attentionSup(long weiID, int type, long supID) {
+		if (type == 1) {
+			// 取消关注
+			yunsupDao.deleteAttention(weiID, supID);
+		} else {
+			// 关注
+			if (!yunsupDao.getIsAttention(weiID, supID)) {
+				UAttention entity = new UAttention();
+				entity.setAttentioner(weiID);
+				entity.setAttTo(supID);
+				entity.setStatus((short) 1);
+				entity.setCreateTime(new Date());
+				yunsupDao.addAttention(entity);
+			}
+			if (!yunsupDao.getIsAttentioned(weiID, supID)) {
+				UAttentioned entity = new UAttentioned();
+				entity.setAttentioner(weiID);
+				entity.setAttTo(supID);
+				entity.setStatus((short) 1);
+				entity.setCreateTime(new Date());
+				yunsupDao.addAttention(entity);
+			}
+		}
+	}
+
+}

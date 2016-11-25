@@ -1,0 +1,88 @@
+package com.okwei.service.impl.activity;
+
+import java.text.DecimalFormat;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.okwei.service.activity.IBasePerfectProductService;
+import com.okwei.bean.domain.APerfectProducts;
+import com.okwei.bean.domain.PProducts;
+import com.okwei.bean.vo.ReturnModel;
+import com.okwei.bean.vo.ReturnStatus;
+import com.okwei.bean.vo.activity.APerfectProductsAppVO;
+import com.okwei.common.Limit;
+import com.okwei.common.PageResult;
+import com.okwei.dao.product.IBaseProductDao;
+import com.okwei.service.impl.BaseService;
+import com.okwei.util.ImgDomain;
+import com.okwei.util.RedisUtil;
+
+
+
+@Service
+public class BasePerfectProductService extends BaseService implements IBasePerfectProductService {
+
+	@Autowired
+	public IBaseProductDao baseProductDao;
+	
+	@Override
+	public ReturnModel  findPerfectProductlist(int pageIndex,int pageSize){
+		ReturnModel rm=new ReturnModel();
+		rm.setStatu(ReturnStatus.Success);
+		String keyname="perfectProductlist_index_"+pageIndex+"_size_"+pageSize;
+		PageResult<APerfectProductsAppVO> listResult=(PageResult<APerfectProductsAppVO>)RedisUtil.getObject(keyname);
+		if(listResult==null||listResult.getList()==null||listResult.getList().size()<=0){
+			String hql=" Select a.perPid as perPid,a.title as title,a.productId as productId,a.url as url,a.sort as sort,a.productImg as productImg   from APerfectProducts a where a.state=:state order by a.sort";
+			Map<String, Object> params = new HashMap<String, Object>();
+			params.put("state", (short)1);
+			listResult=baseProductDao.findPageResultTransByMap(hql, APerfectProductsAppVO.class, Limit.buildLimit(pageIndex, pageSize), params);
+			if(listResult.getList()!=null&&listResult.getList().size()>0){
+				RedisUtil.setObject(keyname, listResult, 600); 
+			}
+		}
+		if(listResult!=null){
+			List<APerfectProductsAppVO> list = listResult.getList() ;
+			if (list != null && list.size() > 0) {
+				for (APerfectProductsAppVO perfectProduct : list) {
+					if(perfectProduct==null) continue;
+					PProducts product=baseProductDao.get(PProducts.class, perfectProduct.getProductId());
+					if(product==null){
+						rm.setStatu(ReturnStatus.DataError);
+						rm.setStatusreson("产品ID不存在!");
+						return rm;
+					}
+					perfectProduct.setProductImg(ImgDomain.GetFullImgUrl(perfectProduct.getProductImg()));
+					if (null != product.getOriginalPrice()) {
+						perfectProduct.setDisplayPrice(product.getOriginalPrice());
+    		    	} else {
+    		    		double percent = 1.5;
+    		    		double displayPrice = product.getDefaultPrice() * percent;
+    		    		DecimalFormat df = new DecimalFormat("#.00");
+    		    		displayPrice = Double.parseDouble(df.format(displayPrice));
+    		    		perfectProduct.setDisplayPrice(product.getOriginalPrice() == null ? displayPrice : product.getOriginalPrice());
+    		    	}
+					perfectProduct.setRetailPrice(product.getDefaultPrice());
+					perfectProduct.setProductId(product.getProductId());
+					perfectProduct.setProductName(product.getProductTitle());
+					perfectProduct.setProductPicture(ImgDomain.GetFullImgUrl(product.getDefaultImg()));
+					perfectProduct.setCommission(product.getDefaultConmision());
+					perfectProduct.setSellerWid(product.getSupplierWeiId());
+					perfectProduct.setProviderWid(product.getSupplierWeiId());
+				}
+				listResult.setList(list);
+			}
+			
+		}
+		rm.setBasemodle(listResult);
+		rm.setStatu(ReturnStatus.Success);
+		rm.setStatusreson("获取精品单选列表成功！");
+		return rm;
+	
+	}
+	
+}

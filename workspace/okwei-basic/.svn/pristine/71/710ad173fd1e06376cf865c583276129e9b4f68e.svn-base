@@ -1,0 +1,397 @@
+package com.okwei.service.impl.shop;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.okwei.bean.domain.AActSupplier;
+import com.okwei.bean.domain.AActivity;
+import com.okwei.bean.domain.DBrands;
+import com.okwei.bean.domain.PProductClass;
+import com.okwei.bean.domain.PShopClass;
+import com.okwei.bean.domain.PcUserAdnotice;
+import com.okwei.bean.domain.TBatchMarket;
+import com.okwei.bean.domain.TRegional;
+import com.okwei.bean.domain.UAgentSupplyer;
+import com.okwei.bean.domain.UAttention;
+import com.okwei.bean.domain.UBatchSupplyer;
+import com.okwei.bean.domain.UBrandSupplyer;
+import com.okwei.bean.domain.UPlatformSupplyer;
+import com.okwei.bean.domain.UPlatformSupplyerImg;
+import com.okwei.bean.domain.UShopInfo;
+import com.okwei.bean.domain.UUserAssist;
+import com.okwei.bean.domain.UWeiSeller;
+import com.okwei.bean.vo.BrandShopModel;
+import com.okwei.bean.vo.CompanyInfo;
+import com.okwei.bean.vo.EnsureType;
+import com.okwei.bean.vo.LoginUser;
+import com.okwei.bean.vo.ShopClassVO;
+import com.okwei.bean.vo.ShopInfoMsg;
+import com.okwei.bean.vo.product.AdPicture;
+import com.okwei.dao.shop.IBasicShopMgtDAO;
+import com.okwei.dao.user.ILoginDAO;
+import com.okwei.service.IBrandAgentService;
+import com.okwei.service.IRegionService;
+import com.okwei.service.agent.IDAgentService;
+import com.okwei.service.impl.BaseService;
+import com.okwei.service.shop.IBasicShopMgtService;
+import com.okwei.util.AppSettingUtil;
+import com.okwei.util.ImgDomain;
+
+@Service
+public class BasicShopMgtServiceImpl extends BaseService implements IBasicShopMgtService {
+
+	@Autowired
+	private IBasicShopMgtDAO basicShopMgtDAO;
+
+	@Autowired
+	private IRegionService regionService;
+
+	@Autowired
+	private ILoginDAO loginDAO;
+	
+	@Autowired
+	private IDAgentService iDagentService;
+
+	@Autowired
+	private IBrandAgentService brandAgentService;
+
+	@Override
+	public List<PProductClass> getPProductClass(short step) {
+		List<PProductClass> list = new ArrayList<PProductClass>();
+		Map<String, Object> params = new HashMap<String, Object>();
+	    params.put("step", step);
+	    String hql = "from PProductClass where step=:step ";
+	    list=basicShopMgtDAO.findByMap(hql, params);
+	    return list;
+	}
+	@Override
+	public List<ShopClassVO> getShopClass(Integer parentId, Long weiId) {
+		List<ShopClassVO> result = new ArrayList<ShopClassVO>();
+		List<PShopClass> list = new ArrayList<PShopClass>();
+		if (parentId == null || parentId == 0) {// 获取当前用户的全部店铺分类
+			list = basicShopMgtDAO.getShopClass(parentId, weiId);
+		} else {
+			if (parentId > 0)
+				list = basicShopMgtDAO.getSubShopClass(parentId);
+		}
+		if (null != list && list.size() > 0) {
+			// 转换成List<ShopClassVO>
+			for (PShopClass ps : list) {
+				ShopClassVO vo = new ShopClassVO();
+				vo.setClassId(ps.getSid());
+				vo.setClassName(ps.getSname());
+				vo.setLevel(ps.getLevel());
+				vo.setParetId(ps.getParetId() == null ? 0 : ps.getParetId());
+				vo.setSort(ps.getSort());
+				vo.setState(ps.getState());
+				vo.setType(ps.getType());
+				vo.setWeiid(ps.getWeiid());
+				//一级目录需要计算其子目录挂的产品数量
+				if (null != ps.getLevel() && Short.valueOf("1").equals(ps.getLevel())) {// 计算该分类下的产品数量
+					long count = basicShopMgtDAO.productCountBySid(weiId, Long.parseLong(ps.getSid().toString()));
+					List<PShopClass> scList = basicShopMgtDAO.getSubShopClass(ps.getSid());
+					if (scList != null && scList.size() > 0) {
+						Long[] scids = new Long[scList.size()];
+						int i = 0;
+						for (PShopClass sc : scList) {
+							scids[i] = Long.valueOf(sc.getSid().toString());
+							i++;
+						}
+						long count2 = basicShopMgtDAO.productCountBySid(weiId, scids);
+						count = count + count2;
+					}
+					vo.setProductCount(count);
+				}
+				//非一级目录
+				else {
+					long count = basicShopMgtDAO.productCountBySid(weiId, Long.parseLong(ps.getSid().toString()));
+					vo.setProductCount(count);
+				}
+				result.add(vo);
+			}
+
+			// 非二级分类id时，返回树型结构
+			/*if (result.size() > 0) {// 构造树形结构返回
+				List<ShopClassVO> level1 = new ArrayList<ShopClassVO>();
+				for (ShopClassVO vo : result) {
+					if (null != vo.getLevel() && vo.getLevel() == 1) {
+						level1.add(vo);
+					}
+				}
+				for (ShopClassVO vo1 : level1) {
+					for (ShopClassVO vo2 : result) {
+						if (null != vo2.getParetId() && vo2.getParetId().equals(vo1.getClassId())) {
+							vo1.getChildClass().add(vo2);
+							vo1.setProductCount(vo1.getProductCount() + vo2.getProductCount());
+						}
+					}
+				}
+				if (level1.size() > 0) {
+					result = level1;
+				}
+			}*/
+		}
+		return result;
+	}
+
+	@Override
+	public CompanyInfo getShopInfo(Long weiId) {
+
+		// 获取用户身份信息, 逻辑拷贝自： LoginService.setLoginUserByRedis()
+		LoginUser user = new LoginUser();
+		UUserAssist assist = loginDAO.getUUserAssist(weiId);// 用户权限
+		if (assist != null) {
+			user.setIdentity(assist.getIdentity() == null ? 0 : assist.getIdentity());// 权限标识
+		} else {
+			user.setIdentity(0);// 权限标识
+		}
+		user.setWeiType((short) user.getIdentity().intValue());// 权限标识（旧）
+		user.setPthSub((short) 0);// 子帐号
+		user.setPthSupply((short) 0);// 子帐号 供应商
+		user.setWeiID(weiId);// 微店号
+
+		UShopInfo shopInfo = super.getById(UShopInfo.class, weiId);
+		CompanyInfo info = new CompanyInfo();
+		info.setShopImg(shopInfo.getShopImg());// 头像
+		info.setShopName(shopInfo.getShopName());// 店铺名称
+
+		String industry = basicShopMgtDAO.getIndustry(weiId);
+		info.setIndustry(industry);// 行业类型
+
+		if (user.getPth() == 1) {
+			UPlatformSupplyer up = super.getById(UPlatformSupplyer.class, weiId);
+			if (null != up) {
+				info.setAddress(up.getAddress());// 公司地址
+				String pro = "";
+				String city = "";
+				String area = "";
+				if (null != up.getProvice()) {
+					regionService.getNameByCode(up.getProvice());
+				}
+				if (null != up.getCity()) {
+					city = regionService.getNameByCode(up.getCity());
+				}
+				if (null != up.getArea()) {
+					area = regionService.getNameByCode(up.getArea());
+				}
+				info.setAreaStr(pro + "-" + city + "-" + area);// 所在地区
+				info.setCompanyName(up.getSupplyName());// 公司名称
+				info.setContact(up.getLinkMan());// 联系人
+				info.setIntro(up.getAppDetails());// 简介文字文本
+				info.setMobile(up.getMobilePhone());
+				info.setPinpaiTese(up.getAppBrandFeature());// 品牌特色文本
+				info.setQq(up.getServiceQq());
+				info.setTel(up.getTelephone());// 联系电话
+				info.setWeiId(up.getWeiId());
+			}
+
+		} else if (user.getPph() == 1) {
+			UBrandSupplyer ub = super.getById(UBrandSupplyer.class, weiId);
+			if (null != ub) {
+				info.setAddress(ub.getAddress());// 公司地址
+				String pro = "";
+				String city = "";
+				String area = "";
+				if (null != ub.getProvice()) {
+					regionService.getNameByCode(ub.getProvice());
+				}
+				if (null != ub.getCity()) {
+					city = regionService.getNameByCode(ub.getCity());
+				}
+				if (null != ub.getArea()) {
+					area = regionService.getNameByCode(ub.getArea());
+				}
+				info.setAreaStr(pro + "-" + city + "-" + area);// 所在地区
+				info.setCompanyName(ub.getSupplyName());// 公司名称
+				info.setContact(ub.getLinkMan());// 联系人
+				info.setIntro(ub.getAppDetails());// 简介文字文本
+				info.setMobile(ub.getMobilePhone());
+				info.setPinpaiTese(ub.getAppBrandFeature());// 品牌特色文本
+				info.setQq(ub.getServiceQq());
+				info.setTel(ub.getTelephone());// 联系电话
+				info.setWeiId(ub.getWeiId());
+			}
+		} else if (user.getPthdls() == 1) {// 平台代理商
+			UAgentSupplyer ua = super.getById(UAgentSupplyer.class, weiId);
+			if (null != ua) {
+				info.setAddress(ua.getAddress());// 公司地址
+				String pro = "";
+				String city = "";
+				String area = "";
+				if (null != ua.getProvice()) {
+					regionService.getNameByCode(ua.getProvice());
+				}
+				if (null != ua.getCity()) {
+					city = regionService.getNameByCode(ua.getCity());
+				}
+				if (null != ua.getArea()) {
+					area = regionService.getNameByCode(ua.getArea());
+				}
+				info.setAreaStr(pro + "-" + city + "-" + area);// 所在地区
+				info.setCompanyName(ua.getSupplyName());// 公司名称
+				info.setContact(ua.getLinkMan());// 联系人
+				info.setIntro(ua.getAppDetails());// 简介文字文本
+				info.setMobile(ua.getMobilePhone());
+				info.setPinpaiTese(ua.getAppBrandFeature());// 品牌特色文本
+				info.setQq(ua.getServiceQq());
+				info.setTel(ua.getTelephone());// 联系电话
+				info.setWeiId(ua.getWeiId());
+			}
+		}
+
+		// 资证列表
+		List<UPlatformSupplyerImg> imgs = basicShopMgtDAO.getImgs(weiId);
+		if (null != imgs && imgs.size() > 0) {
+			for (UPlatformSupplyerImg img : imgs) {
+				Map<String, String> map = new HashMap<String, String>();
+				map.put("img", img.getImage());
+				map.put("name", img.getTitle());
+				info.getZizhi().add(map);
+			}
+		}
+
+		// 权益保障
+		Map<String, String> baozhang1 = new HashMap<String, String>();
+		baozhang1.put("img", "http://base.okimgs.com/images/icon_red3.png");
+		baozhang1.put("name", "担保交易");
+		info.getBaozhang().add(baozhang1);
+		Map<String, String> baozhang2 = new HashMap<String, String>();
+		baozhang2.put("img", "http://base.okimgs.com/images/icon_red4.png");
+		baozhang2.put("name", "闪电发货");
+		info.getBaozhang().add(baozhang2);
+		// 品牌认证： http://base3.okimgs.com/images/tscp.png
+
+		return info;
+	}
+	
+	
+	@Override
+	public boolean isActShop(Long weiId){
+		boolean isActShop=false;
+		List<AActSupplier>  actsupplyerList=basicShopMgtDAO.find(" from AActSupplier a where a.supplyWeiid=? order by createTime", weiId);
+		if(actsupplyerList!=null&&actsupplyerList.size()>0){
+			for (AActSupplier actsuppler : actsupplyerList) {
+				AActivity activity= basicShopMgtDAO.get(AActivity.class, actsuppler.getActId());
+				if(activity!=null&&activity.getType()==1){
+					isActShop= true;
+					break;
+				}
+			}
+		}
+		return isActShop;
+	}
+	@Override
+	public ShopInfoMsg UP_getShopInfo(Long weiNo, Long weiID, String tiket) {
+		
+		ShopInfoMsg result = new ShopInfoMsg();
+		result.setWeiNo(weiNo);
+		UShopInfo shopInfo = basicShopMgtDAO.get(UShopInfo.class, weiNo);
+		
+        List<DBrands> brandsList = brandAgentService.findAgentBrands(weiNo);
+        List<BrandShopModel> bsm= new ArrayList<BrandShopModel>();
+        if(brandsList!=null&&brandsList.size()>0){
+        	BrandShopModel bm = new BrandShopModel();
+        	for(DBrands b:brandsList){
+        		bm.setBrandId(b.getBrandId());
+        		bm.setBrandName(b.getBrandName());
+        		bm.setUserId(b.getWeiId());
+        		bm.setBrandLogo(ImgDomain.GetFullImgUrl(b.getLogo()));
+        		bsm.add(bm);
+        	}
+        }
+        result.setBrandShopList(bsm);
+		UWeiSeller user = basicShopMgtDAO.getUWeiSeller(weiNo);
+		if (shopInfo != null && shopInfo.getShopName() != null && !"".equals(shopInfo.getShopName())) {
+			result.setShopName(shopInfo.getShopName());
+		} else {
+			result.setShopName(basicShopMgtDAO.getNickNameById(user.getWeiId()));
+		}
+		if (shopInfo != null && shopInfo.getShopImg() != null && !"".equals(shopInfo.getShopImg())) {
+			//付豪 修改
+			result.setLogo(basicShopMgtDAO.getShopImageByWeiId(weiNo));
+			//end
+//			result.setLogo(ImgDomain.GetFullImgUrl(shopInfo.getShopImg()));
+		} else {
+			result.setLogo(basicShopMgtDAO.getImageById(user.getWeiId()));// ImgDomain.GetFullImgUrl(user.getImages())
+		}
+		if (shopInfo != null && shopInfo.getShopBusContent() != null && !"".equals(shopInfo.getShopBusContent())) {
+			result.setShopBusContent("主营：" + shopInfo.getShopBusContent());
+		} else {
+			String busString = basicShopMgtDAO.getBusContentById(user.getWeiId());
+			if (busString != null && !"".equals(busString))
+				result.setShopBusContent("主营：" + busString);
+		}
+		UWeiSeller seller = basicShopMgtDAO.get(UWeiSeller.class, weiNo);
+		String sregion = "";// 区域
+		if (seller.getProvince() != null) {
+			TRegional t = basicShopMgtDAO.get(TRegional.class, seller.getProvince());
+			if (t != null)
+				sregion = t.getName();
+		}
+		if (seller.getCity() != null) {
+			TRegional t = basicShopMgtDAO.get(TRegional.class, seller.getCity());
+			if (t != null)
+				sregion += " " + t.getName();
+		}
+		result.setRegion(sregion);
+		// 批发商
+		UBatchSupplyer batchuser = basicShopMgtDAO.get(UBatchSupplyer.class, weiNo);
+		if (batchuser != null && batchuser.getBmid() != null && batchuser.getBmid().intValue() > 0) {
+			result.setMarketAddress(batchuser.getShopPosition());
+			TBatchMarket market = basicShopMgtDAO.get(TBatchMarket.class, batchuser.getBmid());
+			if (market != null) {
+				result.setMarketId(market.getBmid());
+				result.setMarketName("市场：" + market.getName());
+				result.setMarketUrl("http://" + AppSettingUtil.getSingleValue("wapDomain") + "/marapp/marlist?bname=" + market.getName() + "&bmID=" + market.getBmid() + "&tiket=" + tiket);
+			}
+		}
+		// 是否关注此店家
+		UAttention atten = basicShopMgtDAO.getUAttention(weiID, weiNo);
+		if (atten != null) {
+			result.setAttented(1);
+		}
+		List<EnsureType> liste = new ArrayList<EnsureType>();
+		EnsureType et1 = new EnsureType();
+		et1.setName("担保交易");
+		et1.setDesc("担保交易");
+		et1.setUrl("http://base.okimgs.com/appimages/danbaojiaoyi.png");
+		liste.add(et1);
+		EnsureType et = new EnsureType();
+		et.setName("闪电发货");
+		et.setDesc("闪电发货");
+		et.setUrl("http://base.okimgs.com/appimages/shandianfahuo.png");
+		liste.add(et);
+		result.setBrandList(liste);
+		UUserAssist userAssist = basicShopMgtDAO.get(UUserAssist.class, weiNo);
+		if (userAssist != null) {
+			result.setWeiIdentity(userAssist.getIdentity());
+		}
+		//加入广告轮播图
+		String hql = "from PcUserAdnotice where status = 2 and weiId = ? order by sort";
+		Object[] params = new Object[1];
+		params[0] = weiNo;
+		List<PcUserAdnotice> list = basicShopMgtDAO.find(hql, params);
+		if(list != null)
+		{
+			List<AdPicture> adList = new ArrayList<AdPicture>();
+			for (PcUserAdnotice pa : list) {
+				AdPicture ad = new AdPicture();
+				ad.setAdId(pa.getUadId());
+				ad.setAdName(pa.getTitle());
+				ad.setImg(pa.getImgLog());
+				ad.setUrl(pa.getUrl());
+				adList.add(ad);
+			}
+			result.setShopAdPicture(adList);
+		}
+		return result;
+	}
+	
+	
+
+}

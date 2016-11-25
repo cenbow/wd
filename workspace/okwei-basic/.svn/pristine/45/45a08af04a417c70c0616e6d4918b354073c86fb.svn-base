@@ -1,0 +1,24 @@
+package com.okwei.bean.enums.agent;
+
+public enum TicketType {
+
+	/**
+     * 收入
+     */
+	In(1),
+	/**
+     *  支付
+     */
+    Out(2);
+    private final int Type;
+
+    private TicketType(int step)
+    {
+        this.Type = step;
+    }
+
+    public String toString()
+    {
+        return String.valueOf(this.Type);
+    }	
+}

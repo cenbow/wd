@@ -1,0 +1,985 @@
+package com.okwei.service.impl.activity;
+
+import java.text.DecimalFormat;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.GregorianCalendar;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.okwei.bean.domain.AActProductExp;
+import com.okwei.bean.domain.AActProducts;
+import com.okwei.bean.domain.AActProductsShowTime;
+import com.okwei.bean.domain.AActProductsVerifyLog;
+import com.okwei.bean.domain.AActShowProducts;
+import com.okwei.bean.domain.AActSupplier;
+import com.okwei.bean.domain.AActivity;
+import com.okwei.bean.domain.AActivityProducts;
+import com.okwei.bean.domain.AActivityTimespans;
+import com.okwei.bean.domain.PProducts;
+import com.okwei.bean.enums.ActProductVerState;
+import com.okwei.bean.vo.ReturnModel;
+import com.okwei.bean.vo.ReturnStatus;
+import com.okwei.bean.vo.SaleAreaModel;
+import com.okwei.bean.vo.activity.AActivityProExtend;
+import com.okwei.bean.vo.activity.AActivityProductsResult;
+import com.okwei.bean.vo.activity.FlashSaleActivityVO;
+import com.okwei.bean.vo.activity.SaleActivityProductModel;
+import com.okwei.common.Limit;
+import com.okwei.common.PageResult;
+import com.okwei.dao.IBaseDAO;
+import com.okwei.service.IBaseCommonService;
+import com.okwei.service.activity.IBaseActivityService;
+import com.okwei.util.AppSettingUtil;
+import com.okwei.util.DateUtils;
+import com.okwei.util.ImgDomain;
+import com.okwei.util.ObjectUtil;
+import com.okwei.util.ParseHelper;
+import com.okwei.util.RedisUtil;
+
+@Service
+@Transactional(propagation = Propagation.REQUIRED, rollbackFor = { Exception.class })
+public class BaseActivityService implements IBaseActivityService {
+
+	@Autowired
+	IBaseDAO baseDAO;
+	@Autowired
+	IBaseCommonService commonService;
+
+	public SaleAreaModel getSaleAreaModel(Long weiid) {
+		List<FlashSaleActivityVO> flashSaleList = flashSaleList();
+		SaleAreaModel result = new SaleAreaModel();// flashSaleList.get(0);
+		if (flashSaleList != null && flashSaleList.size() > 0) {
+			result.setAreaId(flashSaleList.get(0).getItemId());
+			result.setAreaType(1);
+			result.setTitle("限时抢购");// flashSaleList.get(0).getTitle()
+			result.setSubTitle("低到无底线");
+			result.setServerTime(flashSaleList.get(0).getServerTime());// DateUtil.formatDate(
+																		// new
+																		// Date(),
+																		// "yyyy-MM-dd HH:mm:ss")
+			result.setBeginTime(flashSaleList.get(0).getBeginTime());
+			result.setEndTime(flashSaleList.get(0).getEndTime());
+
+			result.setUrl("http://" + (weiid == null ? 0 : weiid) + ".m.okwei.com/wap5/actflashsale?actId=" + result.getAreaId());
+			PageResult<SaleActivityProductModel> list = flashSaleProductList(result.getAreaId(), 1, 1);
+			if (list != null && list.getList() != null && list.getList().size() > 0) {
+				result.setImageUrl(list.getList().get(0).getProductPicture());
+				double price = list.getList().get(0).getRetailPrice();
+				if (price == (int) price) {
+					result.setTagImageUrl("http://" + AppSettingUtil.getSingleValue("currentApiV3Domain") + "/VersionThree/GenerateImg?price=" + (int) price);
+				} else {
+					result.setTagImageUrl("http://" + AppSettingUtil.getSingleValue("currentApiV3Domain") + "/VersionThree/GenerateImg?price=" + price);
+				}
+			}
+		}
+		return result;
+	}
+
+	public List<FlashSaleActivityVO> flashSaleList() {
+		List<AActivityTimespans> timelist = find_ActTimeSpanslist();
+		Date nowtime = new Date();
+		List<FlashSaleActivityVO> resultList = new ArrayList<FlashSaleActivityVO>();
+		// 开始时间
+		Calendar todayBegin = Calendar.getInstance();
+		todayBegin.setTime(nowtime);
+		// 结束时间
+		Calendar todayEnd = Calendar.getInstance();
+		todayEnd.setTime(nowtime);
+		for (AActivityTimespans tt : timelist) {
+			todayBegin.set(Calendar.HOUR_OF_DAY, tt.getShours());
+			todayBegin.set(Calendar.MINUTE, tt.getSminutes());
+			todayBegin.set(Calendar.SECOND, tt.getSseconds());
+			todayEnd.set(Calendar.HOUR_OF_DAY, tt.getEhours());
+			todayEnd.set(Calendar.MINUTE, tt.getEminutes());
+			todayEnd.set(Calendar.SECOND, tt.getEseconds());
+
+			FlashSaleActivityVO mo = new FlashSaleActivityVO();
+			mo.setItemId(tt.getId());
+			mo.setBeginTime(DateUtils.format(todayBegin.getTime(), "yyyy-MM-dd HH:mm:ss"));
+			mo.setEndTime(DateUtils.format(todayEnd.getTime(), "yyyy-MM-dd HH:mm:ss"));
+			mo.setServerTime(DateUtils.format(new Date(), "yyyy-MM-dd HH:mm:ss"));
+			mo.setTitle(DateUtils.format(todayBegin.getTime(), "HH:mm"));
+			if (todayBegin.getTime().getTime() > nowtime.getTime()) {
+				mo.setStateText("即将开始");
+				resultList.add(mo);
+			} else if (todayBegin.getTime().getTime() <= nowtime.getTime() && todayEnd.getTime().getTime() > nowtime.getTime()) {
+				mo.setStateText("抢购中");
+				mo.setState(1);
+				resultList.add(mo);
+			}
+		}
+		// 明天预告
+		if (resultList != null && resultList.size() < timelist.size()) {
+			Calendar tomorrowBegin = Calendar.getInstance();
+			tomorrowBegin.setTime(nowtime);
+			tomorrowBegin.add(Calendar.DAY_OF_YEAR, 1);
+			Calendar tomorrowEnd = Calendar.getInstance();
+			tomorrowEnd.setTime(nowtime);
+			tomorrowEnd.add(Calendar.DAY_OF_YEAR, 1);
+			int temp = resultList.size();
+			int count = timelist.size();
+			for (int i = 0; i < count - temp; i++) {
+				tomorrowBegin.set(Calendar.HOUR_OF_DAY, timelist.get(i).getShours());
+				tomorrowBegin.set(Calendar.MINUTE, timelist.get(i).getSminutes());
+				tomorrowBegin.set(Calendar.SECOND, timelist.get(i).getSseconds());
+				tomorrowEnd.set(Calendar.HOUR_OF_DAY, timelist.get(i).getEhours());
+				tomorrowEnd.set(Calendar.MINUTE, timelist.get(i).getEminutes());
+				tomorrowEnd.set(Calendar.SECOND, timelist.get(i).getEseconds());
+				FlashSaleActivityVO mo = new FlashSaleActivityVO();
+				mo.setItemId(10 + timelist.get(i).getId());
+				mo.setBeginTime(DateUtils.format(tomorrowBegin.getTime(), "yyyy-MM-dd HH:mm:ss"));
+				mo.setEndTime(DateUtils.format(tomorrowEnd.getTime(), "yyyy-MM-dd HH:mm:ss"));
+				mo.setServerTime(DateUtils.format(new Date(), "yyyy-MM-dd HH:mm:ss"));
+				mo.setStateText("明日预告");
+				mo.setTitle(DateUtils.format(tomorrowBegin.getTime(), "HH:mm"));
+				resultList.add(mo);
+			}
+		}
+		return resultList;
+	}
+
+	public PageResult<SaleActivityProductModel> flashSaleProductList(int itemId, int pageIndex, int pageSize) {
+		List<AActivityTimespans> timelist = find_ActTimeSpanslist();
+		int days = itemId / 10;
+		int keyId = itemId % 10;
+		PageResult<SaleActivityProductModel> result = null;
+		for (AActivityTimespans aa : timelist) {
+			if (aa.getId() == keyId) {
+				// 开始时间
+				Calendar start = new GregorianCalendar();
+				start.setTime(new Date());
+				if (days > 0) {
+					start.add(Calendar.DATE, days);
+				}
+				start.set(Calendar.HOUR_OF_DAY, aa.getShours());
+				start.set(Calendar.MINUTE, aa.getSminutes() - 1);
+				start.set(Calendar.SECOND, aa.getSseconds());
+				// 结束时间
+				Calendar end = new GregorianCalendar();
+				end.setTime(new Date());
+				if (days > 0) {
+					end.add(Calendar.DATE, days);
+				}
+				end.set(Calendar.HOUR_OF_DAY, aa.getEhours());
+				end.set(Calendar.MINUTE, aa.getEminutes() + 1);
+				end.set(Calendar.SECOND, aa.getEseconds());
+				result = this.find_ActProductlist(start.getTime(), end.getTime(), pageIndex, pageSize);
+			}
+		}
+		if (result == null) {
+			result = new PageResult<SaleActivityProductModel>(pageIndex, pageSize);
+		}
+		return result;
+	}
+
+	/**
+	 * 限时抢购 =》活动产品列表 前端展示用
+	 * 
+	 * @param startTime
+	 *            抢购开始时间
+	 * @param endTime
+	 *            结束时间
+	 * @param pageIndex
+	 * @param pageSize
+	 */
+	public PageResult<SaleActivityProductModel> find_ActProductlist(Date startTime, Date endTime, int pageIndex, int pageSize) {
+		String beginStr = DateUtils.format(startTime, "yyyyMMddHHmm");
+		String endStr = DateUtils.format(endTime, "yyyyMMddHHmm");
+		String keyname = "actProlist_b_" + beginStr + "_a_" + endStr + "_index_" + pageIndex + "_size_" + pageSize;
+		PageResult<AActProductsShowTime> pageResult = (PageResult<AActProductsShowTime>) RedisUtil.getObject(keyname);
+		if (pageResult == null || pageResult.getList() == null || pageResult.getList().size() <= 0) {
+			String hqlString = " from AActProductsShowTime a where a.endTime<=:endTime  and a.beginTime>=:beginTime order by a.sort asc,a.actPid desc ";
+			Map<String, Object> map = new HashMap<String, Object>();
+			map.put("beginTime", startTime);
+			map.put("endTime", endTime);
+			pageResult = baseDAO.findPageResultByMap(hqlString, Limit.buildLimit(pageIndex, pageSize), map);
+
+			if (pageResult != null && pageResult.getList() != null && pageResult.getList().size() > 0) {
+				RedisUtil.setObject(keyname, pageResult, 1800);
+			}
+		}
+		PageResult<SaleActivityProductModel> result = null;
+		if (pageResult != null && pageResult.getList() != null && pageResult.getList().size() > 0) {
+			List<SaleActivityProductModel> modlist = new ArrayList<SaleActivityProductModel>();
+			for (AActProductsShowTime actPro : pageResult.getList()) {
+				SaleActivityProductModel mod = new SaleActivityProductModel();
+				mod.setProductId(actPro.getProductId());
+				mod.setProActId(actPro.getProActId());
+				PProducts products = baseDAO.get(PProducts.class, actPro.getProductId());
+				if (products != null) {
+					mod.setProductName(products.getProductTitle());
+					mod.setProductPicture(ImgDomain.GetFullImgUrl(products.getDefaultImg(), 24));
+					double percent = 1.5;
+					double displayPrice = products.getDefaultPrice() * percent;
+					DecimalFormat df = new DecimalFormat("#.00");
+					displayPrice = Double.parseDouble(df.format(displayPrice));
+					mod.setDisplayPrice((products.getOriginalPrice() == null) ? displayPrice : products.getOriginalPrice());
+					mod.setProviderWid(products.getSupplierWeiId());
+					mod.setSellerWid(products.getSupplierWeiId());
+				} else {
+					continue;
+				}
+				AActivityProducts activityProducts = baseDAO.get(AActivityProducts.class, actPro.getProActId());
+				if (activityProducts != null) {
+					mod.setActLimitCount(activityProducts.getTotalCount() == null ? 0 : activityProducts.getTotalCount());
+					mod.setRetailPrice(activityProducts.getPrice());
+					mod.setCommission(activityProducts.getCommission());
+					mod.setActPictureUrl(mod.getProductPicture());
+					mod.setActPrice(activityProducts.getPrice());
+					mod.setActCountVisiable(ParseHelper.toShort(AppSettingUtil.getSingleValue("isShow")));
+				} else {
+					continue;
+				}
+				AActShowProducts actShowProducts = baseDAO.get(AActShowProducts.class, actPro.getProActId());
+				if (actShowProducts == null)
+					continue;
+				if (actShowProducts != null && actShowProducts.getStockCount() != null) {
+					mod.setActSaledCount(activityProducts.getTotalCount().intValue() - (actShowProducts.getStockCount() == null ? 0 : actShowProducts.getStockCount()));
+				}
+				modlist.add(mod);
+			}
+			result = new PageResult(pageResult.getTotalCount(), Limit.buildLimit(pageIndex, pageSize), modlist);
+		} else {
+			result = new PageResult<SaleActivityProductModel>(pageIndex, pageSize);
+		}
+		return result;
+	}
+
+	/**
+	 * 获取当天前后几天的限时抢购产品
+	 * 
+	 * @param beforeDays
+	 *            使用 正整数
+	 * @param afterDays
+	 * @return
+	 */
+	public List<AActProducts> find_AActProductsByTime(int beforeDays, int afterDays) {
+		String keyname = "actProlist_b_" + beforeDays + "_a_" + afterDays;
+		List<AActProducts> result = (List<AActProducts>) RedisUtil.getObject(keyname);
+		if (result == null || result.size() <= 0) {
+			Calendar c1 = new GregorianCalendar();
+			c1.setTime(new Date());
+			if (beforeDays > 0) {
+				c1.set(Calendar.DATE, c1.get(Calendar.DATE) - beforeDays);
+			}
+			c1.set(Calendar.HOUR_OF_DAY, 0);
+			c1.set(Calendar.MINUTE, 0);
+			c1.set(Calendar.SECOND, 0);
+			Calendar c2 = new GregorianCalendar();
+			c2.setTime(new Date());
+			c2.set(Calendar.DATE, c2.get(Calendar.DATE) + afterDays);
+			c2.set(Calendar.HOUR_OF_DAY, 23);
+			c2.set(Calendar.MINUTE, 59);
+			c2.set(Calendar.SECOND, 59);
+			String hqlString = " from AActProducts a where a.actState=? and a.endTime<='" + c2.getTime() + "'? and a.beginTime>='" + c1.getTime() + "' order by a.sort asc";
+			result = baseDAO.find(hqlString, Short.parseShort(ActProductVerState.Ok.toString()));
+			if (result != null && result.size() > 0) {
+				RedisUtil.setObject(keyname, result, 1800);
+			}
+		}
+		return result;
+	}
+
+	public PageResult<AActivityProducts> find_ApplyProductListBySellerID(Long actId, Long sellerId, int pageIndex, int pageSize) {
+		StringBuilder sb = new StringBuilder();
+		Map<String, Object> map = new HashMap<String, Object>();
+		sb.append("from AActivityProducts a where a.actId=:actid");
+		map.put("actid", actId);
+		if (sellerId != null && sellerId > 0) {
+			sb.append(" and  a.sellerId=:sellerid ");
+			map.put("sellerid", sellerId);
+		}
+		sb.append(" order by a.proActId desc ");
+		return baseDAO.findPageResultByMap(sb.toString(), Limit.buildLimit(pageIndex, pageSize), map);
+	}
+
+	public PageResult<AActivityProducts> find_ApplyProductListBySellerID(Long actId, Long sellerId, Short state, int pageIndex, int pageSize) {
+		StringBuilder sb = new StringBuilder();
+		Map<String, Object> map = new HashMap<String, Object>();
+		sb.append("from AActivityProducts a where a.actId=:actid");
+		map.put("actid", actId);
+		if (sellerId != null && sellerId > 0) {
+			sb.append(" and  a.sellerId=:sellerid ");
+			map.put("sellerid", sellerId);
+		}
+		if (state != null) {
+			sb.append(" and  a.state=:state ");
+			map.put("state", state);
+		}
+		sb.append(" order by a.proActId desc ");
+		return baseDAO.findPageResultByMap(sb.toString(), Limit.buildLimit(pageIndex, pageSize), map);
+	}
+
+	public List<AActivityProducts> find_AActivityProductsBySellerID(Long actId, Long sellerId, Short state) {
+		StringBuilder sb = new StringBuilder();
+		Map<String, Object> map = new HashMap<String, Object>();
+		sb.append("from AActivityProducts a where a.actId=:actid");
+		map.put("actid", actId);
+		if (sellerId != null && sellerId > 0) {
+			sb.append(" and  a.sellerId=:sellerid ");
+			map.put("sellerid", sellerId);
+		}
+		if (state != null) {
+			sb.append(" and  a.state=:state ");
+			map.put("state", state);
+		}
+		return baseDAO.findByMap(sb.toString(), map);
+	}
+
+	public long count_AActivityProducts(Long actId, Long sellerId, Short state) {
+		StringBuilder sb = new StringBuilder();
+		sb.append("select count(*) from AActivityProducts a where a.actId=:actid ");
+		Map<String, Object> map = new HashMap<String, Object>();
+		map.put("actid", actId);
+		if (sellerId != null && sellerId > 0) {
+			sb.append(" and a.sellerId=:sellerid");
+			map.put("sellerid", sellerId);
+		}
+		if(state!=null){
+			sb.append(" and a.state=:state");
+			map.put("state", (short)state);
+		}
+		return baseDAO.countByMap(sb.toString(), map);
+	}
+
+	public AActivity getAActivity(Long actID) {
+		return baseDAO.get(AActivity.class, actID);
+	}
+
+	public AActSupplier getAActSupplier(Long actID,Long weiid){
+		return baseDAO.getNotUniqueResultByHql(" from AActSupplier a where a.actId=? and a.supplyWeiid=? ", actID,weiid);
+	}
+	public AActivityProducts getAActivityProducts(Long proActID) {
+		return baseDAO.get(AActivityProducts.class, proActID);
+	}
+
+	public List<AActivityProducts> find_AActivityProductsByIds(List<Long> ids) {
+		if (ids != null && ids.size() > 0) {
+			String hqlString = "from AActivityProducts a where a.proActId in(:ids) ";
+			Map<String, Object> map = new HashMap<String, Object>();
+			map.put("ids", ids);
+			return baseDAO.findByMap(hqlString, map);
+		}
+		return null;
+	}
+
+	public AActProducts getAActProducts(Long productId, boolean isGoing) {
+		StringBuilder sb = new StringBuilder();
+		Date nowtime = new Date();
+		sb.append(" from AActProducts a where a.productId=:proid and a.actState=:state ");
+		Map<String, Object> map = new HashMap<String, Object>();
+		map.put("proid", productId);
+		map.put("state", Short.parseShort(ActProductVerState.Ok.toString()));
+		if (isGoing) {
+			sb.append(" and a.beginTime<=:nowtime and a.endTime>=:nowtime ");
+			map.put("nowtime", nowtime);
+		} else {
+			sb.append(" and  a.endTime>=:nowtime order by a.beginTime asc");
+			map.put("nowtime", nowtime);
+		}
+		List<AActProducts> list = baseDAO.findByMap(sb.toString(), map);
+		if (list != null && list.size() > 0)
+			return list.get(0);
+		return null;
+	}
+
+	public AActProductsShowTime getAActProductsShowTime(Long productId, boolean isGoing) {
+		StringBuilder sb = new StringBuilder();
+		Date nowtime = new Date();
+		sb.append(" from AActProductsShowTime a where a.productId=:proid ");
+		Map<String, Object> map = new HashMap<String, Object>();
+		map.put("proid", productId);
+		if (isGoing) {
+			sb.append(" and a.beginTime<=:nowtime and a.endTime>=:nowtime ");
+			map.put("nowtime", nowtime);
+		} else {
+			sb.append(" and  a.endTime>=:nowtime order by a.beginTime asc");
+			map.put("nowtime", nowtime);
+		}
+		List<AActProductsShowTime> list = baseDAO.findByMap(sb.toString(), map);
+		if (list != null && list.size() > 0) {
+			AActProductsShowTime result = list.get(0);
+			AActShowProducts actShowProducts = baseDAO.get(AActShowProducts.class, result.getProActId());
+			if (actShowProducts != null) {
+				return result;
+			}
+		}
+		return null;
+	}
+
+	public AActivityProducts getAActivityProducts(Long actid, Long productid) {
+		String hql = " from AActivityProducts a where a.actId=? and a.productId=? ";
+		return baseDAO.getUniqueResultByHql(hql, actid, productid);
+	}
+
+	public AActivityProductsResult getAActivityProductsResult(Long proActID) {
+		AActivityProducts mo = baseDAO.get(AActivityProducts.class, proActID);
+		AActivityProductsResult result = new AActivityProductsResult();
+		try {// 将父类 cope到子类
+			ObjectUtil.fatherToChild(mo, result);
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		result.setProductImg(ImgDomain.GetFullImgUrl(mo.getProductImg()));
+		result.setShopName(commonService.getShopNameByWeiId(mo.getSellerId()));
+		String pri = new DecimalFormat("##0.00").format(result.getPrice() - (result.getCommission() == null ? 0 : result.getCommission()));
+
+		result.setPriceWithOutCommission(pri);
+		PProducts pro = baseDAO.get(PProducts.class, mo.getProductId());
+		if (pro != null && pro.getDefaultPrice() != null) {
+			result.setPriceBf(pro.getDefaultPrice());
+			result.setOldPrice(pro.getOriginalPrice());
+		} else {
+			result.setPriceBf(result.getPrice());
+		}
+		AActProductExp exp = baseDAO.get(AActProductExp.class, result.getProActId());
+		if (exp != null) {
+			result.setSelledCount(exp.getSellerCount() == null ? 0 : exp.getSellerCount());
+			result.setSelledAmount(exp.getSellerCount() == null ? 0 : (exp.getSellerCount() * result.getPrice()));
+		}
+		return result;
+	}
+
+	public ReturnModel editAActivityProducts(Long weiid,Double amount, List<AActivityProducts> list){
+		if(amount>0&&list!=null&&list.size()>0){
+			AActSupplier supplier=baseDAO.getNotUniqueResultByHql("from AActSupplier a where a.actId=? and a.supplyWeiid=? ", list.get(0).getActId(),weiid);
+			if(supplier!=null){
+				supplier.setAmount(amount);
+				baseDAO.update(supplier);
+			}else {
+				supplier =new AActSupplier();
+				supplier.setActId(list.get(0).getActId());
+				supplier.setSupplyWeiid(weiid);
+				supplier.setAmount(amount);
+				supplier.setCreateTime(new Date());
+				baseDAO.save(supplier);
+			}
+		}
+		return editAActivityProducts( weiid,  list);
+	}
+	
+	/**
+	 * 保存、修改 限时抢购的商品
+	 */
+	public ReturnModel editAActivityProducts(Long weiid, List<AActivityProducts> list) {
+		ReturnModel rqModel = new ReturnModel();
+		if (list != null && list.size() > 0) {
+			long count = count_AActivityProducts(list.get(0).getActId(), weiid, null);
+			AActivity activity = baseDAO.get(AActivity.class, list.get(0).getActId());
+			if (activity == null) {
+				rqModel.setStatu(ReturnStatus.SystemError);
+				rqModel.setStatusreson("参数有误");
+				return rqModel;
+			}
+			Date nowtime = new Date();
+			if (activity.getState() != Short.parseShort(ActProductVerState.Ok.toString())) {
+				rqModel.setStatu(ReturnStatus.SystemError);
+				rqModel.setStatusreson("活动已关闭,无法提交产品！");
+				return rqModel;
+			}
+			if (nowtime.getTime() > activity.getStartTime().getTime() && nowtime.getTime() <= activity.getEndTime().getTime()) {
+				rqModel.setStatu(ReturnStatus.SystemError);
+				rqModel.setStatusreson("活动正在进行中,无法提交产品！");
+				return rqModel;
+			} else if (nowtime.getTime() > activity.getEndTime().getTime()) {
+				rqModel.setStatu(ReturnStatus.SystemError);
+				rqModel.setStatusreson("活动已经结束,无法提交产品！");
+				return rqModel;
+			}
+			if (count <= 0) {
+				activity.setSellerCount(activity.getSellerCount() == null ? 1 : (activity.getSellerCount() + 1));
+				baseDAO.update(activity);
+			}
+			if(activity.getType()==null||activity.getType()<=0){//全返活动不限制数量
+				if ((count + list.size()) > 20 && weiid!=20162055) {
+					rqModel.setStatu(ReturnStatus.SystemError);
+					rqModel.setStatusreson("参与活动的产品个数限制在20个内");
+					return rqModel;
+				}
+			}
+			
+			for (AActivityProducts aa : list) {
+				if (aa.getProductId() == null || aa.getProductId() <= 0)
+					continue;
+				PProducts pro = baseDAO.get(PProducts.class, aa.getProductId());
+				if (pro == null)
+					continue;
+				AActivityProducts acProducts = getAActivityProducts(aa.getActId(), aa.getProductId());
+				if (acProducts != null) {
+					aa.setProActId(acProducts.getProActId());
+				}
+				if (pro.getSupplierWeiId().longValue() != weiid) {
+					rqModel.setStatu(ReturnStatus.SystemError);
+					rqModel.setStatusreson("只能选择自营的产品！");
+					return rqModel;
+				}
+				if (aa.getPrice() == null || aa.getPrice() <= 0) {
+					rqModel.setStatu(ReturnStatus.ParamError);
+					rqModel.setStatusreson("请设置活动价");
+					return rqModel;
+				}
+				if (aa.getTotalCount() == null || aa.getTotalCount() <= 0) {
+					rqModel.setStatu(ReturnStatus.ParamError);
+					rqModel.setStatusreson("库存数量不能为0");
+					return rqModel;
+				}
+				if(aa.getTraddingPrice()!=null&&aa.getTraddingPrice()>0&&activity.getType()!=null&&activity.getType()>0){
+					double pr=aa.getTraddingPrice()/aa.getPrice();
+					if(pr>0.8d){
+						rqModel.setStatu(ReturnStatus.ParamError);
+						rqModel.setStatusreson("结算价不得高于活动价的80%");
+						return rqModel;
+					}
+				}
+				if (aa.getCommission() == null)
+					aa.setCommission(0d);
+				aa.setProductTitle(pro.getProductTitle());
+				aa.setProductImg(pro.getDefaultImg());
+				aa.setClassId(pro.getClassId());
+				aa.setSellerId(pro.getSupplierWeiId());
+				aa.setState(Short.parseShort(ActProductVerState.applying.toString()));
+				if (aa.getProActId() != null && aa.getProActId() > 0) {
+					AActivityProducts productact = baseDAO.get(AActivityProducts.class, aa.getProActId());
+					if (productact != null) {
+						productact.setTotalCount(aa.getTotalCount());
+						productact.setPrice(aa.getPrice());
+						productact.setCommission(aa.getCommission());
+						productact.setState(Short.parseShort(ActProductVerState.applying.toString()));
+						baseDAO.update(productact);
+					}
+				} else {
+					aa.setCreateTime(new Date());
+					baseDAO.save(aa);
+				}
+			}
+			rqModel.setStatu(ReturnStatus.Success);
+			rqModel.setStatusreson("成功");
+		} else {
+			rqModel.setStatu(ReturnStatus.ParamError);
+			rqModel.setStatusreson("请选择产品！");
+		}
+		return rqModel;
+	}
+
+	public List<AActivityTimespans> find_ActTimeSpanslist() {
+		List<AActivityTimespans> list = baseDAO.find(" from AActivityTimespans a where a.id>0");
+		return list;
+	}
+
+	public ReturnModel edit_AActivityProduct(Long weiid, Long actProID, Short state, String reason) {
+		ReturnModel rq = new ReturnModel();
+		AActivityProducts activityProducts = baseDAO.get(AActivityProducts.class, actProID);
+		if (activityProducts != null) {
+			activityProducts.setState(state);
+			activityProducts.setVerifyTime(new Date());
+			activityProducts.setVerifier(weiid);
+			if (!ObjectUtil.isEmpty(reason)) {
+				activityProducts.setReason(reason);
+			}
+			baseDAO.update(activityProducts);
+			// 插入log记录
+			String content = "";
+			if (state == Short.parseShort(ActProductVerState.Ok.toString())) {
+				content = weiid + "审核通过";
+			} else if (state == Short.parseShort(ActProductVerState.No.toString())) {
+				content = weiid + "审核不通过，理由：" + reason;
+			}
+			// 清除展示时间
+			List<AActProducts> list = find_AActProductslist(actProID);
+			if (list != null && list.size() > 0) {
+				for (AActProducts aa : list) {
+					baseDAO.delete(aa);
+				}
+			}
+			add_AActProductsLog(weiid, actProID, content);
+			rq.setStatu(ReturnStatus.Success);
+			rq.setStatusreson("操作成功！");
+		} else {
+			rq.setStatu(ReturnStatus.ParamError);
+			rq.setStatusreson("参数有误，找不到相应的报名产品！");
+		}
+
+		return rq;
+	}
+
+	/**
+	 * 加入 活动产品 编辑log记录
+	 * 
+	 * @param weiid
+	 * @param proActID
+	 * @param content
+	 */
+	public void add_AActProductsLog(Long weiid, Long proActID, String content) {
+		AActProductsVerifyLog log = new AActProductsVerifyLog();
+		log.setVerifier(weiid);
+		log.setCreateTime(new Date());
+		log.setProActId(proActID);
+		log.setContent(content);
+		baseDAO.save(log);
+	}
+
+	/**
+	 * 获取显示抢购活动列表
+	 * 
+	 * @param pageIndex
+	 * @param pageSize
+	 */
+	public PageResult<AActivity> find_ActivityList(int pageIndex, int pageSize) {
+		// 获取活动列表
+		String hql = " from AActivity a where a.state=1 order by a.actId desc";
+		PageResult<AActivity> pageResult = baseDAO.findPageResult(hql, Limit.buildLimit(pageIndex, pageSize));
+		return pageResult;
+	}
+
+	public ReturnModel set_ActProductShowTime(Long weiid, List<Long> ids, List<AActivityProExtend> timelist) {
+
+		ReturnModel rqModel = new ReturnModel();
+		if (ids != null && ids.size() > 0) {
+			if (timelist == null || timelist.size() <= 0) {
+				rqModel.setStatu(ReturnStatus.ParamError);
+				rqModel.setStatusreson("时间设置有误！");
+				return rqModel;
+			}
+			List<AActivityProducts> proActlist = find_AActivityProductsByIds(ids);
+			if (proActlist == null || proActlist.size() <= 0) {
+				rqModel.setStatu(ReturnStatus.ParamError);
+				rqModel.setStatusreson("找不到相应的申请产品！");
+				return rqModel;
+			}
+			AActivity activity = baseDAO.get(AActivity.class, proActlist.get(0).getActId());
+			if (activity != null) {
+				Date nowtime = new Date();
+				if (nowtime.getTime() > activity.getEndTime().getTime()) {
+					rqModel.setStatu(ReturnStatus.ParamError);
+					rqModel.setStatusreson("活动已经结束！");
+					return rqModel;
+				}
+				for (AActivityProExtend tt : timelist) {
+					if (tt.getBeginTimeDate().getTime() < activity.getStartTime().getTime() || tt.getEndtimeDate().getTime() > activity.getEndTime().getTime()) {
+						rqModel.setStatu(ReturnStatus.ParamError);
+						rqModel.setStatusreson("时间设置不能超出活动起止时间！");
+						return rqModel;
+					}
+				}
+			} else {
+				rqModel.setStatu(ReturnStatus.ParamError);
+				rqModel.setStatusreson("找不到相应的活动/活动已经结束");
+				return rqModel;
+			}
+			for (Long id : ids) {
+				List<AActProducts> list = find_AActProductslist(id);
+				if (list != null && list.size() > 0) {
+					for (AActProducts aa : list) {
+						baseDAO.delete(aa);
+					}
+				}
+				AActivityProducts actPro = baseDAO.get(AActivityProducts.class, id);
+				List<AActProducts> sList = new ArrayList<AActProducts>();
+				for (AActivityProExtend tt : timelist) {
+					AActProducts mo = new AActProducts();
+					mo.setProActId(id);
+					mo.setActState(actPro.getState());
+					mo.setProductId(actPro.getProductId());
+					mo.setSort(999);
+					mo.setBeginTime(tt.getBeginTimeDate());
+					mo.setEndTime(tt.getEndtimeDate());
+					baseDAO.save(mo);
+					sList.add(mo);
+				}
+				// 新增log
+				add_AActProductsLog(weiid, id, "设置展示时间");
+
+				edit_actProductShowTime(actPro, sList);
+			}
+			rqModel.setStatu(ReturnStatus.Success);
+			rqModel.setStatusreson("成功");
+		}
+		return rqModel;
+	}
+
+	/**
+	 * 显示抢购产品展示设置
+	 * 
+	 * @param actPro
+	 * @param list
+	 */
+	public void edit_actProductShowTime(AActivityProducts actPro, List<AActProducts> list) {
+		if (actPro != null) {
+			AActShowProducts products = baseDAO.get(AActShowProducts.class, actPro.getProActId());
+			if (products == null) {
+				products = new AActShowProducts();
+				products.setActId(actPro.getActId());
+				products.setProActId(actPro.getProActId());
+				products.setProductId(actPro.getProductId());
+				products.setProductImg(actPro.getProductImg());
+				products.setProductTitle(actPro.getProductTitle());
+				products.setPrice(actPro.getPrice());
+				products.setCommission(actPro.getCommission());
+				products.setSellerId(actPro.getSellerId());
+				products.setClassId(actPro.getClassId());
+				products.setCreateTime(new Date());
+				products.setStockCount(actPro.getTotalCount());
+				baseDAO.save(products);
+			}
+
+			String hql_ex = " from AActProductsShowTime a where a.proActId=?";
+			List<AActProductsShowTime> tiList = baseDAO.find(hql_ex, actPro.getProActId());
+			if (tiList != null && tiList.size() > 0) {
+				for (AActProductsShowTime tt : tiList) {
+					baseDAO.delete(tt);
+				}
+			}
+			if (list != null && list.size() > 0) {
+				for (AActProducts ss : list) {
+					AActProductsShowTime show = new AActProductsShowTime();
+					show.setActPid(ss.getActPid());
+					show.setBeginTime(ss.getBeginTime());
+					show.setEndTime(ss.getEndTime());
+					show.setSort(ss.getSort());
+					show.setProductId(ss.getProductId());
+					show.setProActId(ss.getProActId());
+					baseDAO.save(show);
+				}
+			}
+		}
+	}
+
+	/**
+	 * 获取产品 展示时间列表
+	 * 
+	 * @param proActID
+	 * @return
+	 */
+	public List<AActProducts> find_AActProductslist(Long proActID) {
+		String hql_ex = " from AActProducts a where a.proActId=?";
+		return baseDAO.find(hql_ex, proActID);
+	}
+
+	public PageResult<AActivityProductsResult> find_ActProductListBySellerID(Long actId, Long sellerId, Short state, int pageIndex, int pageSize) {
+		PageResult<AActivityProducts> pageResult = find_ApplyProductListBySellerID(actId, sellerId, state, pageIndex, pageSize);
+		PageResult<AActivityProductsResult> result = new PageResult<AActivityProductsResult>();
+		result.setPageIndex(pageIndex);
+		result.setPageSize(pageSize);
+		result.setTotalCount(pageResult.getTotalCount());
+		result.setTotalPage(pageResult.getTotalPage());
+		if (pageResult.getList() != null && pageResult.getList().size() > 0) {
+			List<AActivityProductsResult> proList = new ArrayList<AActivityProductsResult>();
+			for (AActivityProducts aa : pageResult.getList()) {
+				AActivityProductsResult re = new AActivityProductsResult();
+				try {// 将父类 cope到子类
+					ObjectUtil.fatherToChild(aa, re);
+				} catch (Exception e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+				// re.setActId(aa.getActId());
+				// re.setClassId(aa.getClassId());
+				// re.setCommission(aa.getCommission());
+				// re.setCreateTime(aa.getCreateTime());
+				// re.setPrice(aa.getPrice());
+				// re.setProActId(aa.getProActId());
+				// re.setProductId(aa.getProductId());
+				// re.setState(aa.getState());
+				// re.setProductTitle(aa.getProductTitle());
+				// re.setTotalCount(aa.getTotalCount());
+				// re.setSellerId(aa.getSellerId());
+				re.setProductImg(ImgDomain.GetFullImgUrl(aa.getProductImg()));
+				re.setShopName(commonService.getShopNameByWeiId(aa.getSellerId()));
+				PProducts pro = baseDAO.get(PProducts.class, aa.getProductId());
+				if (pro != null && pro.getDefaultPrice() != null) {
+					re.setPriceBf(pro.getDefaultPrice());
+				} else {
+					re.setPriceBf(re.getPrice());
+				}
+				AActProductExp exp = baseDAO.get(AActProductExp.class, re.getProActId());
+				if (exp != null) {
+					re.setSelledCount(exp.getSellerCount() == null ? 0 : exp.getSellerCount());
+					re.setSelledAmount(exp.getSellerCount() == null ? 0 : (exp.getSellerCount() * re.getPrice()));
+				}
+
+				List<AActProducts> actlist = find_AActProductslist(re.getProActId());// baseDAO.find(hql_ex,
+																						// re.getProActId());
+				Date nowtime = new Date();
+				if (actlist != null && actlist.size() > 0) {
+					List<AActivityProExtend> list = new ArrayList<AActivityProExtend>();
+					for (AActProducts ee : actlist) {
+						AActivityProExtend extend = new AActivityProExtend();
+						extend.setBeginTimeDate(ee.getBeginTime());
+						extend.setEndtimeDate(ee.getEndTime());
+						extend.setBeginTime(DateUtils.format(ee.getBeginTime(), "yyyy/MM/dd HH:mm"));
+						extend.setEndTime(DateUtils.format(ee.getEndTime(), "yyyy/MM/dd HH:mm"));
+						if (ee.getBeginTime().getTime() < nowtime.getTime()) {
+							extend.setState(0);
+						} else if (ee.getBeginTime().getTime() >= nowtime.getTime() && ee.getEndTime().getTime() <= nowtime.getTime()) {
+							extend.setState(1);
+						} else {
+							extend.setState(2);// 已结束
+						}
+						list.add(extend);
+					}
+					re.setProductExtends(list);
+				}
+				proList.add(re);
+			}
+			result.setList(proList);
+		}
+		return result;
+	}
+
+	public PageResult<AActivityProductsResult> find_ActDetail_prolist(Long sellerid, Long actid, Short state, int pageIndex, int pageSize) {
+		StringBuilder sb = new StringBuilder();
+		sb.append(" select a from  AActProducts a,AActivityProducts b where a.proActId=b.proActId and b.state=1 ");
+		Map<String, Object> map = new HashMap<String, Object>();
+		if (sellerid != null && sellerid > 0) {
+			sb.append(" and b.sellerId=:sellerid");
+			map.put("sellerid", sellerid);
+		}
+		if (actid != null && actid > 0) {
+			sb.append(" and b.actId=:actID");
+			map.put("actID", actid);
+		}
+		Date nowtime = new Date();
+		if (state != null) {
+			switch (state) {
+			case 0:// 未开始
+				sb.append(" and a.beginTime>:nowtime");
+				map.put("nowtime", nowtime);
+				break;
+			case 1:// 正在进行
+				sb.append(" and a.beginTime<:nowtime and a.endTime>=:nowtime");
+				map.put("nowtime", nowtime);
+				break;
+			case 2:// 已结束
+				sb.append(" and a.endTime<:nowtime");
+				map.put("nowtime", nowtime);
+				break;
+			case 3:// 已抢完
+				sb = new StringBuilder();
+				sb.append("select a from  AActProducts a,AActivityProducts b,AActProductExp c where b.state=1 and a.proActId=b.proActId and b.proActId=c.proActId and b.totalCount=c.sellerCount ");
+				if (sellerid != null && sellerid > 0) {
+					sb.append(" and b.sellerId=:sellerid");
+				}
+				if (actid != null && actid > 0) {
+					sb.append(" and b.actId=:actID");
+				}
+				break;
+			default:
+				break;
+			}
+		}
+		PageResult<AActProducts> pageResult = baseDAO.findPageResultByMap(sb.toString(), Limit.buildLimit(pageIndex, pageSize), map);
+		PageResult<AActivityProductsResult> result = new PageResult<AActivityProductsResult>();
+		result.setPageCount(pageResult.getPageCount());
+		result.setTotalCount(pageResult.getTotalCount());
+		result.setTotalPage(pageResult.getTotalPage());
+		result.setPageIndex(pageResult.getPageIndex());
+		if (pageResult.getList() != null && pageResult.getList().size() > 0) {
+			List<AActivityProductsResult> listResults = new ArrayList<AActivityProductsResult>();
+			for (AActProducts ee : pageResult.getList()) {
+				AActivityProducts actPro = baseDAO.get(AActivityProducts.class, ee.getProActId());
+				AActivityProductsResult res = new AActivityProductsResult();
+				try {// 将父类 cope到子类
+					ObjectUtil.fatherToChild(actPro, res);
+				} catch (Exception e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+
+				PProducts pro = baseDAO.get(PProducts.class, actPro.getProductId());
+				if (pro != null && pro.getDefaultPrice() != null) {// 活动前的价格
+					res.setPriceBf(pro.getDefaultPrice());
+				} else {
+					res.setPriceBf(actPro.getPrice());
+				}
+				AActProductExp exp = baseDAO.get(AActProductExp.class, actPro.getProActId());
+				if (exp != null) {
+					res.setSelledCount(exp.getSellerCount() == null ? 0 : exp.getSellerCount());// 销售数量
+					res.setSelledAmount(exp.getSellerCount() == null ? 0 : (exp.getSellerCount() * actPro.getPrice()));// 销售金额
+				}
+				res.setShopName(commonService.getShopNameByWeiId(actPro.getSellerId()));
+				res.setProductImg(ImgDomain.GetFullImgUrl(actPro.getProductImg()));
+				res.setSort(ee.getSort());
+				res.setActPid(ee.getActPid());
+				List<AActivityProExtend> list = new ArrayList<AActivityProExtend>();
+				AActivityProExtend extend = new AActivityProExtend();
+				extend.setBeginTimeDate(ee.getBeginTime());
+				extend.setEndtimeDate(ee.getEndTime());
+				extend.setBeginTime(DateUtils.format(ee.getBeginTime(), "yyyy/MM/dd HH:mm"));
+				extend.setEndTime(DateUtils.format(ee.getEndTime(), "yyyy/MM/dd HH:mm"));
+				if (ee.getEndTime().getTime() < nowtime.getTime()) {
+					extend.setState(2);// 已结束
+				} else if (ee.getBeginTime().getTime() <= nowtime.getTime() && ee.getEndTime().getTime() >= nowtime.getTime()) {
+					extend.setState(1);// 进行中
+				} else {
+					extend.setState(0);// 未开始
+				}
+				list.add(extend);
+				res.setProductExtends(list);
+				listResults.add(res);
+			}
+			result.setList(listResults);
+		}
+		return result;
+	}
+
+	@Override
+	public ReturnModel updateCount(Long proActID, Integer count) {
+		ReturnModel result = new ReturnModel();
+		String hql = "update AActivityProducts  set totalCount=? where proActId=?";
+		baseDAO.executeHql(hql, count, proActID);
+		result.setStatu(ReturnStatus.Success);
+		result.setStatusreson("修改成功！");
+		return result;
+	}
+
+	@Override
+	public AActivityProducts getProducts(Long proActID) {
+		AActivityProducts acti = new AActivityProducts();
+		acti = baseDAO.get(AActivityProducts.class, proActID);
+		return acti;
+	}
+
+	@Override
+	public ReturnModel deleteActProducts(Long proActID, Long actID) {
+		ReturnModel result = new ReturnModel();
+		String hqll = "delete from AActProductsShowTime where actPid=?";
+		baseDAO.executeHql(hqll, actID);
+		String hql = "delete from AActProducts where actPid=?";
+		baseDAO.executeHql(hql, actID);
+		result.setStatu(ReturnStatus.Success);
+		result.setStatusreson("删除成功！");
+		return result;
+	}
+
+	@Override
+	public ReturnModel updateSort(Long proActID, Short state) {
+		ReturnModel result = new ReturnModel();
+		// String hql = "update AActProducts set sort=? where actPid=?";
+		String sql = "update A_ActProducts set Sort=? where ActPID=?;";
+		baseDAO.executeSql(sql, state, proActID);
+		// baseDAO.executeHql(hql, state, proActID);
+		result.setStatu(ReturnStatus.Success);
+		result.setStatusreson("排序更改成功");
+		return result;
+	}
+
+	@Override
+	public ReturnModel deleteActivityProducts(Long proActID, Long actID) {
+		ReturnModel result = new ReturnModel();
+		String hqll = "delete from AActivityProducts where actId=? and proActId=?";
+		baseDAO.executeHql(hqll, actID, proActID);
+		result.setStatu(ReturnStatus.Success);
+		result.setStatusreson("删除成功！");
+		return result;
+	}
+
+}

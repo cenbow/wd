@@ -1,0 +1,112 @@
+package com.okwei.dao.impl.user;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Repository;
+
+import com.okwei.bean.domain.PShelverCount;
+import com.okwei.bean.domain.UFriends;
+import com.okwei.bean.domain.UShopInfo;
+import com.okwei.bean.domain.UUserAssist;
+import com.okwei.bean.domain.UWeiSeller;
+import com.okwei.bean.enums.UserIdentityType;
+import com.okwei.service.shoppingcart.IBasicShoppingCartMgtService;
+import com.okwei.util.BitOperation;
+import com.okwei.dao.impl.BaseDAO;
+import com.okwei.dao.user.IPShelverCountMgtDAO;
+import com.okwei.dao.user.IUUserAssistMgtDAO;
+
+
+@Repository
+public class UUserAssistMgtDAO extends BaseDAO implements IUUserAssistMgtDAO {
+	@Autowired
+	private IPShelverCountMgtDAO iPShelverCountMgtDAO;
+	@Autowired
+    private	IBasicShoppingCartMgtService iBasicShoppingCartMgtService;
+	@Override
+	public void saveUserAssist(long weiid,int identity,int trueOrFalse) {
+		// TODO Auto-generated method stub
+		//通过微店号查询辅助表
+		UUserAssist userassit = getUUserAssist(weiid);
+		//如果改微店还没上架，就想辅助表添加改用户使用上架功能时的个人排序
+		PShelverCount psc = iPShelverCountMgtDAO.getPShelverCount();
+		if(psc == null)
+		{
+			psc = new PShelverCount();
+			psc.setCount(0L);
+		}
+		int bitPosition ;
+		int currentIdentity;
+		//更新辅助表
+		if(userassit == null)
+		{  
+			userassit = new UUserAssist();
+			userassit.setWeiId(weiid);
+			userassit.setWeiIdSort(psc.getCount() + 1);
+			//没有值的时候，给他赋值一个普通用户
+			int _thisIdentity = Integer.parseInt(String.valueOf(UserIdentityType.commonUser));
+			//位移的第几位
+			bitPosition = iBasicShoppingCartMgtService.getTwoPowInteger(_thisIdentity);
+			currentIdentity = BitOperation.setIntegerSomeBit(_thisIdentity,bitPosition, true);
+		    userassit.setIdentity(currentIdentity);
+		    super.saveOrUpdate(userassit);
+		}
+		//用户辅助表不为空时修改
+		if(userassit != null)
+		{	
+			//第几位位移
+		    bitPosition = iBasicShoppingCartMgtService.getTwoPowInteger(identity);
+//		    //身份标识
+//		    currentIdentity = BitOperation.setIntegerSomeBit(userassit.getIdentity() != null ? userassit.getIdentity() : 1,bitPosition,true);
+			switch (trueOrFalse) {
+			case 1:
+			    //身份标识
+			    currentIdentity = BitOperation.setIntegerSomeBit(userassit.getIdentity() != null ? userassit.getIdentity() : 1,bitPosition,true);
+				break;
+			default:
+			    //身份标识
+			    currentIdentity = BitOperation.setIntegerSomeBit(userassit.getIdentity() != null ? userassit.getIdentity() : 1,bitPosition,false);
+				break;
+			}
+		    //身份标识赋值
+		    userassit.setIdentity(currentIdentity);
+		    super.update(userassit);
+		}
+	}
+
+	@Override
+	public UUserAssist getUUserAssist(long weiId) {
+		// TODO Auto-generated method stub
+		String hql=" from UUserAssist p where p.weiId=?";
+		return super.getNotUniqueResultByHql(hql, weiId);
+	}
+	
+	public Long count_children(Long weiid){ 
+		String hqlString="select count(*) from UWeiSeller u where u.sponsorWeiId=?";
+		return super.count(hqlString, weiid);
+	}
+	
+	public Long count_friends(Long weiid){ 
+		String hqlString="select count(*) from UFriends u where u.weiId=?";
+		return super.count(hqlString, weiid);
+	}
+	
+	public Long count_fans(Long weiid){
+		String hql="select count(*) from TWeiFans t where t.weiId=? ";
+		return super.count(hql, weiid);
+	}
+	
+	public List<UShopInfo> find_shoplist(List<Long> userids){
+		String hqlString=" from UShopInfo u where u.weiId in(:userids)";
+		Map<String, Object> map_shop=new HashMap<String, Object>();
+		map_shop.put("userids", userids);
+		return super.findByMap(hqlString, map_shop);
+	}
+	
+	public UShopInfo getShopInfo(Long weiid){
+		return super.get(UShopInfo.class, weiid);
+	}
+}

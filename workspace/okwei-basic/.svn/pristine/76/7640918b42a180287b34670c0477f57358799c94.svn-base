@@ -1,0 +1,247 @@
+package com.okwei.dao.impl.agent;
+
+import java.math.BigInteger;
+import java.util.List;
+
+import org.springframework.stereotype.Repository;
+
+import com.okwei.bean.domain.PProductClass;
+import com.okwei.bean.domain.TRegional;
+import com.okwei.bean.domain.UAttention;
+import com.okwei.bean.domain.UAttentioned;
+import com.okwei.bean.domain.UShopInfo;
+import com.okwei.bean.domain.USupplyer;
+import com.okwei.bean.domain.UYunSupplier;
+import com.okwei.bean.vo.agent.YunSupplierList;
+import com.okwei.dao.agent.IYunSupDao;
+import com.okwei.dao.impl.BaseDAO;
+import com.okwei.util.RedisUtil;
+
+@Repository
+public class YunSupDao extends BaseDAO implements IYunSupDao {
+    /**
+     * 根据上级ID获取分类列表
+     */
+	@Override
+	public List<PProductClass> getProductClassByUpID(Integer parentId) {
+		// TODO Auto-generated method stub
+		String hql =" from PProductClass p where p.parentId=? order by sort";
+		Object[] b=new Object[1];
+		b[0]=parentId;
+		return find(hql,b);
+	}
+    /**
+     * 根据classid获取工厂号供应商列表
+     */
+	@Override
+	public YunSupplierList getYunSuplierById(Integer classid, Integer parentid,Integer pageindex,Integer pagesize) {
+		// TODO Auto-generated method stub
+		YunSupplierList supList = new YunSupplierList();
+		
+		String hql="from UYunSupplier p ";
+		String where=" where p.status=4 and p.haveProduct=1";
+		String orderby=" order by p.payTime";
+		
+	
+		//全品类
+		if(parentid==0){
+			String hqlCount = "select count(1) from U_YunSupplier where Status=4 and HaveProduct=1";
+			List<Object> itemcount = queryBySql(hqlCount);
+			Integer icount = 0;
+			if(itemcount!=null && itemcount.size()>0)
+				icount = Integer.parseInt(itemcount.get(0).toString());
+			supList.setItemcount(icount);
+			supList.setPageindex(pageindex);
+			supList.setPagesize(pagesize);
+			Integer pagecount = (icount/pagesize)+((icount%pagesize)==0?0:1);
+			supList.setPagecount(pagecount);
+			hql += where + orderby;
+			List<UYunSupplier> supplierList = findPage(hql,(pageindex-1)*pagesize,pagesize);
+			supList.setSupplierlist(supplierList);
+		}else{
+			Long[] weiids = getSearchWeiID(classid,parentid);
+			if(weiids!=null&&weiids.length>0)
+			{
+				
+				String strWeiid=weiids[0].toString();
+				for(int i=1;i<weiids.length;i++)
+				{
+					strWeiid += ","+weiids[i].toString();
+				}
+				
+				String hqlCount = "select count(1) from U_YunSupplier where Status=4 and HaveProduct=1 and WeiID in ("+strWeiid+")";
+				List<Object> itemcount = queryBySql(hqlCount);
+				Integer icount = 0;
+				if(itemcount!=null && itemcount.size()>0)
+					icount = Integer.parseInt(itemcount.get(0).toString());
+				
+				supList.setItemcount(icount);
+				supList.setPageindex(pageindex);
+				Integer pagecount = (icount/pagesize) + ((icount%pagesize)==0?0:1);
+				supList.setPagecount(pagecount);
+				supList.setPagesize(pagesize);
+				
+				
+				where+=" and p.weiId in ("+strWeiid+")";
+				hql += where+orderby;
+
+				List<UYunSupplier> supplierList = findPage(hql,(pageindex-1)*pagesize,pagesize,(Object[])null);
+				supList.setSupplierlist(supplierList);
+			}
+		}
+		return supList;
+	}
+
+    /**
+     * 根据分类ID 查找微店号
+     * @param classid
+     * @param parentid
+     * @return
+     */
+	private Long[] getSearchWeiID(Integer classid, Integer parentid){
+		String sql="";
+		//全品类
+		if(parentid==0){
+			return null;
+		}else if(parentid==1){//一级分类
+		    sql ="select distinct WeiID from U_SupplierBusCategory where CategoryID in ("
+			    +" SELECT ClassID FROM P_ProductClass where ParentID="+classid.toString()+")";
+		}else{//二级分类
+           sql ="select distinct WeiID from U_SupplierBusCategory where CategoryID ="+classid.toString();
+		}
+		List<BigInteger> resultList = queryBySql(sql);
+		if(resultList!=null && resultList.size()>0)
+		{
+			Long[] weiList = new Long[resultList.size()];
+			for(int i=0;i<resultList.size();i++)
+			{
+				//String temp = resultList.get(i).toString();
+				weiList[i]=Long.parseLong(resultList.get(i)==null?"0":resultList.get(i).toString());
+			}
+			
+			return weiList;
+		}
+		return null;
+	}
+	@Override
+	public List<USupplyer> getSupBaseMsgByIds(Long[] weiids) {
+		// TODO Auto-generated method stub
+		if(weiids==null || weiids.length==0)
+			return null;
+		String strWeiid=weiids[0].toString();
+		for(int i=1;i<weiids.length;i++)
+		{
+			strWeiid += ","+weiids[i].toString();
+		}
+		String hql = " from USupplyer p where p.weiId in ("+strWeiid+")";
+		return find(hql,(Object[])null);
+	}
+	@Override
+	public List<Object[]> getCategoryByIds(Long[] weiids) {
+		// TODO Auto-generated method stub
+		if(weiids==null || weiids.length==0)
+			return null;
+		String strWeiid=weiids[0].toString();
+		for(int i=1;i<weiids.length;i++)
+		{
+			strWeiid += ","+weiids[i].toString();
+		}
+		String sql = "SELECT A.WeiID,B.ClassName from ("
+				     +" SELECT WeiID,CategoryID from U_SupplierBusCategory where WeiID in ("+strWeiid+")) AS A"
+				     +" LEFT JOIN P_ProductClass AS B ON A.CategoryID=B.ClassID";
+		return queryBySql(sql);
+	}
+	@Override
+	public String getAreaNameByCode(Integer code) {
+		// TODO Auto-generated method stub
+		List<TRegional> regionalList = (List<TRegional>) RedisUtil.getObject("All_RegionalList");
+		if(regionalList==null)
+		{
+			String hql=" from TRegional";
+			regionalList = find(hql,(Object[])null);
+			RedisUtil.setObject("All_RegionalList", regionalList,86400);
+		}
+		String name="";
+		if(regionalList!=null && regionalList.size()>0)
+		{
+			for(TRegional tr:regionalList)
+			{
+				if(tr.getCode().equals(code))
+				{
+					name = tr.getName();
+					break;
+				}
+			}
+		}
+		return name;
+	}
+	@Override
+	public PProductClass getProductClassByCode(Integer code) {
+		// TODO Auto-generated method stub
+		return get(PProductClass.class,code);
+	}
+	/**
+	 * 根据微店号获取店铺信息（产品数量、上架数量）
+	 */
+	@Override
+	public List<UShopInfo> getShopInfoByIds(Long[] weiids) {
+		// TODO Auto-generated method stub
+		if(weiids==null || weiids.length==0)
+			return null;
+		String strWeiid=weiids[0].toString();
+		for(int i=1;i<weiids.length;i++)
+		{
+			strWeiid += ","+weiids[i].toString();
+		}
+		String hql =" from UShopInfo p where p.weiId in ("+strWeiid+")";
+		return find(hql,(Object[])null);
+	}
+	@Override
+	public List<Object[]> getSupplierProImg(Long[] weiids) {
+		// TODO Auto-generated method stub
+		if(weiids==null || weiids.length==0)
+			return null;
+		String strWeiid=weiids[0].toString();
+		for(int i=1;i<weiids.length;i++)
+		{
+			strWeiid += ","+weiids[i].toString();
+		}
+		String sql = "select SupplierWeiID,DefaultImg from P_Products where ProductID in (select MAX(ProductID) from P_Products where SupplierWeiID in ("+strWeiid+") group by SupplierWeiID)";
+		return queryBySql(sql);
+	}
+	@Override
+	public boolean getIsAttention(long userID, long supID) {
+		String hql = "select count(1) from UAttention where attentioner=? and attTo=?";
+		if (super.count(hql, new Object[] { userID, supID }) > 0)
+			return true;
+		return false;
+	}
+	@Override
+	public void deleteAttention(long userID, long supID) {
+		String hql = "delete from UAttention where attentioner=? and attTo=?";
+		Object[] params = new Object[2];
+		params[0] = userID;// 关注人
+		params[1] = supID;// 被关注人
+		super.executeHql(hql, params);
+		hql = "delete from UAttentioned where attentioner=? and attTo=?";
+		super.executeHql(hql, params);
+	    }
+	@Override
+	public void addAttention(UAttention entity) {
+		super.save(entity);
+		
+	}
+	@Override
+	public void addAttention(UAttentioned entity) {
+		super.save(entity);
+		
+	}
+	@Override
+	public boolean getIsAttentioned(long userID, long supID) {
+		String hql = "select count(1) from UAttentioned where attentioner=? and attTo=?";
+		if (super.count(hql, new Object[] { userID, supID }) > 0)
+			return true;
+		return false;
+	}
+	
+}

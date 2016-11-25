@@ -1,0 +1,91 @@
+15-05-21 17:33:58,981 [main] Logfile closed: C:\Users\Administrator\okwei_workspaces\okwei-basic\.\tm.releaselog-1.log
+15-05-21 17:33:59,004 [main] ds1: refreshed XAResource
+15-05-21 17:33:59,023 [main] ds2: refreshed XAResource
+15-05-21 17:33:59,041 [main] ds3: refreshed XAResource
+15-05-21 17:33:59,063 [main] ds4: refreshed XAResource
+15-05-21 17:33:59,088 [main] ds5: refreshed XAResource
+15-05-21 17:33:59,107 [main] ds6: refreshed XAResource
+15-05-21 17:33:59,195 [main] USING core version: 3.7.0
+15-05-21 17:33:59,195 [main] USING com.atomikos.icatch.console_file_name = tm.release.out
+15-05-21 17:33:59,196 [main] USING com.atomikos.icatch.console_file_count = 1
+15-05-21 17:33:59,197 [main] USING com.atomikos.icatch.automatic_resource_registration = true
+15-05-21 17:33:59,197 [main] USING com.atomikos.icatch.client_demarcation = false
+15-05-21 17:33:59,197 [main] USING com.atomikos.icatch.threaded_2pc = false
+15-05-21 17:33:59,198 [main] USING com.atomikos.icatch.serial_jta_transactions = true
+15-05-21 17:33:59,198 [main] USING com.atomikos.icatch.log_base_dir = .\
+15-05-21 17:33:59,199 [main] USING com.atomikos.icatch.console_log_level = INFO
+15-05-21 17:33:59,199 [main] USING com.atomikos.icatch.max_actives = 50
+15-05-21 17:33:59,200 [main] USING com.atomikos.icatch.checkpoint_interval = 500
+15-05-21 17:33:59,200 [main] USING com.atomikos.icatch.enable_logging = true
+15-05-21 17:33:59,201 [main] USING com.atomikos.icatch.output_dir = .\
+15-05-21 17:33:59,201 [main] USING com.atomikos.icatch.log_base_name = tm.releaselog
+15-05-21 17:33:59,201 [main] USING com.atomikos.icatch.console_file_limit = -1
+15-05-21 17:33:59,202 [main] USING com.atomikos.icatch.max_timeout = 300000
+15-05-21 17:33:59,202 [main] USING com.atomikos.icatch.tm_unique_name = com.atomikos.spring.jdbc.tm.release
+15-05-21 17:33:59,203 [main] USING java.naming.factory.initial = com.sun.jndi.rmi.registry.RegistryContextFactory
+15-05-21 17:33:59,208 [main] USING java.naming.provider.url = rmi://localhost:1099
+15-05-21 17:33:59,209 [main] USING com.atomikos.icatch.service = com.atomikos.icatch.standalone.UserTransactionServiceFactory
+15-05-21 17:33:59,210 [main] USING com.atomikos.icatch.force_shutdown_on_vm_exit = false
+15-05-21 17:33:59,210 [main] USING com.atomikos.icatch.default_jta_timeout = 10000
+15-05-21 17:35:35,619 [main] Starting read of logfile C:\Users\Administrator\okwei_workspaces\okwei-basic\.\tm.releaselog0.log
+15-05-21 17:35:35,620 [main] Done read of logfile
+15-05-21 17:35:35,621 [main] Logfile closed: C:\Users\Administrator\okwei_workspaces\okwei-basic\.\tm.releaselog0.log
+15-05-21 17:35:35,646 [main] ds1: refreshed XAResource
+15-05-21 17:35:35,668 [main] ds2: refreshed XAResource
+15-05-21 17:35:35,690 [main] ds3: refreshed XAResource
+15-05-21 17:35:35,712 [main] ds4: refreshed XAResource
+15-05-21 17:35:35,732 [main] ds5: refreshed XAResource
+15-05-21 17:35:35,752 [main] ds6: refreshed XAResource
+15-05-21 17:35:35,836 [main] USING core version: 3.7.0
+15-05-21 17:35:35,836 [main] USING com.atomikos.icatch.console_file_name = tm.release.out
+15-05-21 17:35:35,837 [main] USING com.atomikos.icatch.console_file_count = 1
+15-05-21 17:35:35,837 [main] USING com.atomikos.icatch.automatic_resource_registration = true
+15-05-21 17:35:35,838 [main] USING com.atomikos.icatch.client_demarcation = false
+15-05-21 17:35:35,838 [main] USING com.atomikos.icatch.threaded_2pc = false
+15-05-21 17:35:35,839 [main] USING com.atomikos.icatch.serial_jta_transactions = true
+15-05-21 17:35:35,839 [main] USING com.atomikos.icatch.log_base_dir = .\
+15-05-21 17:35:35,839 [main] USING com.atomikos.icatch.console_log_level = INFO
+15-05-21 17:35:35,840 [main] USING com.atomikos.icatch.max_actives = 50
+15-05-21 17:35:35,840 [main] USING com.atomikos.icatch.checkpoint_interval = 500
+15-05-21 17:35:35,841 [main] USING com.atomikos.icatch.enable_logging = true
+15-05-21 17:35:35,841 [main] USING com.atomikos.icatch.output_dir = .\
+15-05-21 17:35:35,842 [main] USING com.atomikos.icatch.log_base_name = tm.releaselog
+15-05-21 17:35:35,842 [main] USING com.atomikos.icatch.console_file_limit = -1
+15-05-21 17:35:35,844 [main] USING com.atomikos.icatch.max_timeout = 300000
+15-05-21 17:35:35,845 [main] USING com.atomikos.icatch.tm_unique_name = com.atomikos.spring.jdbc.tm.release
+15-05-21 17:35:35,845 [main] USING java.naming.factory.initial = com.sun.jndi.rmi.registry.RegistryContextFactory
+15-05-21 17:35:35,846 [main] USING java.naming.provider.url = rmi://localhost:1099
+15-05-21 17:35:35,846 [main] USING com.atomikos.icatch.service = com.atomikos.icatch.standalone.UserTransactionServiceFactory
+15-05-21 17:35:35,846 [main] USING com.atomikos.icatch.force_shutdown_on_vm_exit = false
+15-05-21 17:35:35,847 [main] USING com.atomikos.icatch.default_jta_timeout = 10000
+15-05-21 17:37:10,159 [main] Starting read of logfile C:\Users\Administrator\okwei_workspaces\okwei-basic\.\tm.releaselog1.log
+15-05-21 17:37:10,159 [main] Done read of logfile
+15-05-21 17:37:10,159 [main] Logfile closed: C:\Users\Administrator\okwei_workspaces\okwei-basic\.\tm.releaselog1.log
+15-05-21 17:37:10,185 [main] ds1: refreshed XAResource
+15-05-21 17:37:10,206 [main] ds2: refreshed XAResource
+15-05-21 17:37:10,223 [main] ds3: refreshed XAResource
+15-05-21 17:37:10,242 [main] ds4: refreshed XAResource
+15-05-21 17:37:10,269 [main] ds5: refreshed XAResource
+15-05-21 17:37:10,288 [main] ds6: refreshed XAResource
+15-05-21 17:37:10,399 [main] USING core version: 3.7.0
+15-05-21 17:37:10,400 [main] USING com.atomikos.icatch.console_file_name = tm.release.out
+15-05-21 17:37:10,400 [main] USING com.atomikos.icatch.console_file_count = 1
+15-05-21 17:37:10,401 [main] USING com.atomikos.icatch.automatic_resource_registration = true
+15-05-21 17:37:10,401 [main] USING com.atomikos.icatch.client_demarcation = false
+15-05-21 17:37:10,402 [main] USING com.atomikos.icatch.threaded_2pc = false
+15-05-21 17:37:10,402 [main] USING com.atomikos.icatch.serial_jta_transactions = true
+15-05-21 17:37:10,402 [main] USING com.atomikos.icatch.log_base_dir = .\
+15-05-21 17:37:10,403 [main] USING com.atomikos.icatch.console_log_level = INFO
+15-05-21 17:37:10,403 [main] USING com.atomikos.icatch.max_actives = 50
+15-05-21 17:37:10,404 [main] USING com.atomikos.icatch.checkpoint_interval = 500
+15-05-21 17:37:10,404 [main] USING com.atomikos.icatch.enable_logging = true
+15-05-21 17:37:10,405 [main] USING com.atomikos.icatch.output_dir = .\
+15-05-21 17:37:10,405 [main] USING com.atomikos.icatch.log_base_name = tm.releaselog
+15-05-21 17:37:10,405 [main] USING com.atomikos.icatch.console_file_limit = -1
+15-05-21 17:37:10,406 [main] USING com.atomikos.icatch.max_timeout = 300000
+15-05-21 17:37:10,406 [main] USING com.atomikos.icatch.tm_unique_name = com.atomikos.spring.jdbc.tm.release
+15-05-21 17:37:10,407 [main] USING java.naming.factory.initial = com.sun.jndi.rmi.registry.RegistryContextFactory
+15-05-21 17:37:10,407 [main] USING java.naming.provider.url = rmi://localhost:1099
+15-05-21 17:37:10,407 [main] USING com.atomikos.icatch.service = com.atomikos.icatch.standalone.UserTransactionServiceFactory
+15-05-21 17:37:10,408 [main] USING com.atomikos.icatch.force_shutdown_on_vm_exit = false
+15-05-21 17:37:10,408 [main] USING com.atomikos.icatch.default_jta_timeout = 10000

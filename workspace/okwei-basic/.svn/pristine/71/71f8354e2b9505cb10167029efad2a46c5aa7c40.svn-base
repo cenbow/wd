@@ -1,0 +1,153 @@
+package com.okwei.bean.domain;
+
+import java.util.Date;
+
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.Id;
+import javax.persistence.Table;
+
+/**
+ * PProductStyles entity. @author MyEclipse Persistence Tools
+ */
+@Entity
+@Table(name = "P_ProductStyles")
+public class PProductStyles extends BaseEntity {
+
+	// Fields
+
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 1L;
+	private Long stylesId;
+	private Long productId;
+	private Double price;
+	private Double conmision;
+	private Integer count;
+	private String defaultImg;
+	private String bussinessNo;
+	private Date createTime;
+	private Date updateTime;
+	private Double agencyPrice;
+	private Double landPrice;
+	
+	private Double originalPrice;
+
+	// Constructors
+
+	/** default constructor */
+	public PProductStyles() {
+	}
+
+	@Id
+	@GeneratedValue
+	@Column(name = "StylesID")
+	public Long getStylesId() {
+		return stylesId;
+	}
+
+	public void setStylesId(Long stylesId) {
+		this.stylesId = stylesId;
+	}
+
+	@Column(name = "ProductID")
+	public Long getProductId() {
+		return productId;
+	}
+
+	public void setProductId(Long productId) {
+		this.productId = productId;
+	}
+
+	@Column(name = "Price", precision = 18)
+	public Double getPrice() {
+		return this.price;
+	}
+
+	public void setPrice(Double price) {
+		this.price = price;
+	}
+
+	@Column(name = "Count")
+	public Integer getCount() {
+		return this.count;
+	}
+
+	public void setCount(Integer count) {
+		this.count = count;
+	}
+
+	@Column(name = "BussinessNo", length = 32)
+	public String getBussinessNo() {
+		return this.bussinessNo;
+	}
+
+	public void setBussinessNo(String bussinessNo) {
+		this.bussinessNo = bussinessNo;
+	}
+
+	@Column(name = "CreateTime", length = 0)
+	public Date getCreateTime() {
+		return this.createTime;
+	}
+
+	public void setCreateTime(Date createTime) {
+		this.createTime = createTime;
+	}
+
+	@Column(name = "UpdateTime", length = 0)
+	public Date getUpdateTime() {
+		return this.updateTime;
+	}
+
+	public void setUpdateTime(Date updateTime) {
+		this.updateTime = updateTime;
+	}
+
+	@Column(name = "Conmision", precision = 18)
+	public Double getConmision() {
+		return conmision;
+	}
+
+	public void setConmision(Double conmision) {
+		this.conmision = conmision;
+	}
+
+	@Column(name = "DefaultImg")
+	public String getDefaultImg() {
+		return defaultImg;
+	}
+
+	public void setDefaultImg(String defaultImg) {
+		this.defaultImg = defaultImg;
+	}
+	@Column(name = "AgencyPrice", precision = 18)
+	public Double getAgencyPrice() {
+		return agencyPrice;
+	}
+
+	public void setAgencyPrice(Double agencyPrice) {
+		this.agencyPrice = agencyPrice;
+	}
+	@Column(name = "LandPrice", precision = 18)
+	public Double getLandPrice() {
+		return landPrice;
+	}
+
+	public void setLandPrice(Double landPrice) {
+		this.landPrice = landPrice;
+	}
+
+	@Column(name = "OriginalPrice")
+	public Double getOriginalPrice() {
+		return originalPrice;
+	}
+
+	public void setOriginalPrice(Double originalPrice) {
+		this.originalPrice = originalPrice;
+	}
+
+	
+}

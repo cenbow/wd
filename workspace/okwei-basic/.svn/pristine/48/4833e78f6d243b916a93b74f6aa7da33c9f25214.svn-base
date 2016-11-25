@@ -1,0 +1,590 @@
+package com.okwei.bean.vo;
+
+import java.io.Serializable;
+import java.util.List;
+
+import com.okwei.bean.enums.UserIdentityType;
+import com.okwei.util.ObjectUtil;
+
+/**
+ * 单点登陆实体类
+ */
+public class LoginUser implements Serializable
+{
+
+    /**
+     * 
+     */
+    private static final long serialVersionUID = -1905364883529645951L;
+    /** 微店号 **/
+    private Long weiID;
+    /** 微店昵称 **/
+    private String weiName;
+    /** 头像 **/
+    private String weiImg;
+    /** 用户身份标识（1是，0否） **/
+    /** 整体标识 **/
+    private Short weiType;
+    private Integer identity;// 整型的权限标识
+    /** 云商通供应商 **/
+    private Short yunS;
+    /** 批发号供应商 **/
+    private Short batchS;
+    /** 云商通见习认证员 **/
+    private Short yrz;
+    /** 批发号认证点 **/
+    private Short brz;
+    /** 云商通正式认证员 **/
+    private Short yHrz;
+    /** 批发号认证员 **/
+    private Short bHrz;
+    /** 认证服务点 **/
+    private Short rzFwd;
+    /** 代理服务商 **/
+    private Short agent;
+    /** 市场管理员 **/
+    private Short market;
+    /** 子帐号 **/
+    private Short pthSub;
+    /** 子帐号供应商 **/
+    private Short pthSupply;
+    /** 平台号 **/
+    private Short pth;
+    /** 品牌号 **/
+    private Short pph;
+    /** 代理商 **/
+    private Short pthdls;
+    /** 落地店 **/
+    private Short pthldd;
+    /** 城主 **/
+    private Short duke;
+    /** 副城主 **/
+    private Short deputyduke;
+    /** 品牌商 **/
+    private Short brandsupplyer;
+    /** 品牌号供应商代理 **/
+    private Short brandagent;
+    /** 品牌号队长 **/
+    private Short brandcaptain;
+    /** 权限 **/
+    private List<String> power;
+    // //子帐号
+    /** 是否子帐号 **/
+    private int isChildren;
+    /** 上級微店號 **/
+    private long parentWeiId;
+    /** 子账号类型 1子帐号员工，2子帐号供应商 **/
+    private Integer accountType;
+    /** 子帐号的账号 **/
+    private String account;
+    /** 帐号名称/子供应商名称 **/
+    private String accountName;
+    /***********************************************/
+    // 推广微店号
+    private String tgWeiID;
+    // 购物车数量
+    private long cartCount;
+    // 用户数量
+    private long userCount;
+    //setIsIndex
+    private int isIndex;
+    
+    /*=========================================================*/
+    /**
+     * 是否是供应商身份（工厂号/批发号等汇总）
+     */
+    private int isSeller;
+    
+
+    public int getIsIndex()
+    {
+        return isIndex;
+    }
+
+    public void setIsIndex(int isIndex)
+    {
+        this.isIndex = isIndex;
+    }
+
+    public String getTgWeiID()
+    {
+        return tgWeiID;
+    }
+
+    public void setTgWeiID(String tgWeiID)
+    {
+        this.tgWeiID = tgWeiID;
+    }
+
+    public long getCartCount()
+    {
+        return cartCount;
+    }
+
+    public void setCartCount(long cartCount)
+    {
+        this.cartCount = cartCount;
+    }
+
+    public long getUserCount()
+    {
+        return userCount;
+    }
+
+    public void setUserCount(long userCount)
+    {
+        this.userCount = userCount;
+    }
+
+    /***********************************************/
+    /**
+     * 是否子帐号
+     * 
+     * @return 1是0不是
+     */
+    public int getIsChildren()
+    {
+        return isChildren;
+    }
+
+    public void setIsChildren(int isChildren)
+    {
+        this.isChildren = isChildren;
+    }
+
+    
+    public int getIsSeller() {
+		return isSeller;
+	}
+
+	public void setIsSeller(int isSeller) {
+		this.isSeller = isSeller;
+	}
+
+	/**
+     * 用户权限判断
+     * 
+     * @param prower
+     *            权限标识
+     * @return true有权限，false没权限
+     */
+    public boolean judgePower(String prower)
+    {
+        if(ObjectUtil.isEmpty(prower))
+        {
+            return false;
+        }
+        if(this.power == null || this.power.size() < 1)
+        {
+            return false;
+        }
+        if(this.power.contains(prower))
+        {
+            return true;
+        }
+        else
+        {
+            return false;
+        }
+    }
+
+    /**
+     * 判断身份 0没有身份，1有这个身份
+     */
+    private short userType(UserIdentityType type)
+    {
+        Integer id = this.identity;
+        if(id == null || id < 1)
+        {
+            return (short) 0;
+        }
+        if((id & Integer.parseInt(type.toString())) > 0)
+        {
+            return (short) 1;
+        }
+        else
+        {
+            return (short) 0;
+        }
+    }
+
+    /**
+     * 获取用户权限标识
+     */
+    public Integer getIdentity()
+    {
+        return identity;
+    }
+
+    
+
+    /**
+     * 获取用户权限集合
+     * 
+     * @return
+     */
+    public List<String> getPower()
+    {
+        return power;
+    }
+
+    /**
+     * 设置用户权限集合
+     * 
+     * @param power
+     */
+    public void setPower(List<String> power)
+    {
+        this.power = power;
+    }
+
+    /**
+     * 微店号
+     */
+    public Long getWeiID()
+    {
+        return weiID;
+    }
+
+    /**
+     * 设置微店号
+     * 
+     * @param weiID
+     */
+    public void setWeiID(Long weiID)
+    {
+        this.weiID = weiID;
+    }
+
+    /**
+     * 微店店铺名
+     * 
+     * @return
+     */
+    public String getWeiName()
+    {
+        return weiName;
+    }
+
+    /**
+     * 设置店铺名
+     * 
+     * @param weiName
+     */
+    public void setWeiName(String weiName)
+    {
+        this.weiName = weiName;
+    }
+
+    /*
+     * 微店头像
+     */
+    public String getWeiImg()
+    {
+        return weiImg;
+    }
+
+    /**
+     * 设置微店头像
+     * 
+     * @param weiImg
+     */
+    public void setWeiImg(String weiImg)
+    {
+        this.weiImg = weiImg;
+    }
+
+    /**
+     * 微店用户权限标识（旧）
+     */
+    public Short getWeiType()
+    {
+        return weiType;
+    }
+
+    /**
+     * 设置微店用户权限标识（旧）
+     * 
+     * @param weiType
+     */
+    public void setWeiType(Short weiType)
+    {
+        this.weiType = weiType;
+    }
+
+    /**
+     * 云商通供应商
+     * 
+     * @return 0否，1是
+     */
+    public Short getYunS()
+    {
+        return yunS;
+    }
+
+    /**
+     * 批发号供应商
+     * 
+     * @return 0否，1是
+     */
+    public Short getBatchS()
+    {
+        return batchS;
+    }
+
+    /**
+     * 云商通(工厂号)见习认证员
+     * 
+     * @return 0否，1是
+     */
+    public Short getYrz()
+    {
+        return yrz;
+    }
+
+    /**
+     * 批发号认证点
+     * 
+     * @return 0否，1是
+     */
+    public Short getBrz()
+    {
+        return brz;
+    }
+
+    /**
+     * 云商通(工厂号)正式认证员
+     * 
+     * @return 0否，1是
+     */
+    public Short getyHrz()
+    {
+        return yHrz;
+    }
+
+    /**
+     * 批发号认证员（也就是云商通工厂号认证员）
+     * 
+     * @return 0否，1是
+     */
+    public Short getbHrz()
+    {
+        return bHrz;
+    }
+
+    /**
+     * 认证服务点
+     * 
+     * @return 0否，1是
+     */
+    public Short getRzFwd()
+    {
+        return rzFwd;
+    }
+
+    /**
+     * 代理服务商
+     * 
+     * @return 0否，1是
+     */
+    public Short getAgent()
+    {
+        return agent;
+    }
+
+    /**
+     * 平台号
+     * 
+     * @return 0否，1是
+     */
+    public Short getPth()
+    {
+        return pth;
+    }
+
+    /**
+     * 市场管理员
+     * 
+     * @return
+     */
+    public Short getMarket()
+    {
+        return market;
+    }
+
+    /**
+     * 品牌号
+     * 
+     * @return 0否，1是
+     */
+    public Short getPph()
+    {
+        return pph;
+    }
+
+    /**
+     * 批发号/品牌号代理商
+     * 
+     * @return 0否，1是
+     */
+    public Short getPthdls()
+    {
+        return pthdls;
+    }
+
+    /**
+     * 落地店
+     * 
+     * @return 0否，1是
+     */
+    public Short getPthldd()
+    {
+        return pthldd;
+    }
+
+    /**
+     * 子帐号用户
+     * 
+     * @return 0否，1是
+     */
+    public Short getPthSub()
+    {
+        return pthSub;
+    }
+
+    /**
+     * 设置子帐号用户
+     * 
+     * @param pthSub
+     */
+    public void setPthSub(Short pthSub)
+    {
+        this.pthSub = pthSub;
+    }
+
+    /**
+     * 子帐号供应商
+     * 
+     * @return 0否，1是
+     */
+    public Short getPthSupply()
+    {
+        return pthSupply;
+    }
+
+    /**
+     * 设置子帐号供应商
+     * 
+     * @param pthSupply
+     */
+    public void setPthSupply(Short pthSupply)
+    {
+        this.pthSupply = pthSupply;
+    }
+
+    public long getParentWeiId()
+    {
+        return parentWeiId;
+    }
+
+    public void setParentWeiId(long parentWeiId)
+    {
+        this.parentWeiId = parentWeiId;
+    }
+
+    public Integer getAccountType()
+    {
+        return accountType;
+    }
+
+    public void setAccountType(Integer accountType)
+    {
+        this.accountType = accountType;
+    }
+
+    public String getAccount()
+    {
+        return account;
+    }
+
+    public void setAccount(String account)
+    {
+        this.account = account;
+    }
+
+    public String getAccountName()
+    {
+        return accountName;
+    }
+
+    public void setAccountName(String accountName)
+    {
+        this.accountName = accountName;
+    }
+
+	public static long getSerialversionuid() {
+		return serialVersionUID;
+	}
+
+	public Short getDuke() {
+		return duke;
+	}
+
+	public Short getDeputyduke() {
+		return deputyduke;
+	}
+
+	public Short getBrandsupplyer() {
+		return brandsupplyer;
+	}
+
+	public Short getBrandagent() {
+		return brandagent;
+	}
+
+	public Short getBrandcaptain() {
+		return brandcaptain;
+	}
+
+	/**
+     * 设置用户权限标识
+     */
+    public void setIdentity(Integer identity)
+    {
+        this.identity = identity;
+        this.yunS = userType(UserIdentityType.yunSupplier);// 云商通供应商
+        this.batchS = userType(UserIdentityType.batchSupplier);// 批发号供应商
+        this.yrz = userType(UserIdentityType.ordinary);// 云商通见习认证员
+        this.brz = userType(UserIdentityType.batchverifierport);// 批发号认证点
+        this.rzFwd = userType(UserIdentityType.batchverifierport);// 认证服务点
+        this.bHrz = userType(UserIdentityType.batchverifier);// 批发号认证员
+        this.yHrz = userType(UserIdentityType.batchverifier);// 批发号认证员 
+        this.pth = userType(UserIdentityType.PlatformSupplier);// 平台号
+        this.market = userType(UserIdentityType.market);// 市场管理员
+        this.pph = userType(UserIdentityType.BrandSupplier);// 品牌号
+        this.pthldd = userType(UserIdentityType.Ground);// 落地店
+        this.pthdls = userType(UserIdentityType.Agent);// 代理商
+        this.agent = userType(UserIdentityType.VerifierAgent);// 代理服务商
+        this.duke = userType(UserIdentityType.AgentDuke);//城主
+        this.deputyduke = userType(UserIdentityType.AgentDeputyDuke);//副城主
+        this.brandsupplyer = userType(UserIdentityType.AgentBrandSupplier);//代理区品牌号供应商
+        this.brandagent = userType(UserIdentityType.AgentBrandAgent);//代理区代理
+        this.brandcaptain=userType(UserIdentityType.AgentCaptain);//代理区队长
+        if(this.yHrz != 1){
+            this.yHrz = userType(UserIdentityType.percent);// 云商通正式认证员
+        }
+        if(this.agent == 1){
+            this.yHrz = 1;
+            this.bHrz  = 1;
+        }
+        if(this.yunS==1||this.batchS==1||this.pth==1||this.pph==1||this.brandsupplyer==1){
+        	this.isSeller = 1;//供应商身份
+        }
+        if(this.deputyduke==1||this.brandagent==1||this.brandcaptain==1||this.duke==1){//品牌代理商
+        	this.brandagent=1;
+        }
+    }
+	
+    
+    
+}

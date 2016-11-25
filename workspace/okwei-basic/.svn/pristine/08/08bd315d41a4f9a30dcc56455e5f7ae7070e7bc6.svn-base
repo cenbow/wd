@@ -1,0 +1,80 @@
+package com.okwei.dao.agent;
+
+import java.util.List;
+
+import com.okwei.bean.domain.DAgentInfo;
+import com.okwei.bean.domain.DAgentMembers;
+import com.okwei.bean.domain.DAgentTasks;
+import com.okwei.bean.domain.DAgentTeam;
+import com.okwei.bean.domain.DCastellans;
+import com.okwei.common.PageResult;
+
+public interface IDAgentMgtDao {
+
+	/**
+	 * 获取代理商 信息
+	 * @param weiid 用户weiid
+	 * @param brandid 品牌id
+	 * @return
+	 */
+	public DAgentInfo getDAgentInfo(Long weiid,Integer brandid);
+	/**
+	 * 获取代理团队列表
+	 * @param weiid 队长weiid
+	 * @param brandid 品牌id
+	 * @param pageIndex
+	 * @param pageSize
+	 * @return
+	 */
+	public PageResult<DAgentMembers> find_DAgentMembers(Long weiid, Integer brandid,int pageIndex,int pageSize);
+	/**
+	 * 获取代理团队列表 
+	 * @param weiid  队长weiid
+	 * @param brandid  品牌id
+	 * @return
+	 */
+	public List<DAgentMembers> find_DAgentMembers(Long weiid, Integer brandid);
+	/**
+	 * 获取代理团队 成员数量
+	 * @param weiid
+	 * @param brandid
+	 * @return
+	 */
+	public long count_DAgentMembers(Long weiid, Integer brandid);
+	/**
+	 * 城主任务列表
+	 * @param weiid 城主（发布者）
+	 * @param brandid 品牌id
+	 * @param pageIndex 
+	 * @param pageSize
+	 * @return
+	 */
+	public PageResult<DAgentTasks> find_DAgentTasks(Long weiid,Integer brandid,int pageIndex,int pageSize);
+	/**
+	 * 城主竞选的 团队列表
+	 * @param brandid 
+	 * @param province
+	 * @param city
+	 * @param district
+	 * @return
+	 */
+	public List<DAgentTeam> find_DAgentTeams(Integer brandid,Integer province,Integer city,Integer district);
+	/**
+	 * 城主竞选的 团队数量
+	 * @param brandid
+	 * @param province
+	 * @param city
+	 * @param district
+	 * @return
+	 */
+	public long count_DAgentTeams(Integer brandid,Integer province,Integer city,Integer district);
+	/**
+	 * 获取某个区域的城主 列表（包括副城主）
+	 * @param brandid
+	 * @param province
+	 * @param city
+	 * @param district
+	 * @return
+	 */
+	public List<DCastellans> find_DCastellans(Integer brandid,Integer province,Integer city,Integer district);
+}

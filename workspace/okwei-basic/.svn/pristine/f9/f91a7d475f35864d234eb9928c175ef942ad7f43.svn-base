@@ -1,0 +1,428 @@
+package com.okwei.service.impl;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import net.sf.json.JSONArray;
+import net.sf.json.JSONObject;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.okwei.bean.domain.DBrandImgs;
+import com.okwei.bean.domain.DBrandIndustry;
+import com.okwei.bean.domain.DBrands;
+import com.okwei.bean.domain.DBrandsExt;
+import com.okwei.bean.domain.DBrandsInfo;
+import com.okwei.bean.domain.DCastellans;
+import com.okwei.bean.domain.UShopInfo;
+import com.okwei.bean.dto.SantoMgtDTO;
+import com.okwei.bean.vo.ReturnModel;
+import com.okwei.bean.vo.ReturnStatus;
+import com.okwei.bean.vo.SantoMgtVO;
+import com.okwei.common.Limit;
+import com.okwei.common.PageResult;
+import com.okwei.dao.IBaseDAO;
+import com.okwei.service.ISantoMgtService;
+import com.okwei.service.TRegionalService;
+import com.okwei.util.DateUtils;
+
+
+@Service
+public class SantoMgtService extends BaseService implements ISantoMgtService {
+
+	@Autowired
+	private IBaseDAO baseDAO;
+	@Autowired
+	private TRegionalService regionalService;
+	@Override
+	public PageResult<SantoMgtVO> findPageSanto(SantoMgtDTO sMgtDTO, Limit limit) {
+
+		String hql = "select a.brandId as brandId,b.weiId as weiId,b.logo as logo,"
+				+ "b.headName as headName,b.brandName as brandName,a.createTime as createTime,"
+				+ "b.phoneNumber as phoneNumber,a.landLine as landLine,"
+				+ "a.province as province,a.city as city,a.district as district,a.addressDetail as addressDetail,"
+				+ "a.main as main,a.securityDeposit as securityDeposit,a.costs as costs,a.payedType as payedType,"
+				+ "a.companyName as companyName,a.companyProfile as companyProfile,a.characteristics as characteristics,"
+				+ "a.conditions as conditions,a.agency as agency,a.bLicense as profitImg from DBrandsInfo as a,DBrands as b"
+				+ " where a.brandId=b.brandId ";
+		Map<String, Object> para = new HashMap<String, Object>();
+		if (sMgtDTO.getProvince() != null&&sMgtDTO.getProvince()>0) {
+			hql +=  " and a.province =:province";
+			para.put("province", sMgtDTO.getProvince());
+		}
+		if (sMgtDTO.getDistrict() != null&&sMgtDTO.getDistrict()>0) {
+			hql +=  " and a.district =:district";
+			para.put("district", sMgtDTO.getDistrict());
+		}
+		if (sMgtDTO.getCity() !=null&&sMgtDTO.getCity()>0) {
+			hql +=  " and a.city =:city";
+			para.put("city", sMgtDTO.getCity());
+		}
+		if (sMgtDTO.getCreateTime() != null&&""!=sMgtDTO.getCreateTime()) {
+			hql += " and a.createTime>=:createdate";
+			para.put("createdate",
+					DateUtils.format(sMgtDTO.getCreateTime(), "yyyy-MM-dd"));
+		}
+		if (sMgtDTO.getBrandName() != null && "" != sMgtDTO.getBrandName()) {
+			hql +=  " and b.brandName like '%" + sMgtDTO.getBrandName()
+					+ "%'";
+		}
+		if (sMgtDTO.getWeiId() != null && sMgtDTO.getWeiId() > 0) {
+			hql +=  " and b.weiId =:weiId";
+			para.put("weiId", sMgtDTO.getWeiId());
+		}
+		hql += " ORDER BY a.createTime DESC";
+		PageResult<SantoMgtVO> pageResult= baseDAO.findPageResultTransByMap(hql.toString(),SantoMgtVO.class, limit,para);
+		List<Integer> brandId = new ArrayList<Integer>();
+		if (pageResult != null&&pageResult.getList()!=null&&pageResult.getList().size()>0) {
+			for (SantoMgtVO stmMgtVO : pageResult.getList()) {
+				brandId.add(stmMgtVO.getBrandId());
+			}
+			Map<String, Object> params = new HashMap<String, Object>();
+			params.put("brandId", brandId);
+			List<DBrandsExt> dbelist = baseDAO.findByMap("from DBrandsExt where brandId in(:brandId)", params);
+			List<DBrandImgs> dBrlist = baseDAO.findByMap("from DBrandImgs where brandId in(:brandId)", params);
+			List<DBrandIndustry> dBilist = baseDAO.findByMap("from DBrandIndustry where brandId in(:brandId)", params);
+			for (SantoMgtVO stmMgtVO : pageResult.getList()) {
+				stmMgtVO.setCreateTimes(DateUtils.formatDateTime(stmMgtVO.getCreateTime()));	
+				if(dBilist!=null&&dBilist.size()>0){
+					stmMgtVO.setDbrList(dBilist);
+				}else{
+					return null;
+				}
+				if(dBrlist!=null&&dBrlist.size()>0){
+					stmMgtVO.setHtimgList(dBrlist);
+				}else{
+					return null;
+				}
+				if (dbelist!=null&&dbelist.size()>0) {
+					for (DBrandsExt dBe : dbelist) {
+						stmMgtVO.setViceCastellanInCount(dBe.getViceCastellanOutCount());
+						stmMgtVO.setViceCastellanOutCount(dBe.getViceCastellanOutCount());
+						stmMgtVO.setAgentOutCount(dBe.getAgentOutCount());
+						stmMgtVO.setAgentInCount(dBe.getAgentInCount());
+						stmMgtVO.setCastellanInCount(dBe.getCastellanInCount());
+						stmMgtVO.setCastellanOutCount(dBe.getCastellanOutCount());
+						stmMgtVO.setShowarea(regionalService.getNameByCode(stmMgtVO.getProvince())+"-"+regionalService.getNameByCode(stmMgtVO.getCity())+"-"+regionalService.getNameByCode(stmMgtVO.getDistrict()));
+					}
+				}else{
+					return null;
+				}
+			}
+		}else{
+			return null;
+		}
+		return pageResult;
+	}
+
+	@Override
+	public ReturnModel getSantoDTO(String json) {
+		// TODO Auto-generated method stub
+		ReturnModel returnModel = new ReturnModel();
+		try
+		{   
+			SantoMgtVO stMgtVO = new SantoMgtVO();
+			JSONObject obj;
+			obj = JSONObject.fromObject(json);
+			//微店号
+			stMgtVO.setWeiId(obj.getLong("weiId"));
+			stMgtVO.setBrandId(obj.getInt("brandId"));
+			//品牌名称
+			stMgtVO.setBrandName(obj.getString("brandName"));
+			if(stMgtVO.getBrandName() == null || "".equals(stMgtVO.getBrandName()))
+			{
+				returnModel.setStatu(ReturnStatus.ParamError);
+				returnModel.setStatusreson("参数supplyName为空!");
+				return returnModel;
+			}
+			//公司名称
+			stMgtVO.setCompanyName(obj.getString("companyName"));
+			if(stMgtVO.getCompanyName() == null || "".equals(stMgtVO.getCompanyName()))
+			{
+				returnModel.setStatu(ReturnStatus.ParamError);
+				returnModel.setStatusreson("参数supplyName为空!");
+				return returnModel;
+			}
+			//负责人
+			stMgtVO.setHeadName(obj.getString("linkMan"));
+			if(stMgtVO.getHeadName() == null || "".equals(stMgtVO.getHeadName()))
+			{
+				returnModel.setStatu(ReturnStatus.ParamError);
+				returnModel.setStatusreson("参数linkMan为空!");
+				return returnModel;
+			}
+			//手机号码
+			stMgtVO.setPhoneNumber(obj.getString("mobilePhone"));
+			if(stMgtVO.getPhoneNumber() == null || "".equals(stMgtVO.getPhoneNumber()))
+			{
+				returnModel.setStatu(ReturnStatus.ParamError);
+				returnModel.setStatusreson("参数mobilePhone为空!");
+				return returnModel;
+			}
+			//电话号码
+			stMgtVO.setLandLine(obj.getString("telephone"));
+			if(stMgtVO.getLandLine() == null || "".equals(stMgtVO.getLandLine()))
+			{
+				returnModel.setStatu(ReturnStatus.ParamError);
+				returnModel.setStatusreson("参数telephone为空!");
+				return returnModel;
+			}
+			
+			//详细地址
+			stMgtVO.setAddressDetail(obj.getString("address"));
+			if(stMgtVO.getAddressDetail() == null || "".equals(stMgtVO.getAddressDetail()))
+			{
+				returnModel.setStatu(ReturnStatus.ParamError);
+				returnModel.setStatusreson("详细地址有误!");
+				return returnModel;
+			}
+			//行业
+			String bClassJson =  obj.getString("industryList");
+			List<DBrandIndustry> dbrList = new ArrayList<DBrandIndustry>();
+			JSONArray bArrayValue = new JSONArray().fromObject(bClassJson);
+			for (int z = 0; z < bArrayValue.size(); z++) // 遍历value
+			{
+				JSONObject bovalue = (JSONObject) bArrayValue.get(z);
+				String businessClass = bovalue.getString("businessclass");
+				if(businessClass == null || "".equals(businessClass) || !isLong(businessClass.trim()))
+				{
+					returnModel.setStatu(ReturnStatus.ParamError);
+					returnModel.setStatusreson("所属行业参数错误!");
+					return returnModel;
+				} 
+				DBrandIndustry dBrandIndustry = new DBrandIndustry();
+				dBrandIndustry.setBrandId(obj.getInt("brandId"));
+				dBrandIndustry.setIndustryId(Integer.parseInt(businessClass.trim()));
+				dbrList.add(dBrandIndustry);
+			}
+			//model行业List
+			stMgtVO.setDbrList(dbrList);
+			//主营
+			stMgtVO.setMain(obj.getString("saleType"));
+			if(stMgtVO.getMain() == null ||"".equals(stMgtVO.getMain()))
+			{
+				returnModel.setStatu(ReturnStatus.ParamError);
+				returnModel.setStatusreson("主营参数错误!");
+				return returnModel;
+			}
+			//bond
+			/*stMgtVO.setSecurityDeposit(obj.getDouble("bond"));
+			if(stMgtVO.getSecurityDeposit() <= 0)
+			{
+				returnModel.setStatu(ReturnStatus.ParamError);
+				returnModel.setStatusreson("保证金参数错误!");
+				return returnModel;
+			}*/
+			//入场费
+			/*stMgtVO.setCosts(obj.getDouble("admission"));
+			if(stMgtVO.getCosts() <= 0)
+			{
+				returnModel.setStatu(ReturnStatus.ParamError);
+				returnModel.setStatusreson("入场费参数错误!");
+				return returnModel;
+			}*/
+			//支付类型
+			/*stMgtVO.setPayedType(obj.getInt("payedType"));
+			if(stMgtVO.getPayedType() < 0)
+			{
+				returnModel.setStatu(ReturnStatus.ParamError);
+				returnModel.setStatusreson("支付类型参数错误!");
+				return returnModel;
+			}*/
+			//logo图
+			stMgtVO.setLogo(obj.getString("logoImage"));
+			//营业执照
+			stMgtVO.setProfitImg(obj.getString("profitImg"));
+			//公司简介
+			stMgtVO.setCompanyProfile(obj.getString("details"));
+			//换行符替换<br>
+			stMgtVO.setCompanyProfile(stMgtVO.getCompanyProfile().replace("\n", "<br>"));
+			//品牌特色
+			stMgtVO.setCharacteristics(obj.getString("brandFeature"));
+			stMgtVO.setConditions(obj.getString("conditions"));
+			//换行符替换<br>
+			stMgtVO.setCharacteristics(stMgtVO.getConditions().replace("\n", "<br>"));
+			stMgtVO.setCharacteristics(stMgtVO.getCharacteristics().replace("\n", "<br>"));
+//			if(stMgtVO.getBrandFeature() == null || "".equals(stMgtVO.getBrandFeature()))
+//			{
+//				returnModel.setStatu(ReturnStatus.ParamError);
+//				returnModel.setStatusreson("品牌特色参数错误!");
+//				return returnModel;
+//			}
+			//返回对象
+			returnModel.setBasemodle(stMgtVO);
+			returnModel.setStatu(ReturnStatus.Success);
+			returnModel.setStatusreson("成功!");
+		}
+		catch(Exception ex)
+		{
+			returnModel.setStatu(ReturnStatus.SystemError);
+			returnModel.setStatusreson(ex.getMessage());
+			return returnModel;
+		}
+		return returnModel;
+	}
+	public static boolean isLong(String str)
+	{
+		boolean Result = false;
+		try {
+			Long.parseLong(str);
+			Result = true;
+		} catch (Exception e) {
+			Result = false;
+		}
+		return Result;
+	}
+
+	@Override
+	public ReturnModel saveSantoDTO(SantoMgtVO vo) {
+		ReturnModel returnModel = new ReturnModel();
+		UShopInfo usif = baseDAO.get(UShopInfo.class, vo.getWeiId());
+		if(usif == null)
+		{
+			returnModel.setStatu(ReturnStatus.DataError);
+			returnModel.setStatusreson("该微店用户不存在");
+			return returnModel;
+		}
+		String hql ="from DBrands where weiId=:weiId";
+		Map<String, Object> params = new HashMap<String, Object>();
+		params.put("weiId", vo.getWeiId());
+		if (vo.getBrandId() != null&&vo.getBrandId()>0) {
+			hql +=  " and brandId =:brandId";
+			params.put("brandId", vo.getBrandId());
+		}
+		//判断数据是否已经存在
+		List<DBrands> dbrlist= baseDAO.findByMap(hql.toString(), params);
+		if(dbrlist==null&&dbrlist.size()<0)
+		{
+			returnModel.setStatu(ReturnStatus.DataError);
+			returnModel.setStatusreson("该品牌号已存在");
+			return returnModel;
+		}
+		DBrands dbd = new DBrands();
+		if (vo.getBrandId() != null&&vo.getBrandId()>0) {
+			baseDAO.delete(DBrands.class, vo.getBrandId());
+			dbd.setBrandId(vo.getBrandId());
+			baseDAO.update("update DBrands set brandName =?,createTime=?,headName=?,"
+					+ "industry=?,logo=?,phoneNumber=?,status=?,weiId=? where brandId=?", vo.getBrandName(),new Date(),vo.getHeadName(),"美食",vo.getLogo(),vo.getPhoneNumber(),1,vo.getWeiId(),vo.getBrandId());
+		}else{
+			dbd.setBrandName(vo.getBrandName());
+			dbd.setCreateTime(new Date());
+			dbd.setHeadName(vo.getHeadName());
+			dbd.setIndustry("美食");
+			dbd.setLogo(vo.getLogo());
+			dbd.setPhoneNumber(vo.getPhoneNumber());
+			dbd.setStatus(1);
+			dbd.setWeiId(vo.getWeiId());
+			baseDAO.save(dbd);
+		}
+		DBrandsInfo dbif  = new DBrandsInfo();
+		if (vo.getBrandId() != null&&vo.getBrandId()>0) {
+			baseDAO.delete(DBrandsInfo.class, vo.getBrandId());
+		}
+		dbif.setBrandId(dbd.getBrandId());
+		dbif.setIndustry("美食");
+		dbif.setPayedType(0);
+		dbif.setProvince(vo.getProvince());
+		dbif.setCity(vo.getCity());
+		dbif.setAddressDetail(vo.getAddressDetail());
+		dbif.setCompanyProfile(vo.getCompanyProfile());
+		dbif.setLandLine(vo.getLandLine());
+		dbif.setbLicense(vo.getProfitImg());
+		dbif.setCompanyName(vo.getCompanyName());
+		dbif.setCharacteristics(vo.getCharacteristics());
+		dbif.setConditions(vo.getConditions());
+		dbif.setMain(vo.getMain());
+		dbif.setAgency(0.0);
+		dbif.setSecurityDeposit(0.0);
+		dbif.setCosts(0.0);
+		dbif.setCreateTime(new Date());
+		dbif.setContactPhone(vo.getPhoneNumber());
+		dbif.setContact(vo.getHeadName());
+		baseDAO.save(dbif);	
+		DBrandImgs dbimg = new DBrandImgs();
+		if (vo.getBrandId() != null&&vo.getBrandId()>0) {
+			baseDAO.delete(DBrandImgs.class, vo.getBrandId());
+		}
+		dbimg.setBrandId(dbd.getBrandId());
+		dbimg.setImg(vo.getImg());
+		dbimg.setType(0);
+		baseDAO.save(dbimg);
+		returnModel.setStatu(ReturnStatus.Success);
+		returnModel.setStatusreson("成功!");
+		return returnModel;
+	}
+
+	@Override
+	public PageResult<SantoMgtVO> findPageAgent(SantoMgtDTO sMgtDTO, Limit limit) {
+		String hql = "select b.brandName as brandName,a.province as province,a.city as city,a.district as district,"
+				+ "a.contactPhone as phoneNumber,a.qq as landLine,a.agentId as agentId,"
+				+ "a.createTime as createTime,a.costs as costs from DAgentApply as a,DBrands as b where a.brandId=b.brandId";
+		Map<String, Object> para = new HashMap<String, Object>();
+		if (sMgtDTO.getProvince() != null&&sMgtDTO.getProvince()>0) {
+			hql +=  " and a.province =:province";
+			para.put("province", sMgtDTO.getProvince());
+		}
+		if (sMgtDTO.getDistrict() != null&&sMgtDTO.getDistrict()>0) {
+			hql +=  " and a.district =:district";
+			para.put("district", sMgtDTO.getDistrict());
+		}
+		if (sMgtDTO.getCity() !=null&&sMgtDTO.getCity()>0) {
+			hql +=  " and a.city =:city";
+			para.put("city", sMgtDTO.getCity());
+		}
+		if (sMgtDTO.getCreateTime() != null&&""!=sMgtDTO.getCreateTime()) {
+			hql += " and a.createTime>=:createdate";
+			para.put("createdate",
+					DateUtils.format(sMgtDTO.getCreateTime(), "yyyy-MM-dd"));
+		}
+		if (sMgtDTO.getBrandName() != null && "" != sMgtDTO.getBrandName()) {
+			hql +=  " and b.brandName like '%" + sMgtDTO.getBrandName()
+					+ "%'";
+		}
+		if (sMgtDTO.getWeiId() != null && sMgtDTO.getWeiId() > 0) {
+			hql +=  " and b.weiId =:weiId";
+			para.put("weiId", sMgtDTO.getWeiId());
+		}
+		hql += " ORDER BY a.createTime DESC";
+		PageResult<SantoMgtVO> pageResult= baseDAO.findPageResultTransByMap(hql.toString(),SantoMgtVO.class, limit,para);
+		List<Integer> brandId = new ArrayList<Integer>();
+		if (pageResult != null&&pageResult.getList()!=null&&pageResult.getList().size()>0) {
+			for (SantoMgtVO stmMgtVO : pageResult.getList()) {
+				stmMgtVO.setCreateTimes(DateUtils.formatDateTime(stmMgtVO.getCreateTime()));
+				stmMgtVO.setShowarea(regionalService.getNameByCode(stmMgtVO.getProvince())+"-"+regionalService.getNameByCode(stmMgtVO.getCity())+"-"+regionalService.getNameByCode(stmMgtVO.getDistrict()));
+				brandId.add(stmMgtVO.getBrandId());
+			}
+			String hqls = "from DCastellans where brandId in(:brandId)";
+			if (sMgtDTO.getStatus() != null && sMgtDTO.getStatus() > 0) {
+				hql +=  " and porN =:porN";
+				para.put("porN", sMgtDTO.getStatus());
+			}
+			Map<String, Object> params = new HashMap<String, Object>();
+			params.put("brandId", brandId);
+			List<DCastellans> dcList = baseDAO.findByMap(hqls.toString(), params);
+			for (SantoMgtVO stmMgtVO : pageResult.getList()) {
+				if(dcList!=null&&dcList.size()>0){
+					for (DCastellans dCastellans : dcList) {
+						stmMgtVO.setShowarea(regionalService.getNameByCode(stmMgtVO.getProvince())+"-"+regionalService.getNameByCode(stmMgtVO.getCity())+"-"+regionalService.getNameByCode(stmMgtVO.getDistrict()));
+						stmMgtVO.setOutOrIn(dCastellans.getOutOrIn());
+						stmMgtVO.setStatus(dCastellans.getPorN());
+						if(stmMgtVO.getStatus()==null&&"".equals("")){
+							stmMgtVO.setStatus(1);
+						}
+					}
+					
+				}else{
+					return null;
+				}
+			}
+		}else{
+			return null;
+		}
+		return pageResult;
+	}
+}

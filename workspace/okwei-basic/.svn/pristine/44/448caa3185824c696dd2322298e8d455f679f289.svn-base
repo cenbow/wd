@@ -1,0 +1,124 @@
+package com.okwei.dao.product;
+
+import java.util.List;
+
+import com.okwei.bean.domain.PBrand;
+import com.okwei.bean.domain.PClassProducts;
+import com.okwei.bean.domain.PPostAgeModel;
+import com.okwei.bean.domain.PProductClassTemp;
+import com.okwei.bean.domain.PProductParamKv;
+import com.okwei.bean.domain.PProducts;
+import com.okwei.bean.domain.PShopClass;
+import com.okwei.bean.domain.UUserAssist;
+import com.okwei.bean.vo.product.ProductQuery;
+import com.okwei.common.Limit;
+import com.okwei.common.PageResult;
+import com.okwei.dao.IBaseDAO;
+
+public interface IBaseProductDao extends IBaseDAO {
+
+	List<PShopClass> findPShopClassList(Long weiId, Integer paretId);
+
+	List<PBrand> findBrandList(Long weiId, Integer classId);
+
+	PageResult<PProducts> getProductsPage(ProductQuery param, Limit buildLimit);
+
+	/**
+	 * 根据上架Id获取 上架表信息
+	 * @param shelveIds
+	 * @return
+	 */
+	List<PClassProducts> findClassProducts(List<Long> shelveIds);
+	
+	/**
+	 * 根据产品IDs 获取产品列表
+	 * @param productIds
+	 * @param productState 产品的状态
+	 * @return
+	 */
+	public List<PProducts> findProductlistByIds(List<Long> productIds,Short productState);
+	
+	/**
+	 * 自己以上架过的产品
+	 * @param productIds
+	 * @param weiid
+	 * @return
+	 */
+	public List<PClassProducts> find_ProductSelflist(List<Long> productIds,Long weiid);
+	
+	PageResult<PBrand> findBrandPageResult(Long weiID, Integer classId,
+			Limit limit);
+	/**
+	 * 获取上架表model
+	 * @param id 上架id
+	 * @return
+	 */
+	public PClassProducts getShangjiaInfo(long id);
+	
+	/**
+	 * 更新产品扩展
+	 * @param productId
+	 * @param type （1成交，2评论 3 点赞 4 上架 5 收藏 6 阅读 7 分享）
+	 * @param count
+	 */
+	public void update_PProductAssist(Long productId, int type, int count);
+	
+	public List<PProductParamKv> getParamKVList(Long proId) ;
+
+	PageResult<PPostAgeModel> findPostAgePageResult(Long weiID, Limit limit);
+
+	List<PPostAgeModel> findPostAgeList(Long weiID);
+
+	/**
+	 * 获取品牌号平台号下的同系列下的所有代理商微店号
+	 * @param weiId
+	 * @param demandId
+	 * @param states
+	 * @return
+	 */
+	Long[] getAgentWeiIdsBySupId(Long weiId, Integer demandId, Short states);
+
+	/**
+	 * 获取品牌号平台号下的同系列下的所有落地店微店号
+	 * @param weiId
+	 * @param demandId
+	 * @return
+	 */
+	Long[] getStoreWeiIdsBySupId(Long weiId, Integer demandId);
+
+	void UPPClassProductsByCondition(Long[] weiid, Long productId, Short state,
+			Short type);
+
+	UUserAssist updateUserAssist(Long weiid);
+
+	void setShelveProduct(Long[] weiid, PProducts pro, Short type);
+	/**
+	 * 获取平台号品牌号下某个系列的所有代理商或落地店weiid
+	 * @param supplyId
+	 * @param demandId
+	 * @param channelType
+	 * @param states
+	 * @return
+	 */
+	Long[] getAgentOrStoreWeiIdsBySupId(Long supplyId, Integer demandId,
+			Short channelType, Short states);
+
+	List<PProductClassTemp> find_ProductClass(Integer parentId,Short level);
+
+	/**
+	 * 一键上架需求产品
+	 * @param demandId 需求id
+	 * @param weiid 用户微店号
+	 */
+	public void UP_onshelves(Integer demandId,Long weiid);
+	
+	/**
+	 * 根据系列查询产品列表
+	 * @param demandId
+	 * @return
+	 */
+	List<PProducts> findProductsListByDemandId(Integer demandId);
+
+	void setShelveProducts(List<PProducts> productList, Short type,
+			Short ShelveStatu, Long platformWid,Long weiId) throws Exception;
+}

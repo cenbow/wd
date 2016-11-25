@@ -1,0 +1,254 @@
+package com.okwei.service.impl.activity;
+
+import java.text.DecimalFormat;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.okwei.service.activity.IBasePerfectProductService;
+import com.okwei.bean.domain.AActivityProducts;
+import com.okwei.bean.domain.AHomeMain;
+import com.okwei.bean.domain.AHomeProducts;
+import com.okwei.bean.domain.APerfectProducts;
+import com.okwei.bean.domain.PProductClass;
+import com.okwei.bean.domain.PProducts;
+import com.okwei.bean.enums.ProductStatusEnum;
+import com.okwei.bean.vo.ReturnModel;
+import com.okwei.bean.vo.ReturnStatus;
+import com.okwei.bean.vo.activity.AActivityProductVo;
+import com.okwei.bean.vo.activity.APerfectProductsAppVO;
+import com.okwei.bean.vo.activity.ActProductInfo;
+import com.okwei.bean.vo.product.ProductInfo;
+import com.okwei.bean.vo.product.ProductModel;
+import com.okwei.common.Limit;
+import com.okwei.common.PageResult;
+import com.okwei.dao.product.IBaseProductDao;
+import com.okwei.dao.product.IProductSearchDao;
+import com.okwei.service.impl.BaseService;
+import com.okwei.util.ImgDomain;
+import com.okwei.util.RedisUtil;
+
+
+
+@Service
+public class BasePerfectProductService extends BaseService implements IBasePerfectProductService {
+
+	@Autowired
+	public IBaseProductDao baseProductDao;
+	
+	@Autowired
+	private IProductSearchDao productDao;
+	@Override
+	public ReturnModel  findPerfectProductlist(int pageIndex,int pageSize){
+		ReturnModel rm=new ReturnModel();
+		rm.setStatu(ReturnStatus.Success);
+		String keyname="perfectProductlist_index_"+pageIndex+"_size_"+pageSize;
+		PageResult<APerfectProductsAppVO> listResult=(PageResult<APerfectProductsAppVO>)RedisUtil.getObject(keyname);
+		if(listResult==null||listResult.getList()==null||listResult.getList().size()<=0){
+			String hql=" Select a.perPid as perPid,a.title as title,a.productId as productId,a.url as url,a.sort as sort,a.productImg as productImg   from APerfectProducts a where a.state=:state order by a.sort";
+			Map<String, Object> params = new HashMap<String, Object>();
+			params.put("state", (short)1);
+			listResult=baseProductDao.findPageResultTransByMap(hql, APerfectProductsAppVO.class, Limit.buildLimit(pageIndex, pageSize), params);
+			if(listResult.getList()!=null&&listResult.getList().size()>0){
+				RedisUtil.setObject(keyname, listResult, 600); 
+			}
+		}
+		if(listResult!=null){
+			List<APerfectProductsAppVO> list = listResult.getList() ;
+			if (list != null && list.size() > 0) {
+				for (APerfectProductsAppVO perfectProduct : list) {
+					if(perfectProduct==null) continue;
+					PProducts product=baseProductDao.get(PProducts.class, perfectProduct.getProductId());
+					if(product==null){
+						rm.setStatu(ReturnStatus.DataError);
+						rm.setStatusreson("产品ID不存在!");
+						return rm;
+					}
+					perfectProduct.setProductPicture(ImgDomain.GetFullImgUrl(perfectProduct.getProductImg()));
+					perfectProduct.setProductImg(ImgDomain.GetFullImgUrl(perfectProduct.getProductImg()));
+					if (null != product.getOriginalPrice()) {
+						perfectProduct.setDisplayPrice(product.getOriginalPrice());
+    		    	} else {
+    		    		double percent = 1.5;
+    		    		double displayPrice = product.getDefaultPrice() * percent;
+    		    		DecimalFormat df = new DecimalFormat("#.00");
+    		    		displayPrice = Double.parseDouble(df.format(displayPrice));
+    		    		perfectProduct.setDisplayPrice(product.getOriginalPrice() == null ? displayPrice : product.getOriginalPrice());
+    		    	}
+					perfectProduct.setRetailPrice(product.getDefaultPrice());
+					perfectProduct.setProductId(product.getProductId());
+					perfectProduct.setProductName(product.getProductTitle());
+					perfectProduct.setCommission(product.getDefaultConmision());
+					perfectProduct.setSellerWid(product.getSupplierWeiId());
+					perfectProduct.setProviderWid(product.getSupplierWeiId());
+				}
+				listResult.setList(list);
+			}
+			
+		}
+		rm.setBasemodle(listResult);
+		rm.setStatu(ReturnStatus.Success);
+		rm.setStatusreson("获取精品单选列表成功！");
+		return rm;
+	
+	}
+	
+	@Override
+	public PageResult<ProductInfo> getAllAHomeMainProducts(Limit limit) {
+		String keyName = "AllHomeMainPage_" + limit.getPageId() + "_" + limit.getSize();
+		PageResult<ProductInfo> result = (PageResult<ProductInfo>) RedisUtil.getObject(keyName);
+		if (result==null||result.getList()==null||result.getList().size()<=0) {
+			List<Long> proids = new ArrayList<Long>();
+			String hql="from AHomeMain where position=1 and state=1  order by homeId";
+			List<AHomeMain> AHomeMainlist=baseProductDao.find(hql);
+			if(AHomeMainlist!=null&&AHomeMainlist.size()>0){
+				for (AHomeMain homemain : AHomeMainlist) {
+					List<AHomeProducts> list=baseProductDao.findPage("from AHomeProducts where homeId=? ORDER BY sort", 0, 6, homemain.getHomeId());
+					for (AHomeProducts pro : list) {
+					    proids.add(pro.getProductId());
+					}
+				}
+			}
+			if(proids!=null&&proids.size()>0){
+				Map<String, Object> params = new HashMap<String, Object>();
+				params.put("proids", proids);
+				params.put("state", Short.parseShort(ProductStatusEnum.Showing.toString()));
+				hql = "from PProducts where productId in(:proids) and state=:state";	 
+				PageResult<PProducts> page= baseProductDao.findPageResultByMap(hql, limit, params);
+				if (page != null&&page.getList()!=null) {
+					List<PProducts> list = page.getList();
+					List<ProductInfo>  proList=new ArrayList<ProductInfo>();
+					for (PProducts pro : list) {
+						ProductInfo temp = new ProductInfo();
+						temp.setProductId(pro.getProductId());
+						temp.setProductName(pro.getProductTitle());
+						temp.setProductPicture(ImgDomain.GetFullImgUrl(pro.getDefaultImg(), 24));
+						temp.setRetailPrice(pro.getDefaultPrice());
+						double percent = 1.5;
+						double displayPrice = pro.getDefaultPrice() * percent;
+						DecimalFormat df = new DecimalFormat("#.00");
+						displayPrice = Double.parseDouble(df.format(displayPrice));
+						temp.setDisplayPrice(pro.getOriginalPrice() == null ? displayPrice : pro.getOriginalPrice());
+						//判断是否是828活动产品
+						ActProductInfo actnew=productDao.get_ProductAct(pro.getProductId());
+						if(actnew!=null){
+							AActivityProducts actProducts=baseProductDao.get(AActivityProducts.class, actnew.getProActId());
+							temp.setActivity((short)actnew.getActiveType());
+							temp.setRetailPrice(actProducts.getPrice());
+							temp.setSellerWid(actProducts.getSellerId());
+						}
+						proList.add(temp);
+					}
+					result = new PageResult<ProductInfo>(page.getTotalCount(), limit, proList);
+					RedisUtil.setObject(keyName, result, 1800);	
+				}
+			}	  
+		}
+		return result;
+	}
+	
+	@Override
+	public PageResult<ProductInfo> getActSecondProducts(Integer classId,Integer pclassId,Limit limit) {
+		String keyName = "ActSecondPage_"+classId+"_"+pclassId+"_"+ limit.getPageId() + "_" + limit.getSize();
+		PageResult<ProductInfo> result = (PageResult<ProductInfo>) RedisUtil.getObject(keyName);
+		if (result==null||result.getList()==null||result.getList().size()<=0) {
+			String hql="from AHomeMain where  classId=?  and state=1  order by homeId";
+			List<AHomeMain> AHomeMainlist=baseProductDao.find(hql,classId);
+			List<Integer> homeMainId = new ArrayList<Integer>();
+			if(AHomeMainlist!=null&&AHomeMainlist.size()>0){
+				for (AHomeMain homemain : AHomeMainlist) {
+					homeMainId.add(homemain.getHomeId());
+				}
+				Map<String, Object> params = new HashMap<String, Object>();
+				params.put("homeId", homeMainId);
+				params.put("state", Short.parseShort(ProductStatusEnum.Showing.toString()));
+				//hql="from  AHomeProducts where homeId in (:homeId))  order by sort";
+				//PageResult<AHomeProducts> page=baseProductDao.findPageResultByMap(hql, limit, params);
+				StringBuffer sb=new StringBuffer();
+				sb.append("from PProducts as a where  a.productId in (select productId from AHomeProducts where homeId in (:homeId))  and a.state=:state");
+				
+				if(pclassId!=null&&pclassId!=-1){
+					List<Integer> list=new ArrayList<Integer>();
+					list.add(pclassId);
+					List<PProductClass> a=findClassId(list);
+					List<Integer> ls=new ArrayList<Integer>();
+
+					for(PProductClass b:a){
+						ls.add(b.getClassId());
+					}
+					sb.append(" and a.classId in(:classId) ");
+					params.put("classId", ls);
+				}
+				
+				//hql = "from PProducts where productId in(select productId from AHomeProducts where homeId=?) and state=?";
+				//PageResult<PProducts> page = baseProductDao.findPageResult(hql, limit, new Object[] { homeMainId.get(0), Short.parseShort(ProductStatusEnum.Showing.toString()) });
+				  
+			    PageResult<PProducts> page = baseProductDao.findPageResultByMap(sb.toString(), limit, params);
+				if(page!=null&&page.getList().size()>0){
+					List<PProducts> list = page.getList();
+					List<ProductInfo>  proList=new ArrayList<ProductInfo>();
+					for (PProducts pro : list) {
+						ProductInfo temp = new ProductInfo();
+						temp.setProductId(pro.getProductId());
+						temp.setProductName(pro.getProductTitle());
+						temp.setProductPicture(ImgDomain.GetFullImgUrl(pro.getDefaultImg(), 24));
+						temp.setRetailPrice(pro.getDefaultPrice());
+						double percent = 1.5;
+						double displayPrice = pro.getDefaultPrice() * percent;
+						DecimalFormat df = new DecimalFormat("#.00");
+						displayPrice = Double.parseDouble(df.format(displayPrice));
+						temp.setDisplayPrice(pro.getOriginalPrice() == null ? displayPrice : pro.getOriginalPrice());
+						//判断是否是828活动产品
+						ActProductInfo actnew=productDao.get_ProductAct(pro.getProductId());
+						if(actnew!=null){
+							AActivityProducts actProducts=baseProductDao.get(AActivityProducts.class, actnew.getProActId());
+							temp.setActivity((short)actnew.getActiveType());
+							temp.setRetailPrice(actProducts.getPrice());
+							temp.setSellerWid(actProducts.getSellerId());
+						}
+						proList.add(temp);
+					}
+					result = new PageResult<ProductInfo>(page.getTotalCount(), limit, proList);
+					RedisUtil.setObject(keyName, result, 1800);	
+
+				}
+				
+			}
+			
+		}
+		return result;
+	}
+	
+	@Override
+	public List<PProductClass> findSecondPClassId(Integer classId){
+		String hql="from PProductClass where step=2 and parentId=? order by sort";
+		List<PProductClass> pclasslist =baseProductDao.find(hql, classId);
+		return pclasslist;
+		
+	}
+	
+	public List<PProductClass> findClassId(List<Integer> sysSid){
+		if (sysSid != null && sysSid.size() > 0) {
+			Map<String, Object> m = new HashMap<String, Object>();
+			m.put("parentId", sysSid);
+			List<PProductClass> a = baseProductDao.findByMap("from PProductClass where parentId in(:parentId)", m);
+			if (a != null && a.size() > 0) {
+				if (a.get(0).getStep()!=null&&a.get(0).getStep() == 3) {
+					return a;
+				} else {
+					List<Integer> b = new ArrayList<Integer>();
+					for (PProductClass c : a) {
+						b.add(c.getClassId());
+					}
+					return  findClassId(b);
+				}
+			}
+		}
+		return null;
+		
+	}
+}

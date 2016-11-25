@@ -1,0 +1,1059 @@
+package com.okwei.company.service.Impl;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import net.sf.json.JSONArray;
+import net.sf.json.JSONObject;
+
+import org.apache.commons.lang.StringUtils;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.okwei.bean.domain.PClassProducts;
+import com.okwei.bean.domain.PPostAgeModel;
+import com.okwei.bean.domain.PProductAssist;
+import com.okwei.bean.domain.PProductBatchPrice;
+import com.okwei.bean.domain.PProductClass;
+import com.okwei.bean.domain.PProducts;
+import com.okwei.bean.domain.PShelverCount;
+import com.okwei.bean.domain.PShevleBatchPrice;
+import com.okwei.bean.domain.PShopClass;
+import com.okwei.bean.domain.PcMarketLeftRec;
+import com.okwei.bean.domain.PcMarketRecommand;
+import com.okwei.bean.domain.TBatchMarket;
+import com.okwei.bean.domain.TBussinessClass;
+import com.okwei.bean.domain.TMarketImgs;
+import com.okwei.bean.domain.TRegional;
+import com.okwei.bean.domain.UBatchSupplyer;
+import com.okwei.bean.domain.UShopInfo;
+import com.okwei.bean.domain.USupplyer;
+import com.okwei.bean.domain.UUserAssist;
+import com.okwei.bean.domain.UWeiSeller;
+import com.okwei.bean.domain.UYunSupplier;
+import com.okwei.bean.enums.SupplierStatusEnum;
+import com.okwei.bean.vo.PcMarketRecommandVO;
+import com.okwei.common.Limit;
+import com.okwei.common.PageResult;
+import com.okwei.company.bean.enums.VerfierStatusEnum;
+import com.okwei.company.bean.vo.BatchMarket;
+import com.okwei.company.bean.vo.BatchMarketVO;
+import com.okwei.company.bean.vo.KeyValue;
+import com.okwei.company.bean.vo.ProductBatchPriceVO;
+import com.okwei.company.bean.vo.ProductInfoVO;
+import com.okwei.company.bean.vo.WholesaleCount;
+import com.okwei.company.bean.vo.WholesaleList;
+import com.okwei.company.dao.IYunSupDao;
+import com.okwei.company.dao.IbatchMarketDAO;
+import com.okwei.company.service.IWholesaleService;
+import com.okwei.company.util.LocalRedisUtil;
+import com.okwei.company.util.TransferManager;
+import com.okwei.service.IRegionService;
+import com.okwei.service.impl.BaseService;
+import com.okwei.util.ImgDomain;
+
+@Service
+public class WholesaleService extends BaseService implements IWholesaleService {
+
+    @Autowired
+    private IYunSupDao baseDao;
+
+
+    @Autowired
+    private IRegionService regionService;
+
+    @Autowired
+    private IbatchMarketDAO batchMarketDAO;
+
+    @Override
+    public WholesaleCount getWholesaleCount() {
+	WholesaleCount result = null;
+	try {
+	    result = (WholesaleCount) LocalRedisUtil.getObject("WholesaleCount");
+	} catch (Exception e) {
+
+	}
+	if (result == null) {
+	    result = new WholesaleCount();
+	    // 按地区查找数量
+	    getAreaList(result);
+	    // 按行业查找数量
+//	    gettradeList(result);
+	    LocalRedisUtil.setObject("WholesaleCount", result);
+	}
+	return result;
+    }
+
+    /**
+     * 按行业查找数量
+     * 
+     * @param result
+     */
+//    private void gettradeList(WholesaleCount result) {
+//	List<KeyValue> tradeList = new ArrayList<KeyValue>();
+//	String sql = "SELECT a.ID,a.Name,coalesce(b.count,0) num FROM T_BussinessClass a LEFT JOIN (SELECT a.BusID,COUNT(1) count FROM T_MarketBusList a JOIN T_BatchMarket b ON a.BMID=b.BMID WHERE b.Status in(1,3) GROUP BY a.BusID) b ON a.ID=b.BusID ORDER BY num DESC";
+//	List<Object[]> list = baseDao.queryBySql(sql);
+//	if (list != null && list.size() > 0) {
+//	    for (Object[] obj : list) {
+//		KeyValue temp = new KeyValue();
+//		temp.setId(Integer.parseInt(obj[0].toString()));
+//		temp.setKey(String.valueOf(obj[1]));
+//		temp.setValue(Long.parseLong(obj[2].toString()));
+//		tradeList.add(temp);
+//	    }
+//	}
+//	result.setTradeList(tradeList);
+//    }
+
+    /**
+     * 根据地区获取批发市场的数量
+     * 
+     * @return
+     */
+    private void getAreaList(WholesaleCount result) {
+	List<KeyValue> arealist = new ArrayList<KeyValue>();
+	String sql = "SELECT a.Code,a.Name,coalesce(b.count,0) num FROM (SELECT * FROM T_Regional WHERE Level=2) a LEFT JOIN (SELECT Province,COUNT(1) count FROM T_BatchMarket WHERE Status IN(1,3) GROUP BY Province) b ON a.Code=b.Province ORDER BY num DESC";
+	List<Object[]> list = baseDao.queryBySql(sql);
+	if (list != null && list.size() > 0) {
+	    for (Object[] obj : list) {
+		KeyValue temp = new KeyValue();
+		temp.setId(Integer.parseInt(obj[0].toString()));
+		temp.setKey(String.valueOf(obj[1]));
+		temp.setValue(Long.parseLong(obj[2].toString()));
+		arealist.add(temp);
+	    }
+	}
+	result.setAreaList(arealist);
+	// 计算总数量
+	String hql = "select count(1) from TBatchMarket where status in(1,3)";
+	result.setCount(baseDao.count(hql));
+    }
+
+    @Override
+    public List<WholesaleList> getWholesaleLists() {
+	List<WholesaleList> result = null;
+	try {
+	    result = (List<WholesaleList>) LocalRedisUtil.getObject("WholesaleList");
+	} catch (Exception e) {
+	}
+	if (result == null) {
+	    result = new ArrayList<WholesaleList>();
+	    // 首先查找大类
+	    String hql = "from PProductClass where step=1 order by sort";
+	    List<PProductClass> classList = baseDao.find(hql);
+	    // 左边推荐
+	    hql = "from PcMarketLeftRec where status=1 order by sort";
+	    List<PcMarketLeftRec> leftList = baseDao.find(hql);
+	    // 中间推荐
+	    hql = "from PcMarketRecommand where status=1 order by sort";
+	    List<PcMarketRecommand> mainList = baseDao.find(hql);
+	    for (PProductClass proclass : classList) {
+		WholesaleList temp = new WholesaleList();
+		temp.setBigClass(proclass.getClassName());
+		List<PcMarketLeftRec> tempLeft = new ArrayList<PcMarketLeftRec>();
+		if (leftList != null && leftList.size() > 0) {
+		    for (PcMarketLeftRec left : leftList) {
+			if (proclass.getClassId().equals(left.getRecType())) {
+			    left.setImg(ImgDomain.GetFullImgUrl(left.getImg(), 24));
+			    tempLeft.add(left);
+			}
+		    }
+		}
+		temp.setLeftList(tempLeft);
+		List<PcMarketRecommand> tempMain = new ArrayList<PcMarketRecommand>();
+		if (mainList != null && mainList.size() > 0) {
+		    int i = 1;
+		    for (PcMarketRecommand main : mainList) {
+			if (proclass.getClassId().equals(main.getBigType())) {
+			    main.setMimg(ImgDomain.GetFullImgUrl(main.getMimg(), 24));
+			    tempMain.add(main);
+			    if (i > 4) {
+				break;
+			    }
+			    i++;
+			}
+		    }
+		}
+		temp.setMainList(tempMain);
+		result.add(temp);
+	    }
+	    LocalRedisUtil.setObject("WholesaleList", result);
+	}
+	return result;
+    }
+
+    @Override
+    public WholesaleCount getWholesaleCount(String code) {
+	int area = 0;
+	try {
+	    area = Integer.parseInt(code);
+	} catch (Exception e) {
+	}
+
+	WholesaleCount result = null;
+	String keyName = "WholesaleCount" + area;
+	try {
+	    result = (WholesaleCount) LocalRedisUtil.getObject(keyName);
+	} catch (Exception e) {
+
+	}
+	if (result == null) {
+	    result = new WholesaleCount();
+	    getAreaList(area, result);
+	    LocalRedisUtil.setObject(keyName, result);
+	}
+	return result;
+    }
+
+    /**
+     * 根据地区获取批发市场的数量
+     * 
+     * @return
+     */
+    private void getAreaList(int code, WholesaleCount result) {
+	TRegional model = null;
+	if (code > 0) {
+	    model = baseDao.get(TRegional.class, code);
+	}
+	String whereArea = "";
+	String whereMark = "";
+	String codeString = "";
+	List<KeyValue> selList = new ArrayList<KeyValue>();
+	if (model != null) {
+	    if ("2".equals(model.getLevel().toString())) {
+		whereArea = "Level=3 and Parent=" + code;
+		whereMark = "and Province=" + code;
+		codeString = "City";
+		KeyValue temp = new KeyValue();
+		temp.setId(model.getCode());
+		temp.setKey(model.getName());
+		selList.add(temp);
+		result.setSelCode(String.valueOf(model.getCode()));
+	    } else if ("3".equals(model.getLevel().toString())) {
+		whereArea = "Level=4 and Parent=" + code;
+		whereMark = "and City=" + code;
+		codeString = "District";
+		// 上级省
+		KeyValue temp = new KeyValue();
+		temp.setId(model.getCode());
+		temp.setKey(model.getName());
+		TRegional sheng = baseDao.get(TRegional.class, model.getParent());
+		KeyValue temp1 = new KeyValue();
+		temp1.setId(sheng.getCode());
+		temp1.setKey(sheng.getName());
+		selList.add(temp1);
+		selList.add(temp);
+		result.setSelCode(String.valueOf(model.getCode()));
+	    } else if ("4".equals(model.getLevel().toString())) {
+		// 上级市
+		TRegional shi = baseDao.get(TRegional.class, model.getParent());
+		whereArea = "Level=4 and Parent=" + shi.getCode();
+		whereMark = "and City=" + shi.getCode();
+		codeString = "District";
+		KeyValue temp = new KeyValue();
+		temp.setId(shi.getCode());
+		temp.setKey(shi.getName());
+		// 上级省
+		TRegional sheng = baseDao.get(TRegional.class, shi.getParent());
+		KeyValue temp1 = new KeyValue();
+		temp1.setId(sheng.getCode());
+		temp1.setKey(sheng.getName());
+		selList.add(temp1);
+		selList.add(temp);
+		result.setSelCode(String.valueOf(shi.getCode()));
+	    } else {
+		whereArea = "Level=2";
+		codeString = "Province";
+	    }
+	} else {
+	    whereArea = "Level=2";
+	    codeString = "Province";
+	}
+	result.setSelList(selList);
+	List<KeyValue> arealist = new ArrayList<KeyValue>();
+	String sql = "SELECT a.Code,a.Name,coalesce(b.count,0) count FROM (SELECT * FROM T_Regional WHERE " + whereArea + ") a LEFT JOIN (SELECT " + codeString + ",COUNT(1) count FROM T_BatchMarket WHERE Status IN(1,3) " + whereMark + " GROUP BY " + codeString + ") b ON a.Code=b." + codeString + " ORDER BY count DESC";
+	List<Object[]> list = baseDao.queryBySql(sql);
+	if (list != null && list.size() > 0) {
+	    for (Object[] obj : list) {
+		KeyValue temp = new KeyValue();
+		temp.setId(Integer.parseInt(obj[0].toString()));
+		temp.setKey(String.valueOf(obj[1]));
+		temp.setValue(Long.parseLong(obj[2].toString()));
+		arealist.add(temp);
+	    }
+	}
+	result.setAreaList(arealist);
+	// 获取地区总数量
+	String hql = "select count(1) from TBatchMarket where status in(1,3) " + whereMark;
+	result.setAreaCount(baseDao.count(hql));
+
+	// 获取行业
+//	List<KeyValue> tradeList = new ArrayList<KeyValue>();
+//	String sql1 = "SELECT a.ID,a.Name,coalesce(b.count,0) counts FROM T_BussinessClass a LEFT JOIN (SELECT a.BusID,COUNT(1) count FROM T_MarketBusList a JOIN T_BatchMarket b ON a.BMID=b.BMID WHERE b.Status in(1,3) " + whereMark + " GROUP BY a.BusID) b ON a.ID=b.BusID  ORDER BY counts DESC";
+//	List<Object[]> list1 = baseDao.queryBySql(sql1);
+//	if (list1 != null && list1.size() > 0) {
+//	    for (Object[] obj : list1) {
+//		KeyValue temp = new KeyValue();
+//		temp.setId(Integer.parseInt(obj[0].toString()));
+//		temp.setKey(String.valueOf(obj[1]));
+//		temp.setValue(Long.parseLong(obj[2].toString()));
+//		tradeList.add(temp);
+//	    }
+//	}
+//	result.setTradeList(tradeList);
+	// 计算行业的数量
+//	result.setCount(baseDao.countBySql("SELECT COUNT(1) FROM T_BatchMarket WHERE Status in (1,3) " + whereMark + " AND BMID in(SELECT BMID FROM T_MarketBusList GROUP BY BMID)"));
+
+    }
+
+    @Override
+    public PageResult<BatchMarket> getWholesaleList(Limit limit, String code, String id) {
+
+	int area = 0;
+	try {
+	    area = Integer.parseInt(code);
+	} catch (Exception e) {
+	}
+	int hyid = 0;
+	try {
+	    hyid = Integer.parseInt(id);
+	} catch (Exception e) {
+	}
+	String keyName = "WholesalePageList" + String.valueOf(limit.getPageId()) + String.valueOf(area) + String.valueOf(hyid);
+	PageResult<BatchMarket> result = null;
+	try {
+	    result = (PageResult<BatchMarket>) LocalRedisUtil.getObject(keyName);
+	} catch (Exception e) {
+	}
+	if (result == null) {
+	    result = new PageResult<BatchMarket>();
+	    String sqlString = "SELECT e.id,e.img,e.name,e.bus,e.province,e.city,e.district,e.supCount,e.rzCount FROM( "+
+" SELECT *,d.supCount+d.rzCount sum FROM( "+
+" SELECT a.BMID id,a.Image img,a.Name name,a.BusContent bus,a.Province province,a.City city,a.District district, "+
+" (SELECT COUNT(1) FROM U_BatchSupplyer b WHERE b.BMID=a.BMID AND b.Status IN (:state)) supCount, "+
+" (SELECT COUNT(1) FROM U_BatchPort c WHERE c.BMID=a.BMID AND c.Status=3) rzCount "+
+" FROM T_BatchMarket a WHERE a.Status IN(1,3) ";
+	    Map<String, Object> params = new HashMap<String, Object>();
+	    params.put("state", new Short[] { Short.parseShort(SupplierStatusEnum.PayIn.toString()), Short.parseShort(SupplierStatusEnum.Pass.toString()) });
+	    if (area > 0) {
+		TRegional model = baseDao.get(TRegional.class, area);
+		if (model != null) {
+		    if ("2".equals(model.getLevel().toString())) {
+			sqlString += " AND a.Province=:province ";
+			params.put("province", area);
+		    } else if ("3".equals(model.getLevel().toString())) {
+			sqlString += " AND a.City=:city ";
+			params.put("city", area);
+		    } else if ("4".equals(model.getLevel().toString())) {
+			sqlString += " AND a.District=:district ";
+			params.put("district", area);
+		    }
+		}
+	    }
+	    if (hyid > 0) {
+		List<Integer> list = baseDao.find("select bmid from TMarketBusList where busId=? group by bmid ", new Object[] { hyid });
+		if (list != null && list.size() > 0) {
+		    Integer[] bmids = new Integer[list.size()];
+		    int i = 0;
+		    for (Integer obj : list) {
+			bmids[i] = obj;
+			i++;
+		    }
+		    sqlString += " AND a.BMID IN(:bmids) ";
+		    params.put("bmids", bmids);
+		}
+	    }
+	    sqlString+=") d ) e ORDER BY e.sum DESC,e.rzCount DESC,e.id ASC";
+	    PageResult<BatchMarket> page = baseDao.queryPageResultByMap(sqlString, BatchMarket.class, limit, params);
+	    if (page != null) {
+		List<BatchMarket> list = page.getList();
+		if (list != null && list.size() > 0) {
+		    for (BatchMarket mark : list) {
+			mark.setImg(ImgDomain.GetFullImgUrl(mark.getImg(), 24));
+			// 地区
+			String address = "";
+			if (mark.getProvince() > 0) {
+			    address += regionService.getNameByCode(mark.getProvince());
+			}
+			if (mark.getCity()  > 0) {
+			    address += regionService.getNameByCode(mark.getCity());
+			}
+			if (mark.getDistrict() > 0) {
+			    address += regionService.getNameByCode(mark.getDistrict());
+			}
+			mark.setAddress(address);
+		    }
+		    result = new PageResult<BatchMarket>(page.getTotalCount(), limit, list);
+		    LocalRedisUtil.setObject(keyName, result);
+		}
+	    }
+	}
+	return result;
+    }
+
+    /*
+     * @Override public PageResult<BatchMarket> getWholesaleList(Limit limit,
+     * String code, String id) {
+     * 
+     * int area = 0; try { area = Integer.parseInt(code); } catch (Exception e)
+     * { } int hyid = 0; try { hyid = Integer.parseInt(id); } catch (Exception
+     * e) { } String keyName = "WholesalePageList" +
+     * String.valueOf(limit.getPageId()) + String.valueOf(area) +
+     * String.valueOf(hyid); PageResult<BatchMarket> result = null; try { result
+     * = (PageResult<BatchMarket>) LocalRedisUtil.getObject(keyName); } catch
+     * (Exception e) { } if (result == null) { result = new
+     * PageResult<BatchMarket>(); String where = ""; Map<String, Object> params
+     * = new HashMap<String, Object>(); if (area > 0) { TRegional model =
+     * baseDao.get(TRegional.class, area); if (model != null) { if
+     * ("2".equals(model.getLevel().toString())) { where +=
+     * " and province=:province "; params.put("province", area); } else if
+     * ("3".equals(model.getLevel().toString())) { where += " and city=:city ";
+     * params.put("city", area); } else if
+     * ("4".equals(model.getLevel().toString())) { where +=
+     * " and district=:district "; params.put("district", area); } } } if (hyid
+     * > 0) { List<Integer> list =
+     * baseDao.find("select bmid from TMarketBusList where busId=? group by bmid "
+     * , new Object[] { hyid }); if (list != null && list.size() > 0) {
+     * Integer[] bmids = new Integer[list.size()]; int i = 0; for (Integer obj :
+     * list) { bmids[i] = obj; i++; } where += " and bmid in(:bmids) ";
+     * params.put("bmids", bmids); } } String hql =
+     * "from TBatchMarket where status in(1,3) " + where +
+     * " order by createTime desc"; PageResult<TBatchMarket> page =
+     * baseDao.findPageResultByMap(hql, limit, params); if (page != null) {
+     * List<TBatchMarket> list = page.getList(); if (list != null && list.size()
+     * > 0) { Integer[] bmids = new Integer[list.size()]; int i = 0; for
+     * (TBatchMarket mark : list) { bmids[i] = mark.getBmid(); i++; }
+     * Map<String, Object> map = new HashMap<String, Object>(); map.put("bmids",
+     * bmids); map.put("state", new Short[] {
+     * Short.parseShort(SupplierStatusEnum.PayIn.toString()),
+     * Short.parseShort(SupplierStatusEnum.Pass.toString()) }); // 查找供应商的数量
+     * List<Object[]> supList = baseDao.findByMap(
+     * "select bmid,count(1) from UBatchSupplyer where bmid in(:bmids) and status in (:state) group by bmid "
+     * , map); // 查找认证店的数量 Map<String, Object> map1 = new HashMap<String,
+     * Object>(); map1.put("bmids", bmids); List<Object[]> rzList =
+     * baseDao.findByMap(
+     * "select bmid,count(1) from UBatchPort where bmid in(:bmids) and status=3 group by bmid "
+     * , map1);
+     * 
+     * List<BatchMarket> bmList = new ArrayList<BatchMarket>(); for
+     * (TBatchMarket mark : list) { BatchMarket temp = new BatchMarket();
+     * temp.setId(mark.getBmid());
+     * temp.setImg(ImgDomain.GetFullImgUrl(mark.getImage(),24));
+     * temp.setName(mark.getName()); temp.setBus(mark.getBusContent()); if
+     * (supList != null && supList.size() > 0) { for (Object[] obj : supList) {
+     * if (mark.getBmid().toString().equals(String.valueOf(obj[0]))) {
+     * temp.setSupCount(Long.parseLong(obj[1].toString())); break; } } } if
+     * (rzList != null && rzList.size() > 0) { for (Object[] obj : rzList) { if
+     * (mark.getBmid().toString().equals(String.valueOf(obj[0]))) {
+     * temp.setRzCount(Long.parseLong(obj[1].toString())); break; } } } // 地区
+     * String address = ""; if (mark.getProvince() != null &&
+     * mark.getProvince().intValue() > 0) { address +=
+     * regionService.getNameByCode(mark.getProvince()); } if (mark.getCity() !=
+     * null && mark.getCity().intValue() > 0) { address +=
+     * regionService.getNameByCode(mark.getCity()); } if (mark.getDistrict() !=
+     * null && mark.getDistrict().intValue() > 0) { address +=
+     * regionService.getNameByCode(mark.getDistrict()); }
+     * temp.setAddress(address); bmList.add(temp); } result = new
+     * PageResult<BatchMarket>(page.getTotalCount(), limit, bmList);
+     * LocalRedisUtil.setObject(keyName, result); } } } return result; }
+     */
+
+    @Override
+    public BatchMarketVO getBatchMarketVOById(Integer m, int type) throws Exception {
+	BatchMarketVO batchMarketVO = null;
+	TBatchMarket batchMarket = batchMarketDAO.get(TBatchMarket.class, m);
+	if (batchMarket != null) {
+	    batchMarketVO = new BatchMarketVO();
+	    batchMarketVO.setAddress(batchMarket.getAddress());
+	    batchMarketVO.setName(batchMarket.getName());
+	    batchMarketVO.setImage(ImgDomain.GetFullImgUrl(StringUtils.isEmpty(batchMarket.getImage()) ? "" : batchMarket.getImage()));
+	    batchMarketVO.setBmid(batchMarket.getBmid());
+	    batchMarketVO.setBusContent(batchMarket.getBusContent());
+	    batchMarketVO.setIsAllIn(batchMarket.getIsAllIn());
+	    batchMarketVO.setMarketDetail(batchMarket.getMarketDetail());
+	    batchMarketVO.setMarketDec(batchMarket.getMarketDec());
+	    if (type == 1) {
+		if (batchMarket.getMarketDec() != null) {
+		    if (batchMarket.getMarketDec().length() > 200) {
+			batchMarketVO.setMarketDec(batchMarketVO.getMarketDec().substring(0, 200) + "......");
+		    }
+		}
+	    }
+	    // 页面显示 地址
+	    StringBuffer area = new StringBuffer();
+	    area.append(regionService.getNameByCode(batchMarket.getProvince() == null ? 0 : batchMarket.getProvince()));
+	    area.append(regionService.getNameByCode(batchMarket.getCity() == null ? 0 : batchMarket.getCity()));
+	    area.append(regionService.getNameByCode(batchMarket.getDistrict() == null ? 0 : batchMarket.getDistrict()));
+	    batchMarketVO.setArea(area.toString());
+	    // 所属行业
+	    List<TBussinessClass> bussinessClassList = batchMarketDAO.getTBussinessClass(batchMarket.getBmid());
+	    if (bussinessClassList != null && bussinessClassList.size() > 0) {
+		StringBuffer sb = new StringBuffer();
+		for (TBussinessClass bclass : bussinessClassList) {
+		    sb.append(bclass.getName()).append("、");
+		}
+		if (StringUtils.isNotEmpty(sb.toString())) {
+		    batchMarketVO.setBussinessClass(sb.toString().substring(0, sb.toString().length() - 1));
+		}
+	    }
+	    // 商家数量
+	    int bussinesCount = (int) batchMarketDAO.countBySql("SELECT COUNT(1) FROM U_BatchSupplyer t WHERE t.BMID = " + m + "  AND (t.Status = 4  OR t.Status = 3)");
+	    batchMarketVO.setBussinesCount(bussinesCount);
+	    // 服务点数量 只统计已进驻的
+	    batchMarketVO.setServiceCount(batchMarketDAO.getUBatchPortCount(batchMarket.getBmid(), Short.valueOf(VerfierStatusEnum.PayIn.toString())));
+	}
+	return batchMarketVO;
+    }
+
+    @Override
+    public List<TMarketImgs> getMarketImgsListByBmid(Integer bmid) throws Exception {
+	return batchMarketDAO.getMarketImgsListByBmid(bmid);
+    }
+
+    @Override
+    public PageResult<UBatchSupplyer> getUBatchSupplyerList(Limit buildLimit, Integer bmid) throws Exception {
+	PageResult<UBatchSupplyer> batchSupplyerPg = null;
+	String sql = " SELECT IFNULL(S.ShopImg,A.ShopPic) as ShopPic,IFNULL(S.ShopName,A.ShopName) as ShopName,IFNULL(S.ShopBusContent,A.BusContent) as BusContent,A.WeiID,T.Name,B.`Status`,A.`Status` as AStatus,B.InTime,IFNULL(D.veriCount,0) AS veriCount  ,IFNULL( count(P.SupplierWeiID),0) as proCount,A.CreateTime " + " from (  " + " select ShopPic,ShopName,WeiID,Saletype,`Status`,BusContent,CreateTime 	from U_BatchSupplyer where BMID= " + bmid.toString() + " and (`Status`=4 or `Status`=3)   " + " ) as A  " + " left join U_ShopInfo  as S on S.weiid = A.weiid  " // --
+		+ " LEFT JOIN (  " + " select WeiID,Status,InTime from U_BatchPort where BMID=" + bmid.toString() + " and `Status`=3 )  " + " as B on A.Weiid = B.weiid " + " LEFT JOIN  " + " T_BussinessClass AS T ON A.Saletype=T.ID " + " left JOIN " + " ( select verifier,count(verifier) as veriCount from U_BatchSupplyer where BMID=" + bmid.toString() + " and (`Status`=4 or `Status`=3)  ) as D   " + " on D.verifier = B.WeiID " + " left join  " + " P_Products as P on  P.State =1 AND P.SupperType > 0   and P.SupplierWeiID = A.WeiID " + " GROUP BY  A.ShopPic,A.ShopName,A.WeiID,T.Name,B.`Status`,A.`Status` ,A.BusContent,B.InTime,D.veriCount ";
+	List<Object[]> supList = batchMarketDAO.queryBySql(sql + " order by  " + " B.STATUS desc ,   " + " D.veriCount desc ,  " + " B.InTime   ,  " + " proCount desc , A.CreateTime " + " LIMIT " + buildLimit.getStart() + "," + buildLimit.getSize());
+	if (supList != null && supList.size() > 0) {
+	    List<UBatchSupplyer> list = new ArrayList<UBatchSupplyer>();
+	    int totalCount = (int) batchMarketDAO.countBySql("select count(1) from (" + sql + ") t");
+	    for (Object[] sup : supList) {
+		UBatchSupplyer batchSupplyer = new UBatchSupplyer();
+		if (sup[0] == null || sup[0] == "") {
+		    UWeiSeller seller = batchMarketDAO.get(UWeiSeller.class, (sup[3] == null ? 0l : Long.valueOf(sup[3].toString())));
+		    if (seller != null) {
+			batchSupplyer.setShopPic(ImgDomain.GetFullImgUrl(seller.getImages(), 0));
+		    }
+		} else {
+		    batchSupplyer.setShopPic(ImgDomain.GetFullImgUrl((String) sup[0], 0));
+		}
+		batchSupplyer.setBusContent(sup[2] == null ? "" : (String) sup[2]);
+		batchSupplyer.setWeiId(sup[3] == null ? 0l : Long.valueOf(sup[3].toString()));
+		if (sup[1] == null || "".equals(sup[1])) {
+		    batchSupplyer.setShopName(getShopNameById(batchSupplyer.getWeiId()));
+		} else {
+		    batchSupplyer.setShopName(sup[1] == null ? "" : (String) sup[1]);
+		}
+		list.add(batchSupplyer);
+	    }
+	    batchSupplyerPg = new PageResult<UBatchSupplyer>(totalCount, buildLimit, list);
+	}
+	if (null == batchSupplyerPg) {
+	    return new PageResult<UBatchSupplyer>();
+	}
+	return batchSupplyerPg;
+    }
+
+    @Override
+    public PageResult<ProductInfoVO> getUBatchSupplyerProductList(Limit buildLimit, Integer bmid, Long weiNo) throws Exception {
+	PageResult<ProductInfoVO> productPg = null;
+	Map<String, String> kv = new HashMap<String, String>();
+	if (bmid > 0) {
+	    kv.put("marketId", String.valueOf(bmid));
+	}
+	kv.put("orderBy", "");
+	kv.put("pageIndex", String.valueOf(buildLimit.getPageId()));
+	kv.put("pageSize", String.valueOf(buildLimit.getSize()));
+	String searchContent = TransferManager.SearchProduct(kv);
+	if (!"".equals(searchContent))// 获取到查询数据
+	{
+	    JSONObject jo = new JSONObject().fromObject(searchContent);
+	    // JSONObject jo= new
+	    // JSONObject().fromObject(jos.getString("BaseModle"));
+	    int totalCount = jo.getInt("totalCount");
+	    JSONArray ja = new JSONArray().fromObject(jo.getString("list"));
+	    List<ProductInfoVO> li = new ArrayList<ProductInfoVO>();
+	    for (int i = 0; i < ja.size(); i++) {
+		try {
+		    JSONObject jsonObj = ja.getJSONObject(i);
+		    long productid = jsonObj.getLong("productId"); // 产品id
+		    int isPi = jsonObj.getInt("pi");// 是否支持批发
+		    int isYu = jsonObj.getInt("yu");// 是否支持预定
+		    long supweiid = jsonObj.getLong("supplierWeiId");// 供应商id
+		    ProductInfoVO pi = new ProductInfoVO();
+		    pi.setShelvesCount(0);//
+		    pi.setProductId(productid);// 产品id
+
+		    PProducts p = batchMarketDAO.get(PProducts.class, productid);
+		    if (p != null) {
+			pi.setImage(ImgDomain.GetFullImgUrl(p.getDefaultImg(), 24));// 主图
+			if (p.getBrandId() > 0) {
+			    pi.setIsBrand((short) 1);// 是否品牌
+			} else {
+			    pi.setIsBrand((short) 0);
+			}
+			Double post = 0.0;
+			if (p.getFreightId() == -1) {
+			    post = p.getDefPostFee();
+			} else {
+			    post = getPostFee(p.getFreightId());
+			}
+			if (post > 0.0) {
+			    pi.setIsPost((short) 0);// 是否包邮
+			    pi.setPost(post);
+			} else {
+			    pi.setIsPost((short) 1);
+			    pi.setPost(0.0);
+			}
+			// 佣金
+			Double c = 0.0;
+			if (p.getDefaultConmision() != null)
+			    c = p.getDefaultConmision();
+			pi.setCommision(c);
+		    }
+
+		    pi.setIsBatch(Short.parseShort(String.valueOf(isPi)));// 是否支持批发
+		    pi.setIsBook(Short.parseShort(String.valueOf(isYu)));// 是否支持预定
+		    pi.setPrice(jsonObj.getDouble("defaultPrice"));// 价格
+		    pi.setTitle(jsonObj.getString("productTitle"));// 标题
+		    pi.setSupweiid(supweiid);// 供应商id
+		    pi.setShopName("");// 供应商名称
+		    pi.setMarketName("");// 批发市场名
+		    pi.setRegion("");
+		    USupplyer sup = batchMarketDAO.get(USupplyer.class, supweiid);
+		    UBatchSupplyer bsup = batchMarketDAO.get(UBatchSupplyer.class, supweiid);
+		    UYunSupplier ysup = batchMarketDAO.get(UYunSupplier.class, supweiid);
+		    String strRegion = "";
+		    if (sup != null) {
+			pi.setShopName(sup.getCompanyName());
+		    }
+		    if (ysup != null) {
+			if (ysup.getProvince() > 0) {
+			    TRegional t = batchMarketDAO.get(TRegional.class, ysup.getProvince());
+			    if (t != null) {
+				strRegion += t.getName();
+			    }
+			}
+			if (ysup.getCity() > 0) {
+			    TRegional t = batchMarketDAO.get(TRegional.class, ysup.getCity());
+			    if (t != null) {
+				strRegion += t.getName();
+			    }
+			}
+		    } else if (bsup != null) {
+			if (bsup.getProvince() > 0) {
+			    TRegional t = batchMarketDAO.get(TRegional.class, bsup.getProvince());
+			    if (t != null) {
+				strRegion += t.getName();
+			    }
+			}
+			if (bsup.getCity() > 0) {
+			    TRegional t = batchMarketDAO.get(TRegional.class, bsup.getCity());
+			    if (t != null) {
+				strRegion += t.getName();
+			    }
+			}
+			if (bsup.getBmid() > 0) {
+			    TBatchMarket tm = batchMarketDAO.get(TBatchMarket.class, bsup.getBmid());
+			    if (tm != null)
+				pi.setMarketName(tm.getName());
+			}
+		    }
+		    pi.setRegion(strRegion);
+		    UShopInfo u = batchMarketDAO.get(UShopInfo.class, supweiid);
+		    if (u != null && u.getShopName() != null && !"".equals(u.getShopName())) {
+			pi.setShopName(u.getShopName());
+		    }
+		    if (isPi > 0)// 有批发价格
+		    {
+			String strHql = " from PProductBatchPrice p where p.productId=? order by p.count";
+			Object[] params = new Object[1];
+			params[0] = productid;
+			List<PProductBatchPrice> listp = batchMarketDAO.find(strHql, params);
+			Double sc = 0.0;// 开始区间
+			Double ec = 0.0;// 结束区间
+			if (listp != null && listp.size() > 0) {
+			    List<ProductBatchPriceVO> ppplist = new ArrayList<ProductBatchPriceVO>();
+			    for (int j = 0; j < listp.size(); j++) {
+				PProductBatchPrice price = listp.get(j);
+				if (j == 0) {
+				    sc = price.getPirce();
+				    ec = price.getPirce();
+				}
+				if (sc > price.getPirce()) {
+				    sc = price.getPirce();
+				}
+				if (ec < price.getPirce())
+				    ec = price.getPirce();
+
+				ProductBatchPriceVO ppp = new ProductBatchPriceVO();
+				if (listp.size() > 1) {
+				    if (j < listp.size() - 1) {
+					ppp.setCountRange(price.getCount() + "~" + (listp.get(j + 1).getCount() - 1));
+					ppp.setNum(price.getCount());
+				    } else {
+					ppp.setCountRange("≥" + price.getCount());
+					ppp.setNum(price.getCount());
+				    }
+				} else {
+				    ppp.setCountRange("≥" + price.getCount());
+				    ppp.setNum(price.getCount());
+				}
+				ppp.setPirce(price.getPirce());
+				ppplist.add(ppp);
+			    }
+			    pi.setBatchPriceList(ppplist);
+			    pi.setPriceRegion(sc.toString() + "~" + ec.toString());
+			}
+		    }
+		    pi.setIsShevles((short) 0);
+		    // 判断是否上架（如果传入微店号则判断，如果没有则不需要执行
+		    if (weiNo != null && weiNo > 0) {
+			String strShevles = " from PClassProducts p where p.weiId=? and p.productId=? and p.state=?";
+			Object[] ob = new Object[3];
+			ob[0] = weiNo;
+			ob[1] = p.getProductId();
+			ob[2] = (short) 1;
+			List<PClassProducts> pcp = batchMarketDAO.find(strShevles, ob);
+			if (pcp != null && pcp.size() > 0) {
+			    pi.setIsShevles((short) 1);
+			}
+
+		    }
+		    //
+		    String strShevlesSQL = " from PClassProducts p where p.weiId=? and p.productId=? and p.state=?";
+		    Object[] obs = new Object[3];
+		    obs[0] = p.getSupplierWeiId();
+		    obs[1] = p.getProductId();
+		    obs[2] = (short) 1;
+		    List<PClassProducts> pcps = batchMarketDAO.find(strShevlesSQL, obs);
+		    if (pcps != null && pcps.size() > 0) {
+			PClassProducts pps = pcps.get(0);
+			pi.setShelvesId(pps.getId());
+		    }
+		    //商品评论次数
+//			String hql = "select count(1) from PProductComment where productId = ?";
+//			long evluateCount = batchMarketDAO.count(hql,p.getProductId());
+//			if (evluateCount > 0) {
+//				pi.setEvaluateCount(Integer.valueOf(evluateCount+""));
+//			} else {
+//				pi.setEvaluateCount(0);
+//			}
+		    li.add(pi);
+		} catch (Exception e) {
+		    continue;
+		}
+	    }
+	    productPg = new PageResult<ProductInfoVO>(totalCount, buildLimit, li);
+	} else {
+	    productPg = new PageResult<ProductInfoVO>();
+	}
+
+	return productPg;
+    }
+
+    private Double getPostFee(int freightid) {
+	try {
+	    PPostAgeModel pa = batchMarketDAO.get(PPostAgeModel.class, freightid);
+	    if (pa == null)
+		return 0.0;
+	    String sql = " select min(Firstpiece) as mi from  P_PostAgeDetails where FreightID=" + freightid;
+	    List<Object> listp = batchMarketDAO.queryBySql(sql);
+	    if (listp == null || listp.size() < 1) {
+		return 0.0;
+	    } else {
+		Object b = listp.get(0);
+		if (b != null && b != null) {
+		    return Double.parseDouble(b.toString());
+		}
+		return 0.0;
+	    }
+	} catch (Exception ex) {
+	    return 0.0;
+	}
+    }
+
+    public UUserAssist updateUserAssist(Long weiid) {
+	// 通过微店号查询辅助表
+	String hql = " from UUserAssist p where p.weiId=?";
+	Object[] b = new Object[1];
+	b[0] = weiid;
+	UUserAssist userassit = batchMarketDAO.getUniqueResultByHql(hql, b);
+	if (userassit == null || userassit.getWeiIdSort() == null || userassit.getWeiIdSort() == 0) {
+	    int temp = 0;
+	    if (userassit == null)
+		temp = 0;
+	    else
+		temp = 1;
+	    // 如果改微店还没上架，就想辅助表添加改用户使用上架功能时的个人排序
+	    hql = " from PShelverCount";
+	    Object[] ob = null;
+	    PShelverCount psc = batchMarketDAO.getUniqueResultByHql(hql, ob);
+	    boolean bp = false;
+	    if (psc == null) {
+		psc = new PShelverCount();
+		psc.setCount(0L);
+		bp = true;
+	    }
+	    userassit = new UUserAssist();
+	    userassit.setWeiId(weiid);
+	    userassit.setWeiIdSort(psc.getCount() + 1);
+	    // 更新辅助表
+	    if (temp == 0)
+		batchMarketDAO.save(userassit);
+	    else
+		batchMarketDAO.update(userassit);
+	    psc.setCount(psc.getCount() + 1);
+	    // 更新记录表，数量加1
+	    if (bp)
+		batchMarketDAO.save(psc);
+	    else
+		batchMarketDAO.update(psc);
+	}
+	return userassit;
+    }
+
+    // 产品上架次数加一
+    public void updatePProductAssist(long productid) throws Exception {
+	PProductAssist pa = batchMarketDAO.get(PProductAssist.class, productid);
+	if (pa != null) {
+	    if (pa.getShelvesCount() != null) {
+		pa.setShelvesCount(pa.getShelvesCount() + 1);
+	    } else {
+		pa.setShelvesCount(1);
+	    }
+	    batchMarketDAO.update(pa);
+	} else {
+	    pa = new PProductAssist();
+	    pa.setProductId(productid);
+	    pa.setShelvesCount(1);
+	    batchMarketDAO.save(pa);
+	}
+    }
+
+    @Override
+    public boolean updateShevles(long productid, int classid, long weiId) throws Exception {
+	try {
+	    String strHql = " from PClassProducts p where p.weiId= :weiNo and p.productId =:ids ";
+	    Map<String, Object> map = new HashMap<String, Object>();
+	    map.put("weiNo", weiId);
+	    map.put("ids", productid);
+	    List<PClassProducts> lis = batchMarketDAO.findByMap(strHql, map);
+	    if (lis != null && lis.size() > 0) {
+		PClassProducts p = lis.get(0);
+		p.setClassId((long) classid);
+		p.setState((short) 1);
+		//p.setReason(reason);
+		batchMarketDAO.update(p);
+		return true;
+	    } else {
+		PProducts p = batchMarketDAO.get(PProducts.class, productid);
+		PClassProducts pc = new PClassProducts();
+		pc.setClassId((long) classid);
+		pc.setCreateTime(new Date());
+		pc.setIsSendMyself((short) 0);
+		pc.setProductId(productid);
+		//pc.setReason(reason);
+		pc.setSellNum(0);
+		pc.setSendweiId(p.getSupplierWeiId());
+		pc.setShelvweiId(p.getSupplierWeiId());
+		pc.setSort((short) 0);
+		pc.setState((short) 1);
+		pc.setSupplierweiId(p.getSupplierWeiId());
+		pc.setType((short) 0);
+		pc.setWeiId(weiId);
+		UUserAssist userassist = updateUserAssist(weiId);
+		pc.setWeiIdsort(userassist.getWeiIdSort());
+		batchMarketDAO.save(pc);
+		updatePProductAssist(productid);
+	    }
+
+	    return true;
+	} catch (Exception ex) {
+	    throw new RuntimeException(ex.getMessage());
+	}
+    }
+
+    @Override
+    public boolean updateShevlesWithBatchPrice(long productid, int classid, long weiId, String batchPrice) throws Exception {
+	String strHql = " from PClassProducts p where p.weiId= :weiNo and p.productId =:ids ";
+	Map<String, Object> map = new HashMap<String, Object>();
+	map.put("weiNo", weiId);
+	map.put("ids", productid);
+	List<PClassProducts> lis = batchMarketDAO.findByMap(strHql, map);
+	if (lis != null && lis.size() > 0) {
+	    PClassProducts p = lis.get(0);
+	    p.setClassId((long) classid);
+	    p.setState((short) 1);
+	    //p.setReason(reason);
+	    batchMarketDAO.update(p);
+	    strHql = " delete from PShevleBatchPrice p where p.id=?";
+	    Object[] b = new Object[1];
+	    b[0] = p.getId();
+	    batchMarketDAO.executeHql(strHql, b);
+	    JSONArray ja = new JSONArray().fromObject(batchPrice);
+	    for (int i = 0; i < ja.size(); i++) {
+		JSONObject jo = ja.getJSONObject(i);
+		PShevleBatchPrice psp = new PShevleBatchPrice();
+		psp.setCount(jo.getInt("Count"));
+		psp.setPrice(jo.getDouble("Price"));
+		psp.setId(p.getId());
+		UUserAssist userassist = updateUserAssist(weiId);
+		psp.setWeiIdsort(userassist.getWeiIdSort());
+		batchMarketDAO.save(psp);
+	    }
+	    return true;
+	} else {
+	    // 没有批发价格
+	    if ("".equals(batchPrice) || "[]".equals(batchPrice)) {
+		PProducts p = batchMarketDAO.get(PProducts.class, productid);
+		PClassProducts pc = new PClassProducts();
+		pc.setClassId((long) classid);
+		pc.setCreateTime(new Date());
+		pc.setIsSendMyself((short) 0);
+		pc.setProductId(productid);
+		//pc.setReason(reason);
+		pc.setSellNum(0);
+		pc.setSendweiId(p.getSupplierWeiId());
+		pc.setShelvweiId(p.getSupplierWeiId());
+		pc.setSort((short) 0);
+		pc.setState((short) 1);
+		pc.setSupplierweiId(p.getSupplierWeiId());
+		pc.setType((short) 0);
+		pc.setWeiId(weiId);
+		UUserAssist userassist = updateUserAssist(weiId);
+		pc.setWeiIdsort(userassist.getWeiIdSort());
+		batchMarketDAO.save(pc);
+		updatePProductAssist(productid);
+		return true;
+	    } else // 有批发价格
+	    {
+		// 先删除上架批发表里面的数据
+		PProducts p = batchMarketDAO.get(PProducts.class, productid);
+		PClassProducts pc = new PClassProducts();
+		pc.setClassId((long) classid);
+		pc.setCreateTime(new Date());
+		pc.setIsSendMyself((short) 1);
+		pc.setProductId(productid);
+		//pc.setReason(reason);
+		pc.setSellNum(0);
+		pc.setSendweiId(weiId);
+		pc.setShelvweiId(p.getSupplierWeiId());
+		pc.setSort((short) 0);
+		pc.setState((short) 1);
+		pc.setSupplierweiId(p.getSupplierWeiId());
+		pc.setType((short) 0);
+		pc.setWeiId(weiId);
+		UUserAssist userassist = updateUserAssist(weiId);
+		pc.setWeiIdsort(userassist.getWeiIdSort());
+		batchMarketDAO.save(pc);
+		updatePProductAssist(productid);
+		// 插入上架批发价格
+		JSONArray ja = new JSONArray().fromObject(batchPrice);
+		for (int i = 0; i < ja.size(); i++) {
+		    JSONObject jo = ja.getJSONObject(i);
+
+		    PShevleBatchPrice psp = new PShevleBatchPrice();
+		    psp.setCount(jo.getInt("Count"));
+		    psp.setPrice(jo.getDouble("Price"));
+		    psp.setId(pc.getId());
+		    psp.setWeiIdsort(userassist.getWeiIdSort());
+		    batchMarketDAO.save(psp);
+		}
+		return true;
+	    }
+	}
+    }
+
+    @Override
+    public List<PShopClass> getShopClassList(long weiID) {
+	return batchMarketDAO.getShopClassList(weiID);
+    }
+
+    public String getShopNameById(Long weiNo) throws Exception {
+	if (weiNo == null) {
+	    return "";
+	}
+	UShopInfo shopInfo = batchMarketDAO.get(UShopInfo.class, weiNo);
+	if (shopInfo != null && shopInfo.getShopName() != null && !"".equals(shopInfo.getShopName()))
+	    return shopInfo.getShopName();
+	UBatchSupplyer bsup = batchMarketDAO.get(UBatchSupplyer.class, weiNo);
+	if (bsup != null && bsup.getShopName() != null && !"".equals(bsup.getShopName())) {
+	    return bsup.getShopName();
+	}
+	USupplyer uSupplyer = batchMarketDAO.get(USupplyer.class, weiNo);
+	if (uSupplyer != null && uSupplyer.getCompanyName() != null && !"".equals(uSupplyer.getCompanyName())) {
+	    return uSupplyer.getCompanyName();
+	}
+	UWeiSeller seller = batchMarketDAO.get(UWeiSeller.class, weiNo);
+	return seller.getWeiName();
+    }
+
+	@Override
+	public List<WholesaleList> getWholesaleListss() {
+		List<WholesaleList> result = null;
+		try {
+		    result = (List<WholesaleList>) LocalRedisUtil.getObject("WholesaleList");
+		} catch (Exception e) {
+		}
+		if (result == null) {
+		    result = new ArrayList<WholesaleList>();
+		    // 首先查找大类
+		    String hql = "from PProductClass where step=1 order by sort";
+		    List<PProductClass> classList = baseDao.find(hql);
+		    // 左边推荐
+		    hql = "from PcMarketLeftRec where status=1 order by sort";
+		    List<PcMarketLeftRec> leftList = baseDao.find(hql);
+		    // 中间推荐
+		    hql = "from PcMarketRecommand where status=1 order by sort";	    
+		    List<PcMarketRecommand> mainList = baseDao.find(hql);    
+		    List<Integer> ids = new ArrayList<Integer>();
+		    for (PProductClass proclass : classList) {
+			WholesaleList temp = new WholesaleList();
+			temp.setBigClass(proclass.getClassName());
+			List<PcMarketLeftRec> tempLeft = new ArrayList<PcMarketLeftRec>();
+			if (leftList != null && leftList.size() > 0) {
+			    for (PcMarketLeftRec left : leftList) {
+				if (proclass.getClassId().equals(left.getRecType())) {
+				    left.setImg(ImgDomain.GetFullImgUrl(left.getImg(), 24));
+				    tempLeft.add(left);
+				}
+			    }
+			}
+			temp.setLeftList(tempLeft);
+			if (mainList != null && mainList.size() > 0) {					
+			    for (PcMarketRecommand main : mainList) {	
+					ids.add(main.getBmid());		    			    	
+				}
+			}	
+			Map<String, Object> params = new HashMap<String, Object>();
+			params.put("ids", ids);
+			List<UBatchSupplyer> ubs = baseDao.findByMap("from UBatchSupplyer where bmid in(:ids)", params);
+			List<PcMarketRecommandVO> mainListvo = new ArrayList<PcMarketRecommandVO>();
+			if (mainList != null && mainList.size() > 0) {
+				int i = 1;
+			    for (PcMarketRecommand prd : mainList) {	
+			    	if (proclass.getClassId().equals(prd.getBigType())) {
+			    	PcMarketRecommandVO prvo = new PcMarketRecommandVO();
+					prvo.setMarketName(prd.getMarketName());
+					prvo.setBmid(prd.getBmid());
+					prvo.setMimg(ImgDomain.GetFullImgUrl(prd.getMimg(),24));
+					prvo.setMainBus(prd.getMainBus());
+					for(UBatchSupplyer sfInfo : ubs){
+						if(prd.getBmid().equals(sfInfo.getBmid())){		
+							//prvo.setBmid(sfInfo.getBmid());
+							prvo.setAddress(regionService.getNameByCode(sfInfo.getProvince())+regionService.getNameByCode(sfInfo.getCity())+regionService.getNameByCode(sfInfo.getDistrict()));						
+						}	
+					
+			    	}
+					mainListvo.add(prvo);
+					if (i > 4) {
+						break;
+					    }
+					i++;
+			    	}
+			    }
+			}		
+			temp.setMainListvo(mainListvo);		
+			result.add(temp);
+		    }
+		    LocalRedisUtil.setObject("WholesaleList", result);
+		}
+		return result;
+	}
+}

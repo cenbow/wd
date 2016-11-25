@@ -1,0 +1,396 @@
+package com.okwei.service.impl.product;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.okwei.bean.domain.AActSupplier;
+import com.okwei.bean.domain.AActivity;
+import com.okwei.bean.domain.AActivityProducts;
+import com.okwei.bean.domain.PPriceShow;
+import com.okwei.bean.domain.PProductRelation;
+import com.okwei.bean.domain.PProducts;
+import com.okwei.bean.domain.PShopClass;
+import com.okwei.bean.domain.PcUserAdnotice;
+import com.okwei.bean.domain.UDemandProduct;
+import com.okwei.bean.domain.USupplyDemand;
+import com.okwei.bean.enums.AgentStatusEnum;
+import com.okwei.bean.enums.SupplyChannelTypeEnum;
+import com.okwei.bean.vo.LoginUser;
+import com.okwei.bean.vo.ReturnModel;
+import com.okwei.bean.vo.ReturnStatus;
+import com.okwei.bean.vo.activity.AActivityProductVo;
+import com.okwei.bean.vo.product.ProductInfo;
+import com.okwei.bean.vo.product.ProductQuery;
+import com.okwei.bean.vo.product.Products;
+import com.okwei.bean.vo.product.ShopClassVO;
+import com.okwei.common.CommonMethod;
+import com.okwei.common.Limit;
+import com.okwei.common.PageResult;
+import com.okwei.dao.product.IBaseProductDao;
+import com.okwei.dao.shop.IBasicShopMgtDAO;
+import com.okwei.service.activity.IBaseActivityService;
+import com.okwei.service.impl.BaseService;
+import com.okwei.service.product.IBasicProductMgtService;
+import com.okwei.service.product.IHouseService;
+import com.okwei.service.product.IShopManagerService;
+import com.okwei.util.ImgDomain;
+import com.okwei.util.ObjectUtil;
+import com.okwei.util.ParseHelper;
+@Service
+public class ShopManagerService extends BaseService implements IShopManagerService{
+	@Autowired
+	private IBaseProductDao productDao;
+	@Autowired
+	private IBasicProductMgtService productMgtService;
+	@Autowired
+	private IHouseService IHouseService;
+	@Autowired
+	private IBasicShopMgtDAO basicShopMgtDAO;
+	
+	@Autowired
+	private IBaseActivityService actService;
+	
+	@Autowired
+	private IBaseProductDao baseProductDAO;
+//	@Autowired
+//	private IBaseDAO baseDao;
+	
+	@Override
+	public List<PShopClass> getShopClassList(Long weiId, Integer sid)  throws Exception{
+		return productDao.findPShopClassList(weiId, sid);
+	}
+	
+	@Override
+	public List<PcUserAdnotice> findPcUserAdnoticeByWeiid(long weiID) {
+		String hql = "from PcUserAdnotice where status = 2 and weiId = ? order by sort";
+		Object[] params = new Object[1];
+		params[0] = weiID;
+		return productDao.find(hql, params);
+	}
+
+	@Override
+	public PageResult<Products> getProductsList(ProductQuery param, LoginUser loginUser) throws Exception{
+		Limit limit = Limit.buildLimit(param.getPageIndex(), param.getPageSize());
+		PageResult<PProducts> page = productDao.getProductsPage(param,limit);
+		if (page == null) {
+			return new PageResult<Products>();
+		}
+		
+		
+		List<Products> list = new ArrayList<Products>();
+		for (PProducts prod : page.getList()) {
+			Products dto = new Products();
+			dto.setProductId(prod.getProductId());
+			dto.setProductName(prod.getProductTitle());
+			dto.setMerchantWeiId(prod.getSupplierWeiId());
+			dto.setMerchantName("");//平台号店铺名称
+			//招商需求Id
+			UDemandProduct dp =  productDao.getUniqueResultByHql("from UDemandProduct where productId=?", new Object[]{prod.getProductId()});
+			if (dp != null) {
+				dto.setInvestmentDemandId(dp.getDemandId());
+				USupplyDemand sd = productDao.get(USupplyDemand.class, dp.getDemandId());
+				if (sd != null) {
+					dto.setInvestmentDemandName(sd.getTitle());
+				}
+				USupplyDemand demand = productDao.getUniqueResultByHql("from USupplyDemand where demandId=?", new Object[]{dp.getDemandId()});
+				if (demand != null) {
+					dto.setStoreBuyAmount(demand.getOrderAmout());//落地店首次采购金额
+				}
+			} else {
+				dto.setInvestmentDemandId(0);
+			}
+			dto.setProductPicture(ImgDomain.GetFullImgUrl(prod.getDefaultImg(),32));
+			dto.setRetailPrice(prod.getDefaultPrice());
+			//产品辅助表关联字段
+			PProductRelation pr = productDao.get(PProductRelation.class, prod.getProductId());
+			if (pr != null) {
+				dto.setStorePrice(pr.getFloorPrice());
+				dto.setAgentPrice(pr.getProxyPrice());
+			}
+			ProductInfo info = new ProductInfo();
+			//判断登陆用户
+			if (loginUser != null) {
+				if(IHouseService.checkUserIsAgentOrStore(param.getShopWeiId(), loginUser.getWeiID(),dto.getInvestmentDemandId(),Short.valueOf(SupplyChannelTypeEnum.Agent.toString()),Short.valueOf(AgentStatusEnum.Normal.toString()))){
+					info.setCurrentUserIsAgent(1);
+				}
+				if(IHouseService.checkUserIsAgentOrStore(param.getShopWeiId(), loginUser.getWeiID(),dto.getInvestmentDemandId(),Short.valueOf(SupplyChannelTypeEnum.ground.toString()),Short.valueOf(AgentStatusEnum.Normal.toString()))){
+					info.setCurrentUserIsStore(1);
+				}
+			} else {
+				info.setCurrentUserIsAgent(0);
+				info.setCurrentUserIsStore(0);
+			}
+			//代理价可见判断
+			PPriceShow priceShow = productDao.get(PPriceShow.class, param.getShopWeiId());
+			info = IHouseService.getPriceShow(loginUser, priceShow, info);
+			dto.setCurrentUserIsStore(info.getCurrentUserIsStore());
+			dto.setCurrentUserIsAgent(info.getCurrentUserIsAgent());
+			if (info != null) {
+				dto.setDlPriceVisibility(info.getDlPriceVisibility());
+				dto.setLdPriceVisibility(info.getLdPriceVisibility());
+			} 
+			
+			//增加原价 add by 阿甘  2016.1.26
+			dto.setDisplayPrice(CommonMethod.getInstance().getDisplayPrice(prod.getDefaultPrice(), prod.getOriginalPrice(), prod.getPercent()));
+			list.add(dto);
+		}
+		return new PageResult<Products>(page.getTotalCount(),limit,list);
+	}
+
+	@Override
+	public ReturnModel editShopClass(ShopClassVO scVo, LoginUser loginUser)
+			throws Exception {
+		ReturnModel rs = new ReturnModel();
+		rs.setStatu(ReturnStatus.DataError);
+		rs.setStatusreson("参数问题");
+		List<PShopClass> scList = new ArrayList<PShopClass>();
+		if (scVo != null) {
+			Integer paretId = null;
+			//修改一级目录
+			if (scVo.getClassId() != null && scVo.getClassId() > 0) {
+				PShopClass shopClass = basicShopMgtDAO.get(PShopClass.class, scVo.getClassId());
+				if (shopClass == null) {
+					rs.setStatu(ReturnStatus.DataError);
+					rs.setStatusreson("一级店铺分类不存在");
+					return rs;
+				}
+				//判断一级店铺分类是否已存在
+				boolean ishave = basicShopMgtDAO.getIsHaveShopName(loginUser.getWeiID(), scVo.getClassName(), Short.valueOf("1"), shopClass.getSid());
+				if (ishave) {
+					rs.setStatu(ReturnStatus.ValidCodeError);
+					rs.setStatusreson("一级店铺分类名称已存在");
+					return rs;
+				}
+				paretId = scVo.getClassId();
+				shopClass.setSname(scVo.getClassName());
+			} 
+			//新增一级目录
+			else {
+				//判断一级店铺分类是否已存在
+				boolean ishave = basicShopMgtDAO.getIsHaveShopName(loginUser.getWeiID(), scVo.getClassName(), Short.valueOf("1"), null);
+				if (ishave) {
+					rs.setStatu(ReturnStatus.ValidCodeError);
+					rs.setStatusreson("一级店铺分类名称已存在");
+					return rs;
+				}
+				PShopClass psClass = new PShopClass();
+				psClass.setCreateTime(new Date());
+				psClass.setSname(scVo.getClassName());
+				psClass.setWeiid(loginUser.getWeiID());
+				psClass.setSort((short) 0);
+				psClass.setState((short) 1);
+				psClass.setType((short) 1);
+				psClass.setLevel((short) 1);
+				paretId = (Integer) basicShopMgtDAO.save(psClass);
+				scList.add(psClass);
+			}
+			//二级店铺分类
+			if (scVo.getChildClass() != null && scVo.getChildClass().size() > 0) {
+				for (ShopClassVO vo : scVo.getChildClass()) {
+					//修改二级分类
+					if (vo.getClassId() != null && vo.getClassId() > 0) {
+						PShopClass shopClass2 = basicShopMgtDAO.get(PShopClass.class, vo.getClassId());
+						if (shopClass2 == null) {
+							rs.setStatu(ReturnStatus.DataError);
+							rs.setStatusreson("二级店铺分类不存在");
+							return rs;
+						}
+						//判断二级店铺分类是否已存在
+						boolean ishave = basicShopMgtDAO.getIsHaveShopName(loginUser.getWeiID(), vo.getClassName(), Short.valueOf("2"), vo.getClassId());
+						if (ishave) {
+							rs.setStatu(ReturnStatus.ValidCodeError);
+							rs.setStatusreson("二级店铺分类名称已存在");
+							return rs;
+						}
+						shopClass2.setSname(vo.getClassName());
+					}
+					//新增二级分类
+					else {
+						//判断二级店铺分类是否已存在
+						boolean ishave = basicShopMgtDAO.getIsHaveShopName(loginUser.getWeiID(), vo.getClassName(), Short.valueOf("2"), null);
+						if (ishave) {
+							rs.setStatu(ReturnStatus.ValidCodeError);
+							rs.setStatusreson("二级店铺分类名称已存在");
+							return rs;
+						}
+						PShopClass psClass = new PShopClass();
+						psClass.setCreateTime(new Date());
+						psClass.setSname(vo.getClassName());
+						psClass.setWeiid(loginUser.getWeiID());
+						psClass.setSort((short) 0);
+						psClass.setState((short) 1);
+						psClass.setType((short) 1);
+						psClass.setLevel((short) 2);
+						psClass.setParetId(paretId);
+						basicShopMgtDAO.save(psClass);
+						scList.add(psClass);
+					}
+				}
+			}
+			rs.setBasemodle(scList);
+			rs.setStatu(ReturnStatus.Success);
+			rs.setStatusreson("操作成功");
+		}
+		return rs;
+	}
+	
+	public List<PShopClass> find_shopClasslist(Long weiid,boolean isSelf,Short state){
+		List<PShopClass> result=new ArrayList<PShopClass>();
+		StringBuilder sql=new StringBuilder();
+		Map<String, Object> map=new HashMap<String, Object>();
+		sql.append("SELECT ClassID,COUNT(ClassID) as counts from P_ClassProducts where WeiID=:weiid ");
+		map.put("weiid", weiid);
+		if(state!=null){
+			sql.append(" and  State=:states ");
+			map.put("states", state);
+		}
+		if(isSelf){
+			sql.append(" and  SupplierWeiID=WeiID ");
+		}
+		sql.append(" GROUP BY ClassID HAVING counts>0;");
+		List<Object[]> list=productDao.findSQLByMap(sql.toString(), map);
+		if(list!=null&&list.size()>0){
+			for (Object[] aa : list) {
+				PShopClass cc=productDao.get(PShopClass.class,ParseHelper.toInt(String.valueOf(aa[0])) );
+				if(cc!=null)
+					result.add(cc);
+			}
+		}
+		return result;
+	}
+	
+	public PageResult<PProducts> find_productlist(Long sellerID,Integer shopClassID,Long actid, String title, int pageIndex,int pageSize){
+		if(sellerID==null||sellerID<=0)
+			return null;
+		PageResult<PProducts> result=null;
+		if(shopClassID!=null&&shopClassID>0){
+			StringBuilder sb=new StringBuilder();
+			Map<String, Object> map=new HashMap<String, Object>();
+			sb.append("select a from PClassProducts p ,PProducts a where p.productId=a.productId and p.supplierweiId=:sellerid and p.weiId=p.supplierweiId and p.state=1 and a.state=1") ;
+			map.put("sellerid", sellerID);
+			if(shopClassID!=null&&shopClassID>0){
+				sb.append(" and p.classId=:classid");
+				map.put("classid", (long)shopClassID);
+			}
+			if(!ObjectUtil.isEmpty(title)){
+				sb.append(" and a.productTitle like'%"+title+"%'");
+			}
+			result=productDao.findPageResultByMap(sb.toString(), Limit.buildLimit(pageIndex, pageSize), map);
+		}else{
+			result=find_PProductsResult(sellerID, title, pageIndex, pageSize);
+		}
+		return result;
+	}
+	
+	public PageResult<PProducts> find_PProductsResult(Long supplyweiid,String title, int pageIndex,int pageSize){
+		StringBuilder sb=new StringBuilder();
+		Map<String, Object> map=new HashMap<String, Object>();
+		sb.append(" from PProducts a where  a.state=1 ") ;
+		if(supplyweiid!=null&&supplyweiid>0){
+			sb.append(" and a.supplierWeiId=:sellerid ") ;
+			map.put("sellerid", supplyweiid);
+		}
+		map.put("sellerid", supplyweiid);
+		if(ObjectUtil.isEmpty(title)){
+			sb.append(" and a.productTitle like'%"+title+"%'");
+		}
+		return productDao.findPageResultByMap(sb.toString(), Limit.buildLimit(pageIndex, pageSize), map);
+	}
+	
+	
+	
+	@Override
+	public PageResult<ProductInfo> find_Shop828ProductId(Long weiId, int pageIndex,int pageSize) {
+		//得到828活动ID号
+		AActivity act=basicShopMgtDAO.getUniqueResultByHql("from AActivity where state=1 and type=1");
+		
+		StringBuffer sb=new StringBuffer();
+		Map<String, Object> map=new HashMap<String, Object>();
+		map.put("actId", act.getActId());
+		sb.append(" from AActivityProducts p where   p.state=1 and p.actId=:actId  ");
+		if (weiId==null||weiId.longValue()==0l) {
+			sb.append(" ");
+		}else{
+			sb.append(" and p.sellerId=:weino ");
+			map.put("weino", weiId);
+		}
+		sb.append(" order by createTime desc");		
+		Limit limit=Limit.buildLimit(pageIndex, pageSize);
+		PageResult<AActivityProducts> page=basicShopMgtDAO.findPageResultByMap(sb.toString(),limit, map);
+		
+		if(page!=null&&page.getList().size()>0){
+			List<ProductInfo>  list=new ArrayList<ProductInfo>();
+			List<AActivityProducts> findNewProduct=page.getList();
+			//List<PProducts> products =baseProductDAO.findProductlistByIds(find_NewProductId, (short)1);
+			
+			if (findNewProduct!=null&&findNewProduct.size()>0) {
+				for (AActivityProducts product : findNewProduct) {
+					ProductInfo sub=new ProductInfo();
+					PProducts pp=basicShopMgtDAO.get(PProducts.class, product.getProductId());
+					if(pp==null) continue;
+					sub.setProductId(product.getProductId());
+					sub.setProductName(product.getProductTitle());
+					sub.setRetailPrice(product.getPrice());
+					sub.setProductPicture(ImgDomain.GetFullImgUrl_product(pp.getDefaultImg(), 75));
+					sub.setDisplayPrice(pp.getOriginalPrice()==null?pp.getDefaultPrice():pp.getOriginalPrice());
+					list.add(sub);
+				}
+				
+			}
+			return new PageResult<ProductInfo>(page.getTotalCount(), limit, list);
+		}
+		
+		return null;
+	}
+	
+	
+	@Override
+	public AActSupplier getActSupplier(long supplyWeiid){
+		return basicShopMgtDAO.getUniqueResultByHql("from AActSupplier where supplyWeiid=?", supplyWeiid);
+		
+	}
+	
+	
+	@Override
+	public PageResult<ProductInfo> find_Product828ProductId(int pageIndex,int pageSize) {
+		//得到828活动ID号
+		AActivity act=basicShopMgtDAO.getUniqueResultByHql("from AActivity where state=1 and type=1");
+		
+		StringBuffer sb=new StringBuffer();
+		Map<String, Object> map=new HashMap<String, Object>();
+		map.put("actId", act.getActId());
+		sb.append("  select  p.productId as proid,p.productTitle as title,p.price as price,p.sellerId as sellerId   from AActivityProducts p where   p.state=1 and p.actId='"+ act.getActId()+"' order by case when p.sellerId  in ('9745656','10622591','10681318','980180','8391485') then 0  else 1 end");
+		Limit limit=Limit.buildLimit(pageIndex, pageSize);
+		
+		PageResult<AActivityProductVo> page=basicShopMgtDAO.findPageResultTrans(sb.toString(), AActivityProductVo.class, limit);
+		if(page!=null&&page.getList().size()>0){
+			List<ProductInfo>  list=new ArrayList<ProductInfo>();
+			List<AActivityProductVo> findNewProduct=page.getList();
+			if (findNewProduct!=null&&findNewProduct.size()>0) {
+				for (AActivityProductVo product : findNewProduct) {
+					ProductInfo sub=new ProductInfo();
+					PProducts pp=basicShopMgtDAO.get(PProducts.class, product.getProid());
+					if(pp==null) continue;
+					sub.setProductId(product.getProid());
+					sub.setProductName(product.getTitle());
+					sub.setRetailPrice(product.getPrice());
+					sub.setSellerWid(product.getSellerId());
+					sub.setProductPicture(ImgDomain.GetFullImgUrl_product(pp.getDefaultImg(), 75));
+					sub.setDisplayPrice(pp.getOriginalPrice()==null?pp.getDefaultPrice():pp.getOriginalPrice());
+					list.add(sub);
+				}
+				
+			}
+			return new PageResult<ProductInfo>(page.getTotalCount(), limit, list);
+		}
+		
+		return null;
+	}
+
+}

@@ -1,0 +1,14 @@
+package com.okwei.service.shop;
+
+import java.util.List;
+
+import com.okwei.bean.vo.CompanyInfo;
+import com.okwei.bean.vo.ShopClassVO;
+import com.okwei.service.IBaseService;
+
+public interface IBasicShopMgtService extends IBaseService {
+
+	List<ShopClassVO> getShopClass(Integer parentId, Long weiId);
+
+	CompanyInfo getShopInfo(Long weiId);
+}

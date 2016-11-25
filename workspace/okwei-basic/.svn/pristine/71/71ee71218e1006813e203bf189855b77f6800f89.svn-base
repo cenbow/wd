@@ -1,0 +1,49 @@
+package com.okwei.service;
+
+import java.util.List;
+
+import com.okwei.bean.domain.UPushMessage;
+import com.okwei.bean.domain.UShopInfo;
+import com.okwei.bean.domain.UWeiSeller;
+
+public interface IBaseCommonService {
+	/**
+	 * 消息推送
+	 * @param msg
+	 * @return
+	 */
+	public boolean insertSendPushMsg(UPushMessage msg);
+	
+	/**
+	 * 获取店铺名称
+	 * @param weiNo
+	 * @return
+	 */
+	public String getShopNameByWeiId(Long weiNo);
+	/**
+	 * 获取店铺图片
+	 * @param weiNo
+	 * @return
+	 */
+	public String getShopImageByWeiId(Long weiNo);
+	/**
+	 * 获取店铺主营
+	 * @param weiNo
+	 * @return
+	 */
+	public String getBusContentByWeiId(Long weiNo);
+	/**
+	 * 获取用户信息
+	 * @param weiids
+	 * @return
+	 */
+	public List<UShopInfo> find_shopinfolist(List<Long> weiids);
+	/**
+	 * zy
+	 * 获取微店信息
+	 * @param weiids
+	 * @return
+	 */
+	public List<UWeiSeller> find_Userlist(List<Long> weiids);
+	
+}

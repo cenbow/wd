@@ -1,0 +1,328 @@
+package com.okwei.service.impl;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.okwei.bean.domain.DAgentInfo;
+import com.okwei.bean.domain.OOrderAddr;
+import com.okwei.bean.domain.OPayOrder;
+import com.okwei.bean.domain.OPayOrderLog;
+import com.okwei.bean.domain.OProductOrder;
+import com.okwei.bean.domain.OSupplyerOrder;
+import com.okwei.bean.domain.PProductClass;
+import com.okwei.bean.domain.PProductSellKey;
+import com.okwei.bean.domain.PProductSellValue;
+import com.okwei.bean.domain.PProductStyleKv;
+import com.okwei.bean.domain.PProductStyles;
+import com.okwei.bean.domain.PProducts;
+import com.okwei.bean.domain.SMainData;
+import com.okwei.bean.domain.TCountStat;
+import com.okwei.bean.domain.UCustomerAddr;
+import com.okwei.bean.domain.UWeiSeller;
+import com.okwei.bean.enums.OrderDel;
+import com.okwei.bean.enums.OrderStatusEnum;
+import com.okwei.bean.enums.OrderTypeEnum;
+import com.okwei.bean.enums.ShoppingCartTypeEnum;
+import com.okwei.bean.enums.agent.BaseResultStateEnum;
+import com.okwei.bean.vo.ReturnModel;
+import com.okwei.bean.vo.ReturnStatus;
+import com.okwei.bean.vo.agent.BaseResultVO;
+import com.okwei.bean.vo.agent.HalfProductVO;
+import com.okwei.bean.vo.agent.HeadInfo;
+import com.okwei.bean.vo.agent.LeftMenu;
+import com.okwei.dao.agent.IYunSupDao;
+import com.okwei.service.IAgentCommonService;
+import com.okwei.service.impl.BaseService;
+import com.okwei.util.AppSettingUtil;
+import com.okwei.util.GenerateOrderNum;
+import com.okwei.util.ImgDomain;
+import com.okwei.util.ObjectUtil;
+import com.okwei.util.ParseHelper;
+import com.okwei.util.RedisUtil;
+
+@Service
+public class AgentCommonService extends BaseService implements IAgentCommonService {
+
+	@Autowired
+	private IYunSupDao baseDao;
+
+	@Override
+	public long getCartCount(long weiid) {
+		if (weiid > 0) {
+			String hql = "select count(1) from TShoppingCar where weiId=? and status=1";
+			return baseDao.count(hql, new Object[] { weiid });
+		}
+		return 0;
+	}
+
+	@Override
+	public HeadInfo getHeadInfo() {
+		HeadInfo info = null;
+		try {
+			info = (HeadInfo) RedisUtil.getObject("NewHeadInfo");
+		} catch (Exception e) {
+		}
+		if (info == null) {
+			info = new HeadInfo();
+			// 获取用户数量
+			info.setUserCount(getUserCount());
+			// 获取左边菜单
+			info.setLeftMenu(getLeftMenu());
+			RedisUtil.setObject("NewHeadInfo", info, 3600);
+		}
+		return info;
+	}
+
+	public List<LeftMenu> getLeftMenu() {
+		List<LeftMenu> result = new ArrayList<LeftMenu>();
+		String hql = "from PProductClass where step in(1,2,3) order by sort";
+		List<PProductClass> list = baseDao.find(hql);
+		// 一级分类
+		for (PProductClass one : list) {
+			if (one.getStep().shortValue() == 1) {
+				LeftMenu tempOne = new LeftMenu();
+				tempOne.setId(one.getClassId());
+				tempOne.setName(one.getClassName());
+				List<LeftMenu> oneList = new ArrayList<LeftMenu>();
+				// 二级分类
+				for (PProductClass two : list) {
+					if (two.getParentId().equals(one.getClassId())) {
+						LeftMenu tempTwo = new LeftMenu();
+						tempTwo.setId(two.getClassId());
+						tempTwo.setName(two.getClassName());
+						List<LeftMenu> twoList = new ArrayList<LeftMenu>();
+						// 三级分类
+						for (PProductClass three : list) {
+							if (three.getParentId().equals(two.getClassId())) {
+								LeftMenu tempThree = new LeftMenu();
+								tempThree.setId(three.getClassId());
+								tempThree.setName(three.getClassName());
+								twoList.add(tempThree);
+							}
+						}
+						tempTwo.setList(twoList);
+						oneList.add(tempTwo);
+					}
+				}
+				tempOne.setList(oneList);
+				result.add(tempOne);
+			}
+		}
+		return result;
+	}
+
+	/**
+	 * 获取用户的数量
+	 * 
+	 * @return
+	 */
+	private long getUserCount() {
+		String hql = "from TCountStat where name='UserCount'";
+		TCountStat entity = baseDao.getUniqueResultByHql(hql);
+		if (entity != null && entity.getCountNum().longValue() > 0)
+			return entity.getCountNum() / 10000;
+		return 0;
+	}
+
+	@Override
+	public HalfProductVO getProductInfo() {
+		
+		long productid=Long.parseLong(AppSettingUtil.getSingleValue("halfproductid"));
+		PProducts pp= baseDao.get(PProducts.class, productid);
+		if(pp==null)
+			return null;
+		HalfProductVO hp=new HalfProductVO();
+		hp.setDefaultimg(ImgDomain.GetFullImgUrl(pp.getDefaultImg(),24));
+		hp.setPrice(pp.getDefaultPrice());
+		hp.setHalfprice(pp.getDefaultPrice()/2);
+		PProductStyles ps=baseDao.getNotUniqueResultByHql(" from PProductStyles p where p.productId=?", productid);
+		hp.setStyleid(ps==null?0L:ps.getStylesId());
+		return hp;
+	}
+
+	@Override
+	public ReturnModel halfBuy(long weiid,int addrid, int num) {
+		ReturnModel resultVO = new ReturnModel();
+		resultVO.setStatu(ReturnStatus.DataError);
+		resultVO.setStatusreson("参数异常！");
+		
+		long productid=Long.parseLong(AppSettingUtil.getSingleValue("halfproductid"));
+		PProducts pp= baseDao.get(PProducts.class, productid);
+		if(pp==null)
+		{
+			resultVO.setStatusreson("商品数据有误！");
+			return resultVO;
+		}
+		PProductStyles ps=baseDao.getNotUniqueResultByHql(" from PProductStyles p where p.productId=?", productid);
+		if(ps == null)
+		{
+			resultVO.setStatusreson("商品款式有误！");
+			return resultVO;
+		}	
+		UCustomerAddr addr = baseDao.get(UCustomerAddr.class,addrid);
+		if(addr==null)
+		{
+			resultVO.setStatusreson("收货地址有误！");
+			return resultVO;
+		}
+		//生成订单数据
+		// 生成支付订单号
+		String payOrderId = GenerateOrderNum.getInstance().GenerateOrder();
+		double totalPrice = 0, totalYoufei = 0,totalCommission=0;// //总价，总邮费
+		int orderType = Integer.parseInt(OrderTypeEnum.HalfTaste.toString());//订单类型
+		Date nowTime = new Date();
+		// ------生成订单收货地址----------
+		OOrderAddr orderAddr = new OOrderAddr();
+		orderAddr.setCaddrId(addrid);
+		orderAddr.setProvince(addr.getProvince());
+		orderAddr.setCity(addr.getCity());
+		orderAddr.setDistrict(addr.getDistrict());
+		orderAddr.setDetailAddr(addr.getDetailAddr());
+		orderAddr.setMobilePhone(addr.getMobilePhone());
+		orderAddr.setWeiId(addr.getWeiId());
+		orderAddr.setReceiverName(addr.getReceiverName());
+		orderAddr.setCreateTime(nowTime);
+		orderAddr.setQq(addr.getQq());
+		baseDao.save(orderAddr);
+		totalPrice=ps.getPrice()*0.5*num;
+		//供应商订单
+		String supplyOrderId = GenerateOrderNum.getInstance().GenerateOrder();
+		OSupplyerOrder supplyOrder = new OSupplyerOrder();
+		supplyOrder.setAddrId(orderAddr.getOrderAddrId());// ParseHelper.toLong(address.getAddressId())
+		supplyOrder.setSupplierOrderId(supplyOrderId);
+		supplyOrder.setPayOrderId(payOrderId);
+		supplyOrder.setOrderTime(nowTime);
+		supplyOrder.setOrderDate(nowTime);
+		supplyOrder.setSupplyerId(pp.getSupplierWeiId()); 
+		supplyOrder.setCommision(totalCommission);
+		supplyOrder.setTotalPrice(totalPrice);
+		supplyOrder.setSellerWeiId(111L); //卖家（可能是供应商、可能是代理、可能是店铺）
+		supplyOrder.setMessage("");
+		supplyOrder.setBuyerID(weiid);
+		supplyOrder.setSellerDel(Short.parseShort(com.okwei.bean.enums.OrderDel.NoDel.toString()));
+		supplyOrder.setBuyerDel(Short.parseShort(com.okwei.bean.enums.OrderDel.NoDel.toString()));
+		supplyOrder.setOrderFrom((short)3);//来源PC
+		supplyOrder.setState(Short.parseShort(OrderStatusEnum.Nopay.toString()));// 等待付款			
+		supplyOrder.setIsActivity((short)0);//默认不参加活动
+		supplyOrder.setVerWeiId(111L); 
+		supplyOrder.setMessage("半价试用");
+		supplyOrder.setOrderType(orderType);
+		supplyOrder.setPostage(totalYoufei);// 设置邮费
+		baseDao.save(supplyOrder);
+		//产品订单
+		String productOrderId = GenerateOrderNum.getInstance().GenerateOrder();
+		OProductOrder productOrder = new OProductOrder();
+		productOrder.setSupplierOrderId(supplyOrderId);
+		productOrder.setPayOrderId(payOrderId);
+		productOrder.setProductOrderId(productOrderId);
+		productOrder.setSupplyeriId(pp.getSupplierWeiId());
+		productOrder.setCreateTime(nowTime);
+		productOrder.setProductId(pp.getProductId());
+		productOrder.setStyleId(ps.getStylesId());
+		productOrder.setStyleDes(getProductStyleName(pp.getProductId(), ps.getStylesId()));
+		productOrder.setBuyerId(weiid);// 买家
+		productOrder.setShopWeiID((long) 111);
+		productOrder.setSellerWeiid((long) 111);
+		productOrder.setSellerUpweiid((long) 111);
+		productOrder.setState(Short.parseShort(OrderStatusEnum.Nopay.toString()));// 默认待付款
+		productOrder.setProdcutTitle(pp.getProductTitle());
+		productOrder.setProductImg(ImgDomain.GetFullImgUrl(pp.getDefaultImg()));
+		productOrder.setCount(num);
+		productOrder.setClassId(pp.getClassId());
+		productOrder.setProductMinTitle(pp.getProductMinTitle());
+		productOrder.setSellerDel(Short.parseShort(OrderDel.NoDel.toString()));
+		productOrder.setBuyerDel(Short.parseShort(OrderDel.NoDel.toString()));
+		productOrder.setCommision(0.0);
+		productOrder.setPrice(ps.getPrice()/2);
+		// 订单类型
+		productOrder.setOrderType((short) orderType);
+		baseDao.save(productOrder);
+		//支付订单
+		OPayOrder payOrder = new OPayOrder();
+		payOrder.setPayOrderId(payOrderId);
+		payOrder.setWeiId(weiid);
+		payOrder.setTotalPrice(totalPrice);
+		payOrder.setTypeState((short) orderType);
+		payOrder.setOrderDate(nowTime);
+		payOrder.setOrderTime(nowTime);
+		payOrder.setOrderFrom(Short.parseShort("3"));
+		payOrder.setState(Short.parseShort(OrderStatusEnum.Nopay.toString()));
+		baseDao.save(payOrder);
+		saveOrderLog(weiid, payOrderId, supplyOrderId, totalPrice);	
+		resultVO.setBasemodle(payOrder);
+		resultVO.setStatu(ReturnStatus.Success);
+		resultVO.setStatusreson("成功！");
+		return resultVO;
+	}
+
+	/**
+	 * 获取产品属性
+	 * 
+	 * @param proid
+	 * @param styleid
+	 * @return
+	 */
+	public String getProductStyleName(Long proid, Long styleid) {
+		/* 查商品款式KV */
+		String hql = " from PProductStyleKv p where p.productId=? and p.stylesId=?  order by p.attributeId asc";
+		Object[] b = new Object[2];
+		b[0] = proid;
+		b[1] = styleid;
+		List<PProductStyleKv> listkey = baseDao.find(hql, b);// 获取商品款式所属的属性列表
+		if (listkey == null || listkey.size() <= 0)// 如果列表为空，返回空
+		{
+			return "";
+		}
+		String ret = "";
+		for (PProductStyleKv ppsk : listkey) {
+			hql = "from PProductSellValue p where p.productId=? and p.keyId=?";
+			Object[] b2 = new Object[2];
+			b2[0] = ppsk.getProductId();
+			b2[1] = ppsk.getKeyId();
+			PProductSellValue ppsv = baseDao.getUniqueResultByHql(hql, b2);
+			hql = "from PProductSellKey p where p.productId=? and p.attributeId=?";
+			b2[1] = ppsk.getAttributeId();
+			PProductSellKey ppkey = baseDao.getUniqueResultByHql(hql, b2);
+			if (ppsv == null || ppkey == null) {
+				continue;
+			}
+			if(ppkey.getAttributeName().equals("-1")){
+				ret +="默认：默认|";
+			}else {
+				ret += ppkey.getAttributeName() + ":" + ppsv.getValue() + "|";
+			}
+		}
+		if (!ObjectUtil.isEmpty(ret) && ret.endsWith("|")) {
+			ret = ret.substring(0, ret.length() - 1);
+		}
+		return ret;
+	}
+	
+	/**
+	 * 插入支付快照
+	 * 
+	 * @param weino
+	 * @param payOrderId
+	 * @param supplyOrderIds
+	 * @param totalPrice
+	 */
+	public void saveOrderLog(long weino, String payOrderId, String supplyOrderIds, double totalPrice) {
+
+		if (!ObjectUtil.isEmpty(supplyOrderIds) && supplyOrderIds.endsWith(",")) {
+			supplyOrderIds = supplyOrderIds.substring(0, supplyOrderIds.length() - 1);
+		}
+		// 记录支付快照
+		OPayOrderLog log = new OPayOrderLog();
+		log.setCreateTime(new Date());
+		log.setWeiId(weino);
+		log.setPayOrderId(payOrderId);
+		log.setSupplyOrderIds(supplyOrderIds);
+		log.setState(Short.valueOf(OrderStatusEnum.Nopay.toString()));
+		log.setTotalAmout(totalPrice);
+		baseDao.save(log);
+	}
+}

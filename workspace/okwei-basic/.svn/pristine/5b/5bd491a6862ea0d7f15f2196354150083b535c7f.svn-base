@@ -1,0 +1,21 @@
+package com.okwei.dao.product;
+
+import com.okwei.bean.domain.PProducts;
+import com.okwei.bean.vo.activity.ActProductInfo;
+
+public interface IProductSearchDao {
+	
+	/**
+	 * 根据产品ID获取产品
+	 * @param productID
+	 * @return
+	 */
+	public PProducts getPProducts(Long productID);
+
+	/**
+	 * 判断产品是否参加活动
+	 * @param productId
+	 * @return （null没有参加，如果不为Null说明参加了活动，通过beginTime,endTime判断是否在活动中,看type类型：1表示全返）
+	 */
+	public ActProductInfo get_ProductAct(Long productId);
+}

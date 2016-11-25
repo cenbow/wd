@@ -1,0 +1,113 @@
+package com.okwei.company.web;
+
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+
+import com.okwei.bean.domain.DAgentApply;
+import com.okwei.bean.domain.DAgentInfo;
+import com.okwei.bean.enums.agent.AgentSupplierType;
+import com.okwei.bean.enums.agent.BrandType;
+import com.okwei.bean.vo.AgentProductVO;
+import com.okwei.bean.vo.AgentVO;
+import com.okwei.bean.vo.LoginUser;
+import com.okwei.company.bean.vo.HeadInfo;
+import com.okwei.company.service.ICommonService;
+import com.okwei.dao.agent.IDAgentMgtDao;
+import com.okwei.dao.impl.user.AgentDAO;
+import com.okwei.service.agent.IAgentBrandService;
+import com.okwei.web.base.SSOController;
+
+@Controller
+@RequestMapping(value = "/agent")
+public class AgentController  extends SSOController {
+	
+	@Autowired
+	private IAgentBrandService agent;
+	@Autowired
+	private IDAgentMgtDao agentDao;
+	
+	@Autowired
+    private ICommonService commonService;
+//	@RequestMapping(value = "/list", method = { RequestMethod.GET })
+//	public String list(Model model, @RequestParam(required = false, defaultValue = "1") int pageId)
+//	{
+//		LoginUser user = getUserOrSub();
+//		user.setCartCount(commonService.getCartCount(user.getWeiID()));
+//		HeadInfo headinfo = commonService.getHeadInfo();
+//		model.addAttribute("user", user);
+//		model.addAttribute("headinfo", headinfo);
+//		
+//		//获取联合分销号数据
+//		List<AgentVO> li=agent.getAgentList(Integer.parseInt(BrandType.join.toString()),user.getWeiID());
+//		List<AgentVO> li2=agent.getAgentList(Integer.parseInt(BrandType.personal.toString()),user.getWeiID());
+//		List<AgentProductVO> litop= agent.getTopAgentList();
+//		model.addAttribute("union", li);
+//		model.addAttribute("indep", li2);
+//		model.addAttribute("top", litop);
+//		model.addAttribute("user", user);
+//		return "agent/list";
+//	}
+	@RequestMapping(value = "/list", method = { RequestMethod.GET })
+	public String lists(Model model, @RequestParam(required = false, defaultValue = "1") int pageId)
+	{
+		LoginUser user = getUserOrSub();
+		//user.setWeiID(1111L);
+		user.setCartCount(commonService.getCartCount(user.getWeiID()));
+		HeadInfo headinfo = commonService.getHeadInfo();
+		model.addAttribute("user", user);
+		model.addAttribute("headinfo", headinfo);
+		if(user.getWeiID()>0){
+			DAgentInfo dainfo=agentDao.getDAgentInfo(user.getWeiID(), 1);
+			DAgentApply dapply=agentDao.getDAgentApply(user.getWeiID(), 1);
+			if(dapply!=null){
+				if(dainfo!=null){
+					model.addAttribute("stype", 1);//代理身份
+				}else{
+					model.addAttribute("stype", 2);//2未缴费
+				}
+				
+			}else{
+				model.addAttribute("stype", 0);//0未游客，或者非代理身份
+			}
+		}else{
+			model.addAttribute("stype", 0);//0未游客，或者非代理身份
+		}
+		
+		//营养保健类
+		List<Long> yybj_productIds =new ArrayList<Long>(Arrays.asList(1452262L,1452268L,1452524L,1452528L,1452532L,1440966L,1441106L,1441122L,1441478L));
+		List<AgentProductVO> yybjagentProductList=agent.getAgentProductByPids(yybj_productIds, user.getWeiID(), 1, "yybj");
+		model.addAttribute("yybj", yybjagentProductList);
+		//化妆美容类
+		List<Long> hzmr_productIds =new ArrayList<Long>(Arrays.asList(1441090L,1441130L,1441132L,1441134L,1441140L,1441142L,1441148L,1442102L,1442118L,1442126L,1442134L,1442142L,1442152L,1442166L,1442176L,1442186L,1442196L,1442206L,1442214L,1452916L));
+		List<AgentProductVO> hzmragentProductList=agent.getAgentProductByPids(hzmr_productIds, user.getWeiID(), 1, "hzmr");
+		model.addAttribute("hzmr", hzmragentProductList);
+		//生活日用类
+		List<Long> shry_productIds =new ArrayList<Long>(Arrays.asList(1441298L,1441300L,1441306L,1441310L,1441344L,1441350L,1441356L,1441360L,1441368L,1441582L,1441586L,1441590L,1441600L));
+		List<AgentProductVO> shryagentProductList=agent.getAgentProductByPids(shry_productIds, user.getWeiID(), 1, "shry");
+		model.addAttribute("shry", shryagentProductList);
+		//粮油调味类
+		List<Long> lytw_productIds =new ArrayList<Long>(Arrays.asList(1441474L));
+		List<AgentProductVO> lytwagentProductList=agent.getAgentProductByPids(lytw_productIds, user.getWeiID(), 1, "lytw");
+		model.addAttribute("lytw", lytwagentProductList);
+		//家居家纺类
+		List<Long> jjjf_productIds =new ArrayList<Long>(Arrays.asList(1452924L));
+		List<AgentProductVO> jjjfagentProductList=agent.getAgentProductByPids(jjjf_productIds, user.getWeiID(), 1, "jjjf");
+		model.addAttribute("jjjf", jjjfagentProductList);
+		//生活电器类
+		List<Long> shdq_productIds =new ArrayList<Long>(Arrays.asList(1448072L,1450838L,1451090L,1451212L));
+		List<AgentProductVO> shdqagentProductList=agent.getAgentProductByPids(shdq_productIds, user.getWeiID(), 1, "shdq");
+		model.addAttribute("shdq", shdqagentProductList);
+		List<AgentProductVO> litop= agent.getTopAgentList();
+		model.addAttribute("top", litop);
+		return "agent/list1";
+	}
+
+}

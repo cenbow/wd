@@ -1,0 +1,43 @@
+package com.okwei.bean.vo.order;
+
+public class ProductImgVO {
+	
+	private Long productImgId;
+	/**
+	 * 商品ID
+	 */
+	private Long productId;
+	/**
+	 * 供应商微店号
+	 */
+	private Long supplierWeiId;
+	/**
+	 * 图片地址
+	 */
+	private String imgPath;
+	
+	public Long getProductImgId() {
+		return productImgId;
+	}
+	public void setProductImgId(Long productImgId) {
+		this.productImgId = productImgId;
+	}
+	public Long getProductId() {
+		return productId;
+	}
+	public void setProductId(Long productId) {
+		this.productId = productId;
+	}
+	public Long getSupplierWeiId() {
+		return supplierWeiId;
+	}
+	public void setSupplierWeiId(Long supplierWeiId) {
+		this.supplierWeiId = supplierWeiId;
+	}
+	public String getImgPath() {
+		return imgPath;
+	}
+	public void setImgPath(String imgPath) {
+		this.imgPath = imgPath;
+	}
+}

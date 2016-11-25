@@ -1,0 +1,21 @@
+package com.okwei.service.order;
+
+import com.okwei.bean.vo.ReturnModel;
+
+public interface IOrderMgtService {
+
+	/**
+	 * 修改单价
+	 * @param WeiID
+	 * @param param
+	 * @return
+	 */
+	public ReturnModel updatePostUnitPrice(long WeiID, String param);
+	/**
+	 * 修改总价
+	 * @param WeiID
+	 * @param param
+	 * @return
+	 */
+	public ReturnModel updateModifyTotalPrice(long WeiID, String param);
+}

@@ -1,0 +1,72 @@
+package com.okwei.dao.impl.agent;
+
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.okwei.bean.domain.DAgentInfo;
+import com.okwei.bean.domain.DAgentMembers;
+import com.okwei.bean.domain.DAgentTasks;
+import com.okwei.bean.domain.DAgentTeam;
+import com.okwei.bean.domain.DCastellans;
+import com.okwei.common.Limit;
+import com.okwei.common.PageResult;
+import com.okwei.dao.IBaseDAO;
+import com.okwei.dao.agent.IDAgentMgtDao;
+
+@Repository
+@Transactional(propagation = Propagation.REQUIRED, rollbackFor = { Exception.class })
+public class DAgentMgtDao implements IDAgentMgtDao {
+	@Autowired
+	private IBaseDAO baseDAO;
+	
+	public DAgentInfo getDAgentInfo(Long weiid,Integer brandid){
+		return baseDAO.getNotUniqueResultByHql(" from DAgentInfo a where a.weiId=? and a.brandId=?", weiid,brandid);
+	}
+	
+	public PageResult<DAgentMembers> find_DAgentMembers(Long weiid, Integer brandid,int pageIndex,int pageSize){
+		String hql = " from DAgentMembers a where a.brandId=? and a.superWeiid=? order by a.memberId desc ";
+		Limit limit=Limit.buildLimit(pageIndex, pageSize);
+		return baseDAO.findPageResult(hql, limit, brandid, weiid);
+	}
+	
+	public List<DAgentMembers> find_DAgentMembers(Long weiid, Integer brandid){
+		String hql = " from DAgentMembers a where a.brandId=? and a.superWeiid=? order by a.memberId desc ";
+		return baseDAO.find(hql,  brandid, weiid);
+	}
+	public long count_DAgentMembers(Long weiid, Integer brandid){
+		String hql = " select count(*) from DAgentMembers a where a.brandId=? and a.superWeiid=?  ";
+		return baseDAO.count(hql, brandid, weiid);
+	}
+	
+	public PageResult<DAgentTasks> find_DAgentTasks(Long weiid,Integer brandid,int pageIndex,int pageSize){
+		return baseDAO.findPageResult(" from DAgentTasks d where d.weiId=? and d.brandId=? order by d.taskId desc ", Limit.buildLimit(pageIndex, pageSize), weiid,brandid);
+	}
+	
+	public List<DAgentTeam> find_DAgentTeams(Integer brandid,Integer province,Integer city,Integer district){
+		return baseDAO.find(" from DAgentTeam a where a.brandId=? and a.province=? and a.city=? and a.district=?", brandid,province,city,district);
+	}
+	
+	public DAgentTeam getDAgentTeam(Integer brandid,Long weiid){
+		return baseDAO.getNotUniqueResultByHql(" from DAgentTeam a where a.brandId=? and a.weiId=?", brandid,weiid);
+	}
+	
+	public DAgentTeam getDAgentTeamMaxNum(Integer brandid,Integer province,Integer city,Integer district){
+		List<DAgentTeam>list= baseDAO.find(" from DAgentTeam a where a.brandId=? and a.province=? and a.city=? and a.district=? order by a.memberCount desc ", brandid,province,city,district);
+		if(list!=null&&list.size()>0)
+			return list.get(0);
+		return null;
+	}
+	
+	public long count_DAgentTeams(Integer brandid,Integer province,Integer city,Integer district){
+		return baseDAO.count("select count(*) from DAgentTeam a where a.brandId=? and a.province=? and a.city=? and a.district=?", brandid,province,city,district);
+	}
+	
+	public List<DCastellans> find_DCastellans(Integer brandid,Integer province,Integer city,Integer district){
+		return baseDAO.find(" from DCastellans a where a.brandId=? and a.province=? and a.city=? and a.district=?", brandid,province,city,district);	
+	}
+	
+}

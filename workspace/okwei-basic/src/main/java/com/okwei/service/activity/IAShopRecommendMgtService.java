@@ -1,0 +1,65 @@
+package com.okwei.service.activity;
+
+import java.util.List;
+
+import com.okwei.bean.domain.ARedPacMoneyDetail;
+import com.okwei.bean.domain.ARedPacMoneyTypes;
+import com.okwei.bean.domain.AShopRecommend;
+import com.okwei.bean.dto.activity.AShopRecommendDTO;
+import com.okwei.bean.vo.ReturnModel;
+import com.okwei.bean.vo.activity.AShopRecommendVO;
+import com.okwei.bean.vo.activity.RedPacMoneyVO;
+import com.okwei.bean.vo.activity.WeiShopModel;
+import com.okwei.common.Limit;
+import com.okwei.common.PageResult;
+
+public interface IAShopRecommendMgtService {
+    /**
+     * 添加店铺推荐
+     * 
+     * @param srdto
+     * @return
+     */
+    public ReturnModel addAShopRecommend(AShopRecommendDTO dto);
+
+    /**
+     * 获取店铺推荐列表
+     * 
+     * @param title
+     * @param state
+     * @return
+     */
+    public PageResult<AShopRecommendVO> findRecommend(AShopRecommend srds,Limit limit);
+    /**
+     * APP获取店铺推荐列表
+     * 
+     * @param title
+     * @param state
+     * @return
+     */
+    public PageResult<WeiShopModel> findRecommend(Limit limit);
+    /**
+     * 获取红包管理列表
+     * 
+     * @param title
+     * @param state
+     * @return
+     */
+    public PageResult<RedPacMoneyVO> findRedPacMoney(Limit limit,String actTime,int pid);
+    /**
+     * 获取红包管理列表
+     * 
+     * @param title
+     * @param state
+     * @return
+     */
+    public List<ARedPacMoneyTypes> findTypesList();
+    /**
+     * 获取红包管理列表
+     * 
+     * @param title
+     * @param state
+     * @return
+     */
+    public ReturnModel addRedPacMoney(List<ARedPacMoneyDetail> list,String actTime,Double totalAmount,Long weiId,int pid);
+}

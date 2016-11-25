@@ -1,0 +1,82 @@
+package com.okwei.dao.impl.shop;
+
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.stereotype.Repository;
+
+import com.okwei.bean.domain.PShopClass;
+import com.okwei.bean.domain.UPlatformSupplyerImg;
+import com.okwei.dao.impl.BaseDAO;
+import com.okwei.dao.shop.IBasicShopMgtDAO;
+
+@Repository
+public class BasicShopMgtDAO extends BaseDAO implements IBasicShopMgtDAO {
+
+	@Override
+	public List<PShopClass> getSubShopClass(Integer parentId) {
+		return super.find("from PShopClass where state = 1 and paretId = ? order by sort", parentId);
+	}
+
+	@Override
+	public List<PShopClass> getShopClass(Integer parentId, Long weiId) {
+		return super.find("from PShopClass where level=1 and state = 1 and weiid = ? order by sort", weiId);
+	}
+
+	@Override
+	public List<UPlatformSupplyerImg> getImgs(Long weiId) {
+		String hql = "from UPlatformSupplyerImg where weiId = ? ";
+		return super.find(hql, weiId);
+	}
+
+	@Override
+	public String getIndustry(Long weiId) {
+		StringBuilder sb = new StringBuilder();
+		String hql = "select b.name from USupplierBusCategory a,TBussinessClass b where a.categoryId=b.id and a.weiId = ?";
+		List<String> list = super.find(hql, weiId);
+		if (null != list && list.size() > 0) {
+			for (String str : list) {
+				sb.append(str + " ");
+			}
+		}
+		return sb.toString();
+	}
+
+	@Override
+	public boolean getIsHaveShopName(long weiID, String shopClassName, Short level, Integer sid) {
+		boolean result = false;
+		if (weiID < 1) {
+			return result;
+		}
+		String hql = "select count(*) from PShopClass p where p.weiid =:weiID and p.sname=:sName and p.level=:level";
+		Map<String, Object> params = new HashMap<String, Object>();
+		params.put("weiID", weiID);
+		params.put("sName", shopClassName);
+		params.put("level", level);
+		if (sid != null && sid > 0) {
+			hql += " and p.sid != :sid";
+			params.put("sid", sid);
+		}
+		if (countByMap(hql, params) > 0) {
+			result = true;
+		}
+		return result;
+	}
+
+	@Override
+	public long productCountBySid(long weiId, long classId) {
+		String hql = "select count(1) from PClassProducts where (state=0 or state=1) and weiId=? and classId=?";
+		return super.count(hql, weiId, classId);
+	}
+
+	@Override
+	public long productCountBySid(Long weiId, Long[] scids) {
+		String hql = "select count(1) from PClassProducts where (state=0 or state=1) and weiId=:weiID and classId in(:scids)";
+		Map<String, Object> params = new HashMap<String, Object>();
+		params.put("weiID", weiId);
+		params.put("scids", scids);
+		return super.countByMap(hql, params);
+	}
+
+}

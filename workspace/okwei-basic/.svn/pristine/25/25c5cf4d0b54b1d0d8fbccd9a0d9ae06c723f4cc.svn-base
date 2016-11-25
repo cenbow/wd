@@ -1,0 +1,249 @@
+package com.okwei.service.impl.address;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.okwei.bean.domain.TRegional;
+import com.okwei.bean.domain.UCustomerAddr;
+import com.okwei.bean.vo.address.AddressVO;
+import com.okwei.bean.vo.order.BAddressVO;
+import com.okwei.dao.address.IBasicAdressDAO;
+import com.okwei.dao.order.IBasicOrdersDao;
+import com.okwei.service.IRegionService;
+import com.okwei.service.address.IBasicAdressService;
+import com.okwei.service.impl.BaseService;
+import com.okwei.util.ObjectUtil;
+import com.okwei.util.ParseHelper;
+
+@Service
+public class BasicAdressService extends BaseService implements IBasicAdressService {
+
+	@Autowired
+	private IBasicAdressDAO adressDAO;
+
+	@Autowired
+	private IRegionService regionService;
+
+	@Autowired
+	private IBasicOrdersDao basicOrdersDao;
+	
+	@Override
+	public BAddressVO getCustomerDefaultAddress(Long weiId){
+		BAddressVO addressVO=null;
+		//得到默认收货地址
+		String hql_add="from UCustomerAddr u where u.weiId=? and u.isDefault=1";
+		UCustomerAddr addr=adressDAO.getUniqueResultByHql(hql_add, weiId);
+		if(addr!=null){
+			addressVO=new BAddressVO();
+			addressVO.setAddressId(addr.getCaddrId().toString());
+			addressVO.setProvince(addr.getProvince()); 
+			addressVO.setCity(addr.getCity());
+			addressVO.setDistrict(addr.getDistrict());
+			addressVO.setPhone(addr.getMobilePhone());
+			addressVO.setReceiveName(addr.getReceiverName());
+			addressVO.setAddress(addr.getDetailAddr());
+			addressVO.setAddress(addr.getDetailAddr()); 
+		}
+		return addressVO;
+	}
+	
+	@Override
+	public BAddressVO getCustomerAddressById(Long weiId,String addressId){
+		BAddressVO addressVO=null;
+		if (!ObjectUtil.isEmpty(addressId)) {
+			UCustomerAddr defaultaddr = null;
+			// 显示已选择的地址
+			defaultaddr = adressDAO.getCustomerAddressById(ParseHelper.toInt(addressId),
+					weiId);
+			addressVO = new BAddressVO();
+			
+			addressVO.setAddressId(defaultaddr.getCaddrId().toString());
+			addressVO.setCity(defaultaddr.getCity());
+			addressVO.setDistrict((defaultaddr.getDistrict()==null)?0:defaultaddr.getDistrict());
+			addressVO.setPhone(defaultaddr.getMobilePhone());
+			addressVO.setProvince(defaultaddr.getProvince()==null?defaultaddr.getCity():defaultaddr.getProvince());
+			addressVO.setReceiveName(defaultaddr.getReceiverName());
+			TRegional province=adressDAO.get(TRegional.class, (defaultaddr.getProvince()==null?defaultaddr.getCity():defaultaddr.getProvince()));
+			TRegional city=adressDAO.get(TRegional.class, defaultaddr.getCity());
+			TRegional district=adressDAO.get(TRegional.class, defaultaddr.getDistrict());
+			addressVO.setAddress(province.getName()+" "+city.getName()+" "+ district.getName()+" "+defaultaddr.getDetailAddr());
+			
+		}	
+		return addressVO;
+	}
+	
+	
+	public List<BAddressVO> getAddressList1(Long weiid) {
+		List<UCustomerAddr> list = basicOrdersDao.getCustomerAddressByWeiID(weiid);
+		List<BAddressVO> result = new ArrayList<BAddressVO>();
+		if (list != null && list.size() > 0) {
+			for (UCustomerAddr addr : list) {
+				BAddressVO temp = new BAddressVO();
+				temp.setAddressId(addr.getCaddrId().toString());
+				temp.setReceiveName(addr.getReceiverName());
+				temp.setProvince(addr.getProvince());
+				temp.setCity(addr.getCity());
+				temp.setDistrict(addr.getDistrict());
+				temp.setDetailAddr(addr.getDetailAddr());
+				temp.setPhone(addr.getMobilePhone());
+				temp.setQq(addr.getQq());
+				temp.setIsDefault(addr.getIsDefault());
+				temp.setIsShopAddress(addr.getIsShopAddress());
+				// TODO 获取详细地址 基类缓存还没有配置好
+				String address = "";
+				int province = addr.getProvince() == null ? 0 : addr.getProvince();
+				if (province > 0) {
+					address += regionService.getNameByCode(province);
+				}
+				int city = addr.getCity() == null ? 0 : addr.getCity();
+				if (city > 0) {
+					address += regionService.getNameByCode(city);
+				}
+				int street = addr.getDistrict() == null ? 0 : addr.getDistrict();
+				if (street > 0) {
+					address += regionService.getNameByCode(street);
+				}
+				temp.setAddress(address);
+				result.add(temp);
+			}
+		}
+		return result;
+	}
+	
+	
+	@Override
+	public List<AddressVO> getAddressList(Long weiid) {
+		List<UCustomerAddr> list = basicOrdersDao.getCustomerAddressByWeiID(weiid);
+		List<AddressVO> result = new ArrayList<AddressVO>();
+		if (list != null && list.size() > 0) {
+			for (UCustomerAddr addr : list) {
+				AddressVO temp = new AddressVO();
+				temp.setCaddrId(addr.getCaddrId());
+				temp.setReceiverName(addr.getReceiverName());
+				temp.setProvince(addr.getProvince());
+				temp.setCity(addr.getCity());
+				temp.setDistrict(addr.getDistrict());
+				temp.setDetailAddr(addr.getDetailAddr());
+				temp.setMobilePhone(addr.getMobilePhone());
+				temp.setQq(addr.getQq());
+				temp.setIsDefault(addr.getIsDefault());
+				temp.setIsShopAddress(addr.getIsShopAddress());
+				// TODO 获取详细地址 基类缓存还没有配置好
+				String address = "";
+				int province = addr.getProvince() == null ? 0 : addr.getProvince();
+				if (province > 0) {
+					address += regionService.getNameByCode(province);
+				}
+				int city = addr.getCity() == null ? 0 : addr.getCity();
+				if (city > 0) {
+					address += regionService.getNameByCode(city);
+				}
+				int street = addr.getDistrict() == null ? 0 : addr.getDistrict();
+				if (street > 0) {
+					address += regionService.getNameByCode(street);
+				}
+				temp.setAddress(address);
+				result.add(temp);
+			}
+		}
+		return result;
+	}
+
+	public List<BAddressVO> getBAddressList(Long weiid) {
+		List<UCustomerAddr> list = basicOrdersDao.getCustomerAddressByWeiID(weiid);
+		List<BAddressVO> result = new ArrayList<BAddressVO>();
+		if (list != null && list.size() > 0) {
+			for (UCustomerAddr addr : list) {
+				BAddressVO vo = new BAddressVO();
+				vo.setAddressId(addr.getCaddrId().toString());
+				vo.setReceiveName(addr.getReceiverName());
+				vo.setProvince(addr.getProvince());
+				vo.setCity(addr.getCity());
+				vo.setDistrict(addr.getDistrict());
+				vo.setQq(addr.getQq());
+				vo.setDetailAddr(addr.getDetailAddr());
+				vo.setPhone(addr.getMobilePhone());
+				String address = regionService.getNameByCode(addr.getProvince()==null?0:addr.getProvince()) + regionService.getNameByCode(addr.getCity()==null?0:addr.getCity()) + regionService.getNameByCode(addr.getDistrict()==null?0:addr.getDistrict());
+				vo.setAddress(address);
+				vo.setIsDefault(addr.getIsDefault());
+				vo.setIsShopAddress(addr.getIsShopAddress()==null?0:addr.getIsShopAddress()); 
+				result.add(vo);
+			}
+		}
+		return result;
+	}
+
+	@Override
+	public int saveOrUpdateAdd(UCustomerAddr model) {
+		// 如果修改的时候设为默认,修改其他的地址不为默认
+		if (model.getIsDefault() != null && model.getIsDefault().shortValue() == 1) {
+			if (model.getCaddrId() == null || model.getCaddrId() <= 0) {
+				adressDAO.cancelDefault(model.getWeiId());
+			}
+			else {
+				adressDAO.cancelDefault(model.getWeiId(), model.getCaddrId());
+			}
+		}
+		if (model.getIsShopAddress() != null && model.getIsShopAddress().shortValue() == 1) {
+			if (model.getCaddrId() == null || model.getCaddrId() <= 0) {
+				adressDAO.cancelShopAddress(model.getWeiId());
+			}
+			else {
+				adressDAO.cancelShopAddress(model.getWeiId(), model.getCaddrId());
+			}
+			String hql="update UProductShop set province=:province,city=:city,area=:area,address=:address,phone=:phone,linkMan=:linkMan where weiId=:weiId";
+			Map<String, Object> map=new HashMap<String, Object>();
+			map.put("province", model.getProvince());
+			map.put("city", model.getCity());
+			map.put("area", model.getDistrict()); 
+			map.put("phone", model.getMobilePhone());
+			map.put("linkMan", model.getReceiverName());
+			map.put("address", model.getDetailAddr());
+			map.put("weiId", model.getWeiId());
+			adressDAO.executeHqlByMap(hql, map); 
+		}
+		if (model.getCaddrId() != null && model.getCaddrId().intValue() > 0) {
+			if (model != null && model.getWeiId() != null && model.getWeiId().longValue() > 0) {
+				model.setUpdateTime(new Date());
+				return adressDAO.updateCustomerAddr(model);
+			}
+			return 0;
+		} else {
+			model.setRegisterTime(new Date());
+			// 添加
+			return adressDAO.addCustomerAddr(model);
+		}
+	}
+
+	@Override
+	public int deleteAddress(long weiid, int caddrID) {
+		return adressDAO.deleteAddress(weiid, caddrID);
+	}
+
+	@Override
+	public int setDefault(long weiid, int caddrID) {
+		// 如果修改的时候设为默认,修改其他的地址不为默认
+		adressDAO.cancelDefault(weiid);
+		return adressDAO.setDefault(caddrID);
+	}
+
+	@Override
+	public int setShopAddress(long weiid, int caddrID) {
+		// 如果修改的时候设为默认,修改其他的地址不为默认
+		adressDAO.cancelShopAddress(weiid);
+		return adressDAO.setShopAddress(caddrID);
+	}
+
+	@Override
+	public void cancelAllDefault(long weiid) {
+		// TODO Auto-generated method stub
+		adressDAO.cancelDefault(weiid);
+	}
+
+}

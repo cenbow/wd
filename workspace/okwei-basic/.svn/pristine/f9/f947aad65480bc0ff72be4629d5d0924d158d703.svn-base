@@ -1,0 +1,98 @@
+package com.okwei.bean.vo.activity;
+
+import java.io.Serializable;
+
+public class ActivityModel  implements Serializable{
+
+	private static final long serialVersionUID = -1999441290201606195L;
+
+	private int actId;
+	private String title;//活动标题
+	private String serverTime;//当前服务器时间
+	private String beginTime;//活动开始时间
+	private String endTime;
+	private Double actPrice;
+	private int state;//
+	private String stateText;
+	private int buyNumLimit;//限制购买数量
+	//参考枚举 ActType （0限时抢购，1全返）
+	private int activeType;
+	private String stateImage;
+	private Integer StockCount;//活动剩余库存
+	
+	public int getActId() {
+		return actId;
+	}
+	public void setActId(int actId) {
+		this.actId = actId;
+	}
+	public String getTitle() {
+		return title;
+	}
+	public void setTitle(String title) {
+		this.title = title;
+	}
+	public String getServerTime() {
+		return serverTime;
+	}
+	public void setServerTime(String serverTime) {
+		this.serverTime = serverTime;
+	}
+	public String getBeginTime() {
+		return beginTime;
+	}
+	public void setBeginTime(String beginTime) {
+		this.beginTime = beginTime;
+	}
+	public String getEndTime() {
+		return endTime;
+	}
+	public void setEndTime(String endTime) {
+		this.endTime = endTime;
+	}
+	public Double getActPrice() {
+		return actPrice;
+	}
+	public void setActPrice(Double actPrice) {
+		this.actPrice = actPrice;
+	}
+	public int getState() {
+		return state;
+	}
+	public void setState(int state) {
+		this.state = state;
+	}
+	public int getBuyNumLimit() {
+		return buyNumLimit;
+	}
+	public void setBuyNumLimit(int buyNumLimit) {
+		this.buyNumLimit = buyNumLimit;
+	}
+	public String getStateText() {
+		return stateText;
+	}
+	public void setStateText(String stateText) {
+		this.stateText = stateText;
+	}
+	public int getActiveType() {
+		return activeType;
+	}
+	public void setActiveType(int activeType) {
+		this.activeType = activeType;
+	}
+	public String getStateImage() {
+		return stateImage;
+	}
+	public void setStateImage(String stateImage) {
+		this.stateImage = stateImage;
+	}
+	public Integer getStockCount() {
+		return StockCount;
+	}
+	public void setStockCount(Integer stockCount) {
+		StockCount = stockCount;
+	}
+	
+	
+	
+}

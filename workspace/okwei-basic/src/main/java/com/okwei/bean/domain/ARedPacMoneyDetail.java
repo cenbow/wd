@@ -1,0 +1,125 @@
+package com.okwei.bean.domain;
+
+import java.util.Date;
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import static javax.persistence.GenerationType.IDENTITY;
+import javax.persistence.Id;
+import javax.persistence.Table;
+
+/**
+ * ARedPacMoneyDetail entity. @author MyEclipse Persistence Tools
+ */
+@Entity
+@Table(name = "A_RedPacMoneyDetail")
+public class ARedPacMoneyDetail implements java.io.Serializable {
+
+	// Fields
+
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = -8548499061281446260L;
+	private Integer redDetailId;
+	private Integer pid;
+	private Double amount;
+	private Integer redTypeId;
+	private Integer count;
+	private Date createTime;
+	private Integer status;
+	private Integer restCount;
+
+	// Constructors
+
+	/** default constructor */
+	public ARedPacMoneyDetail() {
+	}
+
+	/** full constructor */
+	public ARedPacMoneyDetail(Integer pid, Double amount, Integer redTypeId,
+			Integer count, Date createTime, Integer status) {
+		this.pid = pid;
+		this.amount = amount;
+		this.redTypeId = redTypeId;
+		this.count = count;
+		this.createTime = createTime;
+		this.status = status;
+	}
+
+	// Property accessors
+	@Id
+	@GeneratedValue(strategy = IDENTITY)
+	@Column(name = "RedDetailId", unique = true, nullable = false)
+	public Integer getRedDetailId() {
+		return this.redDetailId;
+	}
+
+	public void setRedDetailId(Integer redDetailId) {
+		this.redDetailId = redDetailId;
+	}
+
+	@Column(name = "PID")
+	public Integer getPid() {
+		return this.pid;
+	}
+
+	public void setPid(Integer pid) {
+		this.pid = pid;
+	}
+
+	@Column(name = "Amount", precision = 18)
+	public Double getAmount() {
+		return this.amount;
+	}
+
+	public void setAmount(Double amount) {
+		this.amount = amount;
+	}
+
+	@Column(name = "RedTypeId")
+	public Integer getRedTypeId() {
+		return this.redTypeId;
+	}
+
+	public void setRedTypeId(Integer redTypeId) {
+		this.redTypeId = redTypeId;
+	}
+
+	@Column(name = "Count")
+	public Integer getCount() {
+		return this.count;
+	}
+
+	public void setCount(Integer count) {
+		this.count = count;
+	}
+	
+	@Column(name = "RestCount")
+	public Integer getRestCount() {
+		return this.restCount;
+	}
+
+	public void setRestCount(Integer count) {
+		this.restCount = count;
+	}
+
+	@Column(name = "CreateTime", length = 0)
+	public Date getCreateTime() {
+		return this.createTime;
+	}
+
+	public void setCreateTime(Date createTime) {
+		this.createTime = createTime;
+	}
+
+	@Column(name = "Status")
+	public Integer getStatus() {
+		return this.status;
+	}
+
+	public void setStatus(Integer status) {
+		this.status = status;
+	}
+
+}

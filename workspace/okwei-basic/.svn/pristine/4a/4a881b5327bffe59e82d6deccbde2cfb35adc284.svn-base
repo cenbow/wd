@@ -1,0 +1,529 @@
+package com.okwei.service.impl.shop;
+
+import java.text.DecimalFormat;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.okwei.bean.domain.AActProductsShowTime;
+import com.okwei.bean.domain.AActShowProducts;
+import com.okwei.bean.domain.ADeals;
+import com.okwei.bean.domain.ADealsLog;
+import com.okwei.bean.domain.ADealsProducts;
+import com.okwei.bean.domain.AHomeMain;
+import com.okwei.bean.domain.AHomeProducts;
+import com.okwei.bean.domain.PProducts;
+import com.okwei.bean.enums.ProductStatusEnum;
+import com.okwei.bean.vo.ADealsVO;
+import com.okwei.bean.vo.HomeMainVO;
+import com.okwei.bean.vo.ReturnModel;
+import com.okwei.bean.vo.ReturnStatus;
+import com.okwei.bean.vo.activity.ActProductInfo;
+import com.okwei.bean.vo.activity.SaleActivityProductModel;
+import com.okwei.bean.vo.product.ProductInfo;
+import com.okwei.bean.vo.product.ProductModel;
+import com.okwei.bean.vo.share.ShareProduct;
+import com.okwei.common.Limit;
+import com.okwei.common.PageResult;
+import com.okwei.dao.IBaseDAO;
+import com.okwei.dao.product.IProductSearchDao;
+import com.okwei.service.activity.IBaseActivityService;
+import com.okwei.service.impl.BaseService;
+import com.okwei.service.shop.IDealsService;
+import com.okwei.util.ImgDomain;
+import com.okwei.util.RedisUtil;
+
+@Service
+public class DealsService extends BaseService implements IDealsService {
+    @Autowired
+    private IBaseDAO baseDAO;
+    @Autowired
+    private IProductSearchDao IPDao;
+    @Autowired
+    private IBaseActivityService activityService;
+    @Override
+    public ReturnModel addDeals(ADeals model, List<ADealsProducts> list, String operator) {
+	boolean flag = true;// 添加
+	if (model.getDealsId() != null && model.getDealsId().intValue() > 0) {
+	    flag = false;// 修改
+	}
+	ReturnModel result = new ReturnModel();
+	baseDAO.saveOrUpdate(model);
+	baseDAO.executeHql("delete ADealsProducts where dealsId=?", model.getDealsId());
+	for (ADealsProducts pro : list) {
+	    pro.setDealsId(model.getDealsId());
+	    pro.setPicture(ImgDomain.ReplitImgDoMain(pro.getPicture()));
+	    pro.setSort(99);
+	    baseDAO.save(pro);
+	}
+	if (flag) {
+	    addDealsLog(model.getDealsId(), operator, "添加了特卖产品");
+	} else {
+	    addDealsLog(model.getDealsId(), operator, "修改了特卖产品");
+	}
+	result.setStatu(ReturnStatus.Success);
+	return result;
+    }
+
+    /**
+     * 添加日志记录
+     * 
+     * @param operator
+     * @param content
+     */
+    private void addDealsLog(Integer dealsid, String operator, String content) {
+	ADealsLog entity = new ADealsLog();
+	entity.setDealsId(dealsid);
+	entity.setOperator(operator);
+	entity.setContent(content);
+	entity.setCreateTime(new Date());
+	baseDAO.save(entity);
+    }
+
+    @Override
+    public ADealsVO getADeals(int dealsid) {
+	ADealsVO model = null;
+	if (dealsid > 0) {
+	    ADeals entity = baseDAO.get(ADeals.class, dealsid);
+	    if (entity != null) {
+		model = new ADealsVO();
+		model.setDealsId(entity.getDealsId());
+		model.setDealsDate(entity.getDealsDate());
+		model.setDealsTitle(entity.getDealsTitle());
+		model.setPicturesHome(ImgDomain.GetFullImgUrl(entity.getPicturesHome()));
+		model.setDealsBigPicture(ImgDomain.GetFullImgUrl(entity.getDealsBigPicture()));
+		model.setCount(entity.getCount());
+		model.setState(entity.getState());
+		model.setCreateTime(entity.getCreateTime());
+	    }
+	}
+	return model;
+    }
+
+    @Override
+    public PageResult<SaleActivityProductModel> getDealsProducts(int dealsid, Limit limit) {
+	PageResult<ADealsProducts> page = baseDAO.findPageResult("from ADealsProducts where dealsId=? order by sort asc", limit, dealsid);
+	if (page != null) {
+	    List<ADealsProducts> list = page.getList();
+	    if (list != null && list.size() > 0) {
+		List<Long> proids = new ArrayList<Long>();
+		for (ADealsProducts pro : list) {
+		    proids.add(pro.getProductId());
+		}
+		Map<String, Object> params = new HashMap<String, Object>();
+		params.put("proids", proids.toArray());
+		params.put("state", Short.parseShort(ProductStatusEnum.Showing.toString()));
+		List<PProducts> prolist = baseDAO.findByMap("from PProducts where productId in(:proids) and state=:state", params);
+		boolean flag = false;
+		if (prolist != null && prolist.size() > 0)
+		    flag = true;
+		if (prolist != null && prolist.size() > 0) {
+		    List<SaleActivityProductModel> result = new ArrayList<SaleActivityProductModel>();
+		    for (ADealsProducts deals : list) {
+			SaleActivityProductModel temp = new SaleActivityProductModel();
+			temp.setProductPicture(ImgDomain.GetFullImgUrl(deals.getPicture()));
+			temp.setActDescription(deals.getDescription());
+			if (flag) {
+			    for (PProducts pro : prolist) {
+				if (deals.getProductId().equals(pro.getProductId())) {
+				    temp.setProductId(pro.getProductId());
+				    temp.setProductName(pro.getProductTitle());
+				    temp.setRetailPrice(pro.getDefaultPrice());
+				    temp.setDisplayPrice(pro.getOriginalPrice() == null ? pro.getDefaultPrice() : pro.getOriginalPrice());
+				    temp.setCommission(pro.getDefaultConmision());
+				    temp.setProviderWid(pro.getSupplierWeiId());
+				    break;
+				}
+			    }
+			}
+			result.add(temp);
+		    }
+		    return new PageResult<SaleActivityProductModel>(page.getTotalCount(), limit, result);
+		}
+	    }
+	}
+	return null;
+    }
+
+    @Override
+    public List<ProductInfo> getDealsProducts(int dealsid) {
+	if (dealsid > 0) {
+	    List<ADealsProducts> list = baseDAO.find("from ADealsProducts where dealsId=? order by sort asc", dealsid);
+	    if (list != null && list.size() > 0) {
+		List<Long> proids = new ArrayList<Long>();
+		for (ADealsProducts pro : list) {
+		    proids.add(pro.getProductId());
+		}
+		Map<String, Object> params = new HashMap<String, Object>();
+		params.put("proids", proids.toArray());
+		params.put("state", Short.parseShort(ProductStatusEnum.Showing.toString()));
+		List<PProducts> prolist = baseDAO.findByMap("from PProducts where productId in(:proids) and state=:state", params);
+		boolean flag = false;
+		if (prolist != null && prolist.size() > 0)
+		    flag = true;
+		if (prolist != null && prolist.size() > 0) {
+		    List<ProductInfo> result = new ArrayList<ProductInfo>();
+		    for (ADealsProducts deals : list) {
+			ProductInfo temp = new ProductInfo();
+			temp.setStockCount(deals.getId());
+			temp.setCompanyName(ImgDomain.GetFullImgUrl(deals.getPicture()));
+			temp.setShopClass(deals.getDescription());
+			temp.setType(deals.getSort());
+			if (flag) {
+			    for (PProducts pro : prolist) {
+				if (deals.getProductId().equals(pro.getProductId())) {
+				    temp.setProductId(pro.getProductId());
+				    temp.setProductPicture(ImgDomain.GetFullImgUrl(pro.getDefaultImg(), 24));
+				    temp.setProductName(pro.getProductTitle());
+				    temp.setStorePrice(pro.getDefaultPrice());
+				    temp.setDisplayPrice(pro.getOriginalPrice() == null ? pro.getDefaultPrice() : pro.getOriginalPrice());
+				    temp.setCommission(pro.getDefaultConmision());
+				    break;
+				}
+			    }
+			}
+			result.add(temp);
+		    }
+		    return result;
+		}
+	    }
+	}
+	return null;
+    }
+
+    @Override
+    public PageResult<ADealsVO> getADeals(String title, short state, Limit limit) {
+	Map<String, Object> params = new HashMap<String, Object>();
+	String hql = "from ADeals where ";
+	if (state == -1) {
+	    hql += " state!=-1";
+	} else {
+	    hql += " state=:state";
+	    params.put("state", state);
+	}
+	if (!"".equals(title)) {
+	    hql += " and dealsTitle like :title ";
+	    params.put("title", "%" + title + "%");
+	}
+	hql += " order by dealsDate desc";
+	PageResult<ADeals> page = baseDAO.findPageResultByMap(hql, limit, params);
+	if (page != null) {
+	    List<ADeals> list = page.getList();
+	    if (list != null && list.size() > 0) {
+		List<ADealsVO> resultlist = new ArrayList<ADealsVO>();
+		for (ADeals deals : list) {
+		    ADealsVO temp = new ADealsVO();
+		    temp.setDealsId(deals.getDealsId());
+		    temp.setDealsDate(deals.getDealsDate());
+		    temp.setDealsTitle(deals.getDealsTitle());
+		    temp.setPicturesHome(ImgDomain.GetFullImgUrl(deals.getPicturesHome()));
+		    temp.setDealsBigPicture(ImgDomain.GetFullImgUrl(deals.getDealsBigPicture()));
+		    temp.setCount(deals.getCount());
+		    temp.setState(deals.getState());
+		    temp.setCreateTime(deals.getCreateTime());
+		    resultlist.add(temp);
+		}
+		return new PageResult<ADealsVO>(page.getTotalCount(), limit, resultlist);
+	    }
+	}
+	return null;
+    }
+
+    @Override
+    public ReturnModel upOpenCancel(int dealsid, short state) {
+	ReturnModel result = new ReturnModel();
+	String hql = "update ADeals set state=";
+	if (state == 1) {
+	    hql += "0";
+	} else {
+	    hql += "1";
+	}
+	hql += " where dealsId=?";
+	baseDAO.executeHql(hql, dealsid);
+	result.setStatu(ReturnStatus.Success);
+	return result;
+    }
+
+    @Override
+    public ReturnModel upSetSort(int id, int sort) {
+	ReturnModel result = new ReturnModel();
+	baseDAO.executeHql("update ADealsProducts set sort=? where id=?", new Object[] { sort, id });
+	result.setStatu(ReturnStatus.Success);
+	return result;
+    }
+
+    @Override
+    public ReturnModel updeldealspro(int id) {
+	ReturnModel result = new ReturnModel();
+	baseDAO.executeHql("delete ADealsProducts where id=?", id);
+	result.setStatu(ReturnStatus.Success);
+	return result;
+    }
+
+    @Override
+    public ReturnModel addhomepc(AHomeMain entity, List<AHomeProducts> list) {
+	ReturnModel result = new ReturnModel();
+	result.setStatu(ReturnStatus.DataError);
+	// 一个位置只能添加一次
+	if (entity.getHomeId() == null || entity.getHomeId().intValue() <= 0) {
+	    if (baseDAO.count("select count(1) from AHomeMain where classId=? and position=? and type=?", new Object[] { entity.getClassId(), entity.getPosition(),entity.getType() }) > 0) {
+		result.setStatusreson("该位置已经添加了数据请列表点击编辑");
+		return result;
+	    }
+	}
+	baseDAO.saveOrUpdate(entity);
+	baseDAO.executeHql("delete AHomeProducts where homeId=?", entity.getHomeId());
+	for (AHomeProducts pro : list) {
+		pro.setHomeId(entity.getHomeId());
+	    baseDAO.save(pro);
+	}
+	result.setStatu(ReturnStatus.Success);
+	return result;
+    }
+
+    @Override
+    public HomeMainVO getAHomeMain(int homeId) {
+    	return getAHomeMain(homeId,0);
+    }
+    @Override
+    public HomeMainVO getAHomeMain(int homeId,int cid) {
+	HomeMainVO model = null;
+	if (homeId > 0) {
+	    AHomeMain entity = baseDAO.get(AHomeMain.class, homeId);
+	    if (entity != null) {
+		model = new HomeMainVO();
+		model.setHomeId(entity.getHomeId());
+		model.setClassId(entity.getClassId());
+		model.setClassName(entity.getClassName());
+		model.setPosition(entity.getPosition());
+		model.setCategoryName(entity.getCategoryName());
+		model.setLead(entity.getLead());
+		model.setHomeImage(ImgDomain.GetFullImgUrl(entity.getHomeImage()));
+		model.setBannerImage(ImgDomain.GetFullImgUrl(entity.getBannerImage()));
+		model.setState(entity.getState());
+		model.setCreateTime(entity.getCreateTime());
+	    }
+	}
+	if(cid>0){
+		AHomeMain entity = baseDAO.getNotUniqueResultByHql("from AHomeMain where classId=?", cid);
+	    if (entity != null) {
+		model = new HomeMainVO();
+		model.setHomeId(entity.getHomeId());
+		model.setClassId(entity.getClassId());
+		model.setClassName(entity.getClassName());
+		model.setPosition(entity.getPosition());
+		model.setCategoryName(entity.getCategoryName());
+		model.setLead(entity.getLead());
+		model.setHomeImage(ImgDomain.GetFullImgUrl(entity.getHomeImage()));
+		model.setBannerImage(ImgDomain.GetFullImgUrl(entity.getBannerImage()));
+		model.setState(entity.getState());
+		model.setCreateTime(entity.getCreateTime());
+	    }
+	}
+	return model;
+    }
+
+    @Override
+    public List<ProductInfo> getAHomeMainProducts(int homeId) {
+	if (homeId > 0) {
+	    List<AHomeProducts> list = baseDAO.find("from AHomeProducts where homeId=? ORDER BY sort", homeId);
+	    if (list != null && list.size() > 0) {
+		List<Long> proids = new ArrayList<Long>();
+		for (AHomeProducts pro : list) {
+		    proids.add(pro.getProductId());
+		}
+		Map<String, Object> params = new HashMap<String, Object>();
+		params.put("proids", proids);
+		params.put("state", Short.parseShort(ProductStatusEnum.Showing.toString()));
+		List<PProducts> proList = baseDAO.findByMap("from PProducts where productId in(:proids) and state=:state", params);
+		boolean flag = false;
+		if (proList != null && proList.size() > 0)
+		    flag = true;
+		List<ProductInfo> result = new ArrayList<ProductInfo>();
+		for (AHomeProducts home : list) {
+		    if (flag) {
+		    	ProductInfo temp = new ProductInfo();
+		    	if(home.getSort()!=null){
+		    		temp.setSort(home.getSort());
+		    	}
+			for (PProducts pro : proList) {
+			    if (home.getProductId().equals(pro.getProductId())) {
+				temp.setProductId(pro.getProductId());
+				temp.setProductName(pro.getProductTitle());
+				temp.setRetailPrice(pro.getDefaultPrice());
+				temp.setProductPicture(ImgDomain.GetFullImgUrl(pro.getDefaultImg(), 24));
+				result.add(temp);
+				break;
+			    }
+			}
+		    }
+		}
+		return result;
+	    }
+	}
+	return null;
+    }
+
+    @Override
+    public PageResult<HomeMainVO> getAHomeMain(int classId, int position, short state, Limit limit) {
+	Map<String, Object> params = new HashMap<String, Object>();
+	String hql = "from AHomeMain where 1=1 ";
+	if (classId > 0) {
+	    hql += " and classId=:classId ";
+	    params.put("classId", classId);
+	}
+	if (position > 0) {
+	    hql += " and position=:position ";
+	    params.put("position", position);
+	}
+	if (state != -1) {
+	    hql += " and state=:state ";
+	    params.put("state", state);
+	}
+	PageResult<AHomeMain> page = baseDAO.findPageResultByMap(hql, limit, params);
+	if (page != null) {
+	    List<AHomeMain> list = page.getList();
+	    if (list != null && list.size() > 0) {
+		List<HomeMainVO> modellist = new ArrayList<HomeMainVO>();
+		for (AHomeMain home : list) {
+		    HomeMainVO model = new HomeMainVO();
+		    model.setType(home.getType());
+		    model.setHomeId(home.getHomeId());
+		    model.setClassId(home.getClassId());
+		    model.setClassName(home.getClassName());
+		    model.setPosition(home.getPosition());
+		    model.setCategoryName(home.getCategoryName());
+		    model.setLead(home.getLead());
+		    model.setHomeImage(ImgDomain.GetFullImgUrl(home.getHomeImage()));
+		    model.setBannerImage(ImgDomain.GetFullImgUrl(home.getBannerImage()));
+		    model.setState(home.getState());
+		    model.setCreateTime(home.getCreateTime());
+		    modellist.add(model);
+		}
+		return new PageResult<HomeMainVO>(page.getTotalCount(), limit, modellist);
+	    }
+	}
+	return null;
+    }
+
+    @Override
+    public ReturnModel upOpenHome(int homeId, short state) {
+	ReturnModel result = new ReturnModel();
+	String hql = "update AHomeMain set state=";
+	if (state == 1) {
+	    hql += "0";
+	} else {
+	    hql += "1";
+	}
+	hql += " where homeId=?";
+	baseDAO.executeHql(hql, homeId);
+	result.setStatu(ReturnStatus.Success);
+	return result;
+
+    }
+
+    @SuppressWarnings("unchecked")
+    @Override
+    public PageResult<ProductModel> getAHomeMainProducts(int homeId, Limit limit) {
+    	return getAHomeMainProducts(homeId,0,0,limit);
+    }
+    @SuppressWarnings("unchecked")
+    @Override
+    public PageResult<ProductModel> getAHomeMainProducts(int homeId,int cid, int type,Limit limit) {
+	String keyName = "SecondaryPage_h_" + homeId +"_cid_"+cid+"_index_" + limit.getPageId() + "_size_" + limit.getSize();
+	PageResult<ProductModel> result = null;
+	try {
+	    result = (PageResult<ProductModel>) RedisUtil.getObject(keyName);
+	} catch (Exception e) {
+
+	}
+	if (result == null) {
+		String hql = null;
+		PageResult<PProducts> page=new PageResult<PProducts>();
+		if(cid>0){
+			hql="from PProducts where productId in(select productId from AHomeProducts where homeId in(select homeId from AHomeMain where classId=? and type=?) order by sort) and state=? ";
+			page = baseDAO.findPageResult(hql, limit, new Object[] { cid, type,Short.parseShort(ProductStatusEnum.Showing.toString()) });
+		}
+		if(homeId>0){
+			hql = "from PProducts where productId in(select productId from AHomeProducts where homeId=? order by sort) and state=?";
+			page = baseDAO.findPageResult(hql, limit, new Object[] { homeId, Short.parseShort(ProductStatusEnum.Showing.toString()) });
+		}
+	    if (page != null) {
+		List<PProducts> list = page.getList();
+		if (list != null && list.size() > 0) {
+		    List<ProductModel> proList = new ArrayList<ProductModel>();
+		    for (PProducts pro : list) {
+			ProductModel temp = new ProductModel();
+			temp.setProductId(pro.getProductId());
+			temp.setProductName(pro.getProductTitle());
+			temp.setProductPicture(ImgDomain.GetFullImgUrl(pro.getDefaultImg(), 24));
+			temp.setRetailPrice(pro.getDefaultPrice());
+			// 判断是否参加828周年庆活动
+			ActProductInfo api = IPDao.get_ProductAct(pro.getProductId());
+			if (api != null) {
+			AActProductsShowTime act = activityService.getAActProductsShowTime(
+											pro.getProductId(), true);
+			if (act != null) {
+				AActShowProducts product = baseDAO.get(AActShowProducts.class,
+										api.getProActId());
+				if (product != null) {
+					temp.setActPrice(product.getPrice());
+					temp.setStockCount(product.getStockCount());
+				}
+				long nowtime = System.currentTimeMillis();
+				long btime = api.getBeginTime().getTime();
+				long etime = api.getEndTime().getTime();
+				if (nowtime >= btime && nowtime <= etime) {
+					temp.setTy(1);
+					}
+				}
+			}
+			double percent = 1.5;
+			double displayPrice = pro.getDefaultPrice() * percent;
+			DecimalFormat df = new DecimalFormat("#.00");
+			displayPrice = Double.parseDouble(df.format(displayPrice));
+			temp.setDisplayPrice(pro.getOriginalPrice() == null ? displayPrice : pro.getOriginalPrice());
+			proList.add(temp);
+		    }
+		    result = new PageResult<ProductModel>(page.getTotalCount(), limit, proList);
+		    RedisUtil.setObject(keyName, result, 1800);
+		}
+	    }
+	}
+	return result;
+    }
+
+    @Override
+    public ADeals getADeals() {
+	String hql = "from ADeals where state=1 and dealsDate<=? order by dealsDate desc";
+	return baseDAO.getNotUniqueResultByHql(hql, new Date());
+    }
+
+    @Override
+    public List<ProductModel> getHotMainProducts(int homeId) {
+	PageResult<ShareProduct> page = baseDAO.queryPageResultBySql("select a.ProductID proID,a.ProductTitle proTitle,a.DefaultImg proImage,a.DefaultPrice price,a.OriginalPrice yprice,b.TotalCount saleCount from P_Products a LEFT JOIN P_ProductAssist b on a.ProductID=b.ProductID  where  a.productId in(select ProductID from A_HomeProducts where homeId=?) and a.state=? ORDER BY b.TotalCount DESC", ShareProduct.class, Limit.buildLimit(1, 3), new Object[] { homeId, Short.parseShort(ProductStatusEnum.Showing.toString()) });
+	if (page != null) {
+	    List<ShareProduct> list = page.getList();
+	    if (list != null && list.size() > 0) {
+		List<ProductModel> result = new ArrayList<ProductModel>();
+		for (ShareProduct pro : list) {
+		    ProductModel temp = new ProductModel();
+		    temp.setProductId(pro.getProID().longValue());
+		    temp.setProductName(pro.getProTitle());
+		    temp.setProductPicture(ImgDomain.GetFullImgUrl(pro.getProImage(), 24));
+		    temp.setRetailPrice(pro.getPrice().doubleValue());
+		    temp.setDisplayPrice(pro.getYprice() == null ? pro.getPrice().doubleValue() : pro.getYprice().doubleValue());
+		    temp.setSaleCount(pro.getSaleCount() == null ? 0 : pro.getSaleCount());
+		    result.add(temp);
+		}
+		return result;
+	    }
+	}
+	return null;
+    }
+}

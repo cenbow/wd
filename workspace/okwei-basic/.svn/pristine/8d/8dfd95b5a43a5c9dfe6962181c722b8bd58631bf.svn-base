@@ -1,0 +1,240 @@
+package com.okwei.service.impl.agent;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.okwei.bean.domain.DAgentInfo;
+import com.okwei.bean.domain.DBrandSupplier;
+import com.okwei.bean.domain.DBrands;
+import com.okwei.bean.domain.DBrandsInfo;
+import com.okwei.bean.domain.PBrandShevle;
+import com.okwei.bean.domain.PProductClass;
+import com.okwei.bean.domain.PProducts;
+import com.okwei.bean.domain.UUserAssist;
+import com.okwei.bean.enums.ProductStatusEnum;
+import com.okwei.bean.enums.UserIdentityType;
+import com.okwei.bean.vo.activity.ActProductInfo;
+import com.okwei.bean.vo.product.ProductModel;
+import com.okwei.common.Limit;
+import com.okwei.common.PageResult;
+import com.okwei.dao.impl.BaseDAO;
+import com.okwei.dao.product.IBaseProductDao;
+import com.okwei.dao.product.IProductSearchDao;
+import com.okwei.service.agent.IDAgentService;
+import com.okwei.util.BitOperation;
+import com.okwei.util.ImgDomain;
+
+@Service
+@Transactional(propagation = Propagation.REQUIRED, rollbackFor = { Exception.class })
+public class AgentServiceImpl extends BaseDAO implements IDAgentService{
+	@Autowired
+	private IBaseProductDao productDao;
+	@Autowired
+	private  IProductSearchDao productSearchDao;
+	
+	
+	public PageResult<PProducts> find_Productlist(Long weiid,Integer classID,Integer sysClassID, int pageIndex,int pageSize){
+		DBrandSupplier supplier=super.get(DBrandSupplier.class, weiid);
+		Limit limit=Limit.buildLimit(pageIndex, pageSize);
+		if(supplier!=null){
+			StringBuilder sb=new StringBuilder();
+			sb.append(" from PBrandShevle a where a.brandId=:brandid and a.type=:type ");
+			Map<String, Object> map=new HashMap<String, Object>();
+			map.put("brandid", supplier.getBrandId());
+			map.put("type", Short.parseShort(ProductStatusEnum.Showing.toString())); 
+			if(classID!=null&&classID!=-1){
+				sb.append(" and a.classId=:classid ");
+		 		map.put("classid", classID);
+			}
+			if(sysClassID!=null&&sysClassID!=-1){
+				List<Integer> list=new ArrayList<Integer>();
+				list.add(sysClassID);
+				List<PProductClass> a=findClassId(list);
+				List<Integer> ls=new ArrayList<Integer>();
+
+				for(PProductClass b:a){
+					ls.add(b.getClassId());
+				}
+				sb.append(" and a.systemClassID in(:systemClassID) ");
+				map.put("systemClassID", ls);
+			}
+			sb.append(" order by a.bid desc ");
+		    PageResult<PBrandShevle> result=super.findPageResultByMap(sb.toString(), limit, map);
+		    if(result!=null&&result.getList()!=null&&result.getList().size()>0){
+		    	List<Long> proidsList=new ArrayList<Long>();
+		    	for (PBrandShevle p : result.getList()) {
+					proidsList.add(p.getProductId());
+				}
+		    	List<PProducts> prolist=productDao.findProductlistByIds(proidsList, Short.parseShort(ProductStatusEnum.Showing.toString()));
+		    	return new PageResult<PProducts>(result.getTotalCount(), limit, prolist);
+		    }
+		    return new PageResult<PProducts>(result.getTotalCount(),limit,null);
+		}
+		return new PageResult<PProducts>(0,limit,null);
+	}
+	public List<PProductClass> findClassId(List<Integer> sysSid){
+		if (sysSid != null && sysSid.size() > 0) {
+			Map<String, Object> m = new HashMap<String, Object>();
+			m.put("parentId", sysSid);
+			List<PProductClass> a = super.findByMap("from PProductClass where parentId in(:parentId)", m);
+			if (a != null && a.size() > 0) {
+				if (a.get(0).getStep()!=null&&a.get(0).getStep() == 3) {
+					return a;
+				} else {
+					List<Integer> b = new ArrayList<Integer>();
+					for (PProductClass c : a) {
+						b.add(c.getClassId());
+					}
+					return  findClassId(b);
+				}
+			}
+		}
+		return null;
+		
+	}
+	public int verBrandSupplier(Long weiid){
+		DBrandSupplier supplier=super.get(DBrandSupplier.class, weiid);
+		if(supplier!=null){
+			return supplier.getType()==null?0:supplier.getType();
+		}else {
+			UUserAssist assist=super.get(UUserAssist.class, weiid);
+			if(assist!=null){
+				if(BitOperation.verIdentity(assist.getIdentity()==null?0:assist.getIdentity(), UserIdentityType.AgentBrandAgent)
+				||BitOperation.verIdentity(assist.getIdentity()==null?0:assist.getIdentity(), UserIdentityType.AgentDuke)
+				||BitOperation.verIdentity(assist.getIdentity()==null?0:assist.getIdentity(), UserIdentityType.AgentDeputyDuke)
+				||BitOperation.verIdentity(assist.getIdentity()==null?0:assist.getIdentity(), UserIdentityType.AgentCaptain)){
+					return 3;
+				}
+			}
+		}
+		return -1;
+	}
+	
+	public DBrands getBrands(Long weiid){
+		DBrandSupplier supplier=super.get(DBrandSupplier.class, weiid);
+		if(supplier!=null&&supplier.getBrandId()!=null){
+			return super.get(DBrands.class, supplier.getBrandId());
+		}
+		return null;
+	}
+	
+	public boolean canShelve(int useridentity){
+		if(BitOperation.isIdentity(useridentity, UserIdentityType.AgentBrandAgent)
+				||BitOperation.isIdentity(useridentity, UserIdentityType.AgentBrandSupplier)
+				||BitOperation.isIdentity(useridentity, UserIdentityType.AgentCaptain)
+				||BitOperation.isIdentity(useridentity, UserIdentityType.AgentDuke)
+				||BitOperation.isIdentity(useridentity, UserIdentityType.AgentDeputyDuke)){
+			return false;
+		}
+		return true;
+	}
+
+
+	@Override
+	public List<DBrands> find_listDBrands(Long wid) {
+		List<DBrandSupplier> supplier=super.find("from DBrandSupplier where weiId=?", wid);
+		if(supplier!=null&&supplier.size()>0){
+			List<DBrands> list=new ArrayList<DBrands>();
+			for(DBrandSupplier db:supplier){
+				DBrands brands=super.getUniqueResultByHql("from DBrands where brandId=?", db.getBrandId());//fin();
+				list.add(brands);
+			}
+			return list;
+		}
+		return null;
+	}
+
+	@Override
+	public Long getwei(Integer long1) {
+		DBrands db=super.get(DBrands.class,long1);
+		if(db!=null){
+			return db.getWeiId();
+		}
+		return null;
+	}
+
+	@Override
+	public List<DBrands> findBrandIds(Long wid) {
+		List<DAgentInfo> daifo= super.find("from DAgentInfo where weiId=? order by brandId", wid);//getNotUniqueResultByHql("select superWeiid from DAgentInfo where weiId=?", wid);
+		List<DBrands> list=null;
+		if(daifo!=null&&daifo.size()>0){
+			list=new ArrayList<DBrands>();
+			for(DAgentInfo w:daifo){
+				Integer brandid=w.getBrandId();
+				DBrands aa=super.get(DBrands.class, brandid);
+				list.add(aa);
+			}
+		}
+		return list;
+	}
+	
+	
+	 @Override
+	 public PageResult<ProductModel>  findAgentShopProductlist(Long weiid,Integer classID,Integer sysClassID, int pageIndex,int pageSize){
+	    	DBrandSupplier supplier=productDao.get(DBrandSupplier.class, weiid);
+			Limit limit=Limit.buildLimit(pageIndex, pageSize);
+			if(supplier!=null){
+				StringBuilder sb=new StringBuilder();
+				sb.append(" from PBrandShevle a where a.brandId=:brandid ");
+				Map<String, Object> map=new HashMap<String, Object>();
+				map.put("brandid", supplier.getBrandId());
+				if(classID!=null&&classID!=-1&&classID!=0){
+					sb.append(" and a.classId=:classid ");
+					map.put("classid", classID);
+				}
+				if(sysClassID!=null&&sysClassID!=-1&&sysClassID!=0){
+					List<Integer> list=new ArrayList<Integer>();
+					list.add(sysClassID);
+					List<PProductClass> a=findClassId(list);
+					List<Integer> ls=new ArrayList<Integer>();
+
+					for(PProductClass b:a){
+						ls.add(b.getClassId());
+					}
+					sb.append(" and a.systemClassID in(:systemClassID) ");
+					map.put("systemClassID", ls);
+				}
+				
+				sb.append(" order by a.bid desc ");
+			    PageResult<PBrandShevle> result=productDao.findPageResultByMap(sb.toString(), limit, map);
+			    if(result!=null&&result.getList()!=null&&result.getList().size()>0){
+			    	List<Long> proidsList=new ArrayList<Long>();
+			    	for (PBrandShevle p : result.getList()) {
+						proidsList.add(p.getProductId());
+					}
+			    	List<PProducts> prolist=productDao.findProductlistByIds(proidsList, Short.parseShort(ProductStatusEnum.Showing.toString()));
+			    	List<ProductModel> getAgentShopProductsList=new ArrayList<ProductModel>();
+			    	for (PProducts product : prolist) {
+			    		ProductModel pp=new ProductModel();
+			    		pp.setProductId(product.getProductId());
+			    		pp.setProductName(product.getProductTitle());
+			    		pp.setProductPicture(ImgDomain.GetFullImgUrl_product(product.getDefaultImg(), 75));
+			    		pp.setDisplayPrice(product.getOriginalPrice()==null?product.getDefaultPrice():product.getOriginalPrice());
+			    		pp.setRetailPrice(product.getDefaultPrice());
+			    		pp.setCommission(product.getDefaultConmision());
+			    		pp.setSellerWid(product.getSupplierWeiId());
+			    		//add by @zlp at 20160628 添加是否全返活动商品
+						ActProductInfo actpro=productSearchDao.get_ProductAct(product.getProductId());
+						if(actpro!=null&&actpro.getActiveType()==1){
+							pp.setIsActPro(1);
+						}
+						getAgentShopProductsList.add(pp);
+			    		
+					}
+			    	return new PageResult<ProductModel>(result.getTotalCount(), limit, getAgentShopProductsList);
+			    }
+			    return new PageResult<ProductModel>(result.getTotalCount(),limit,null);
+			}
+			return new PageResult<ProductModel>(0,limit,null);
+	    }
+	
+	
+	
+}

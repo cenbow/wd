@@ -1,0 +1,124 @@
+package com.okwei.bean.vo.product;
+
+import java.io.Serializable;
+
+public class ProductModel implements Serializable{
+
+	private static final long serialVersionUID = -7630372924359878101L;
+	
+	private Long productId;//商品Id
+	private String productName;//商品名称
+	private String productDescription;//商品说明，可为空
+	private String productPicture;//商品主图
+	private Double retailPrice;//零售价
+	private Double commission;//佣金
+	private Double displayPrice;//原价，可为空
+	private Integer stockCount;//库存数量
+	private Integer saleCount;//销量
+	private Long providerWid;//供应商微店号
+	private Long sellerWid;//供应商微店号
+	private Long shelveId;//产品上架Id，未上架商品可为空
+	
+	//是否被收藏(1全返活动产品  0 其它)
+	private int isActPro;//是否是828活动商品 add by @zlp at 2016.07.11
+	
+	//活动价
+	private Double actPrice;
+	//是否为活动进行中1进行中，0不在进行中
+	private int ty;
+	
+	
+	public int getTy() {
+		return ty;
+	}
+	public void setTy(int ty) {
+		this.ty = ty;
+	}
+	public Double getActPrice() {
+		return actPrice;
+	}
+	public void setActPrice(Double actPrice) {
+		this.actPrice = actPrice;
+	}
+	public Long getProductId() {
+		return productId;
+	}
+	public void setProductId(Long productId) {
+		this.productId = productId;
+	}
+	public String getProductName() {
+		return productName;
+	}
+	public void setProductName(String productName) {
+		this.productName = productName;
+	}
+	public String getProductDescription() {
+		return productDescription;
+	}
+	public void setProductDescription(String productDescription) {
+		this.productDescription = productDescription;
+	}
+	public String getProductPicture() {
+		return productPicture;
+	}
+	public void setProductPicture(String productPicture) {
+		this.productPicture = productPicture;
+	}
+	public Double getRetailPrice() {
+		return retailPrice;
+	}
+	public void setRetailPrice(Double retailPrice) {
+		this.retailPrice = retailPrice;
+	}
+	public Double getCommission() {
+		return commission;
+	}
+	public void setCommission(Double commission) {
+		this.commission = commission;
+	}
+	public Double getDisplayPrice() {
+		return displayPrice;
+	}
+	public void setDisplayPrice(Double displayPrice) {
+		this.displayPrice = displayPrice;
+	}
+	public Integer getStockCount() {
+		return stockCount;
+	}
+	public void setStockCount(Integer stockCount) {
+		this.stockCount = stockCount;
+	}
+	public Integer getSaleCount() {
+		return saleCount;
+	}
+	public void setSaleCount(Integer saleCount) {
+		this.saleCount = saleCount;
+	}
+	public Long getProviderWid() {
+		return providerWid;
+	}
+	public void setProviderWid(Long providerWid) {
+		this.providerWid = providerWid;
+	}
+	public Long getSellerWid() {
+		return sellerWid;
+	}
+	public void setSellerWid(Long sellerWid) {
+		this.sellerWid = sellerWid;
+	}
+	public Long getShelveId() {
+		return shelveId;
+	}
+	public void setShelveId(Long shelveId) {
+		this.shelveId = shelveId;
+	}
+	public int getIsActPro() {
+		return isActPro;
+	}
+	public void setIsActPro(int isActPro) {
+		this.isActPro = isActPro;
+	}
+	
+	
+	
+}

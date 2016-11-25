@@ -1,0 +1,18 @@
+package com.okwei.bean.vo.activity;
+
+import com.okwei.bean.domain.AActProductsShowTime;
+
+public class ActProductInfo extends AActProductsShowTime{
+
+	private static final long serialVersionUID = -8138093858858489238L;
+	
+	private int activeType;
+	public int getActiveType() {
+		return activeType;
+	}
+	public void setActiveType(int activeType) {
+		this.activeType = activeType;
+	}
+	
+	
+}

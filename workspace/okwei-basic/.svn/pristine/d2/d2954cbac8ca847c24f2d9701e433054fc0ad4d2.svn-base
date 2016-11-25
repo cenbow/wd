@@ -1,0 +1,38 @@
+package com.okwei.dao.product;
+
+import com.okwei.bean.domain.PProducts;
+import com.okwei.bean.vo.activity.ActProductInfo;
+
+public interface IProductSearchDao {
+	
+	/**
+	 * 根据产品ID获取产品
+	 * @param productID
+	 * @return
+	 */
+	public PProducts getPProducts(Long productID);
+
+	/**
+	 * PS：活动产品
+	 * 判断产品是否参加活动
+	 * @param productId
+	 * @return （null没有参加，如果不为Null说明参加了活动，通过beginTime,endTime判断是否在活动中,看type类型：1：表示全返，0或null表示普通限时抢购）
+	 */
+	public ActProductInfo get_ProductAct(Long productId);
+	
+	//----------------------------------------------------------
+	/**
+	 * PS：活动产品
+	 * 产品下架、不通过、等临时操作，清除缓存区的信息
+	 * （ 主要用户CTS操作）
+	 * @param productId
+	 */
+	public void del_redis_productAct(Long productId);
+	/**
+	 * PS:活动产品
+	 * 主动设置活动产品 至缓存区
+	 * （建议CTS操作时使用）
+	 * @param productId
+	 */
+	public void set_redis_productAct(Long productId);
+}

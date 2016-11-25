@@ -1,0 +1,49 @@
+package com.okwei.company.web;
+
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.RequestParam;
+
+import com.okwei.bean.enums.agent.AgentSupplierType;
+import com.okwei.bean.enums.agent.BrandType;
+import com.okwei.bean.vo.AgentProductVO;
+import com.okwei.bean.vo.AgentVO;
+import com.okwei.bean.vo.LoginUser;
+import com.okwei.company.bean.vo.HeadInfo;
+import com.okwei.company.service.ICommonService;
+import com.okwei.service.agent.IAgentBrandService;
+import com.okwei.web.base.SSOController;
+
+@Controller
+@RequestMapping(value = "/agent")
+public class AgentController  extends SSOController {
+	
+	@Autowired
+	private IAgentBrandService agent;
+	@Autowired
+    private ICommonService commonService;
+	@RequestMapping(value = "/list", method = { RequestMethod.GET })
+	public String list(Model model, @RequestParam(required = false, defaultValue = "1") int pageId)
+	{
+		LoginUser user = getUserOrSub();
+		user.setCartCount(commonService.getCartCount(user.getWeiID()));
+		HeadInfo headinfo = commonService.getHeadInfo();
+		model.addAttribute("user", user);
+		model.addAttribute("headinfo", headinfo);
+		//获取联合分销号数据
+		List<AgentVO> li=agent.getAgentList(Integer.parseInt(BrandType.join.toString()));
+		List<AgentVO> li2=agent.getAgentList(Integer.parseInt(BrandType.personal.toString()));
+		List<AgentProductVO> litop= agent.getTopAgentList();
+		model.addAttribute("union", li);
+		model.addAttribute("indep", li2);
+		model.addAttribute("top", litop);
+		model.addAttribute("user", user);
+		return "agent/list";
+	}
+
+}

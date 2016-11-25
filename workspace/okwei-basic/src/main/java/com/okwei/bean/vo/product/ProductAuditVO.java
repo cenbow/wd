@@ -1,0 +1,292 @@
+package com.okwei.bean.vo.product;
+
+public class ProductAuditVO {
+		/**
+		 * 产品id
+		 */
+		private long productID;
+		/**
+		 * 产品图片
+		 */
+		private String productImg;
+		/**
+		 * 产品标题
+		 */
+		private Double supplyPrice; //供货价
+		private String productTitle;
+		/**
+		 * 所属分类
+		 */
+		private String categories;
+		/**
+		 * 发布者微店号
+		 */
+		private long publisherWeiId;
+		/**
+		 * 发布者姓名
+		 */
+		private String publisher;
+		/**
+		 * 更新时间
+		 */
+		private String updateTime;
+		/**
+		 * 商品状态
+		 */
+		private short productState;
+		/**
+		 * 审核状态
+		 */
+		private short auditState;
+		/**
+		 * 
+		 * 审核时间
+		 */
+		private String auditTime;
+		/**
+		 * 创建时间
+		 * @return
+		 */
+		private String createTime;
+		//馆信息
+		private String moroStr;
+		//产品规格
+		private String attributeName;
+		//款式ＩＤ
+		private Long stylesId;
+		private Double price;//零售价
+		private String dukePrice;//城主价
+		private String deputyPrice;//副城主价
+		private String agentPrice;//代理价
+
+		public Long getStylesId() {
+			return stylesId;
+		}
+		public void setStylesId(Long stylesId) {
+			this.stylesId = stylesId;
+		}
+		/**
+		 * 零售价
+		 */
+		private Double defaultPrice;
+		public String getAttributeName() {
+			return attributeName;
+		}
+
+		public void setAttributeName(String attributeName) {
+			this.attributeName = attributeName;
+		}
+
+		/**
+		 * @return the productID
+		 */
+		public long getProductID() {
+			return productID;
+		}
+		/**
+		 * @param productID the productID to set
+		 */
+		public void setProductID(long productID) {
+			this.productID = productID;
+		}
+		/**
+		 * @return the productImg
+		 */
+		public String getProductImg() {
+			return productImg;
+		}
+		/**
+		 * @param productImg the productImg to set
+		 */
+		public void setProductImg(String productImg) {
+			this.productImg = productImg;
+		}
+		/**
+		 * @return the supplyPrice
+		 */
+		public Double getSupplyPrice() {
+			return supplyPrice;
+		}
+		/**
+		 * @param supplyPrice the supplyPrice to set
+		 */
+		public void setSupplyPrice(Double supplyPrice) {
+			this.supplyPrice = supplyPrice;
+		}
+		/**
+		 * @return the productTitle
+		 */
+		public String getProductTitle() {
+			return productTitle;
+		}
+		/**
+		 * @param productTitle the productTitle to set
+		 */
+		public void setProductTitle(String productTitle) {
+			this.productTitle = productTitle;
+		}
+		/**
+		 * @return the categories
+		 */
+		public String getCategories() {
+			return categories;
+		}
+		/**
+		 * @param categories the categories to set
+		 */
+		public void setCategories(String categories) {
+			this.categories = categories;
+		}
+		/**
+		 * @return the publisherWeiId
+		 */
+		public long getPublisherWeiId() {
+			return publisherWeiId;
+		}
+		/**
+		 * @param publisherWeiId the publisherWeiId to set
+		 */
+		public void setPublisherWeiId(long publisherWeiId) {
+			this.publisherWeiId = publisherWeiId;
+		}
+		/**
+		 * @return the publisher
+		 */
+		public String getPublisher() {
+			return publisher;
+		}
+		/**
+		 * @param publisher the publisher to set
+		 */
+		public void setPublisher(String publisher) {
+			this.publisher = publisher;
+		}
+		/**
+		 * @return the updateTime
+		 */
+		public String getUpdateTime() {
+			return updateTime;
+		}
+		/**
+		 * @param updateTime the updateTime to set
+		 */
+		public void setUpdateTime(String updateTime) {
+			this.updateTime = updateTime;
+		}
+		/**
+		 * @return the productState
+		 */
+		public short getProductState() {
+			return productState;
+		}
+		/**
+		 * @param productState the productState to set
+		 */
+		public void setProductState(short productState) {
+			this.productState = productState;
+		}
+		/**
+		 * @return the auditState
+		 */
+		public short getAuditState() {
+			return auditState;
+		}
+		/**
+		 * @param auditState the auditState to set
+		 */
+		public void setAuditState(short auditState) {
+			this.auditState = auditState;
+		}
+		/**
+		 * @return the auditTime
+		 */
+		public String getAuditTime() {
+			return auditTime;
+		}
+		/**
+		 * @param auditTime the auditTime to set
+		 */
+		public void setAuditTime(String auditTime) {
+			this.auditTime = auditTime;
+		}
+		/**
+		 * @return the createTime
+		 */
+		public String getCreateTime() {
+			return createTime;
+		}
+		/**
+		 * @param createTime the createTime to set
+		 */
+		public void setCreateTime(String createTime) {
+			this.createTime = createTime;
+		}
+		/**
+		 * @return the moroStr
+		 */
+		public String getMoroStr() {
+			return moroStr;
+		}
+		/**
+		 * @param moroStr the moroStr to set
+		 */
+		public void setMoroStr(String moroStr) {
+			this.moroStr = moroStr;
+		}
+		/**
+		 * @return the defaultPrice
+		 */
+		public Double getDefaultPrice() {
+			return defaultPrice;
+		}
+		/**
+		 * @param defaultPrice the defaultPrice to set
+		 */
+		public void setDefaultPrice(Double defaultPrice) {
+			this.defaultPrice = defaultPrice;
+		}
+
+		public Double getPrice() {
+			return price;
+		}
+		public void setPrice(Double price) {
+			this.price = price;
+		}
+		/**
+		 * @return the dukePrice
+		 */
+		public String getDukePrice() {
+			return dukePrice;
+		}
+		/**
+		 * @param dukePrice the dukePrice to set
+		 */
+		public void setDukePrice(String dukePrice) {
+			this.dukePrice = dukePrice;
+		}
+		/**
+		 * @return the deputyPrice
+		 */
+		public String getDeputyPrice() {
+			return deputyPrice;
+		}
+		/**
+		 * @param deputyPrice the deputyPrice to set
+		 */
+		public void setDeputyPrice(String deputyPrice) {
+			this.deputyPrice = deputyPrice;
+		}
+		/**
+		 * @return the agentPrice
+		 */
+		public String getAgentPrice() {
+			return agentPrice;
+		}
+		/**
+		 * @param agentPrice the agentPrice to set
+		 */
+		public void setAgentPrice(String agentPrice) {
+			this.agentPrice = agentPrice;
+		}
+		
+}

@@ -1,0 +1,234 @@
+package com.okwei.bean.domain;
+
+import static javax.persistence.GenerationType.IDENTITY;
+
+import java.util.Date;
+
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.Id;
+import javax.persistence.Table;
+
+/**
+ * DAgentApply entity. @author MyEclipse Persistence Tools
+ */
+@Entity
+@Table(name = "D_AgentApply")
+public class DAgentApply implements java.io.Serializable {
+
+	// Fields
+
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = -874422414056826581L;
+	private Long agentApplyId;
+	private Long weiId;
+	private Integer brandId;
+	private String name;
+	private String contactPhone;
+	private String qq;
+	private Integer province;
+	private Integer city;
+	private Integer district;
+	private Double costs;
+	private String advantage;
+	private Date createTime;
+	private Long referencer;
+	private Integer status;
+	private Long auditOperator;
+	private Long agentId;
+	private String weiXin;
+
+	// Constructors
+
+	/** default constructor */
+	public DAgentApply() {
+	}
+
+	/** minimal constructor */
+	public DAgentApply(Long agentApplyId) {
+		this.agentApplyId = agentApplyId;
+	}
+
+	/** full constructor */
+	public DAgentApply(Long agentApplyId, Long weiId, Integer brandId,
+			String name, String contactPhone, String qq, Integer province,
+			Integer city, Integer district, Double costs, String advantage,
+			Date createTime, Long referencer, Integer status,
+			Long auditOperator, Long agentId) {
+		this.agentApplyId = agentApplyId;
+		this.weiId = weiId;
+		this.brandId = brandId;
+		this.name = name;
+		this.contactPhone = contactPhone;
+		this.qq = qq;
+		this.province = province;
+		this.city = city;
+		this.district = district;
+		this.costs = costs;
+		this.advantage = advantage;
+		this.createTime = createTime;
+		this.referencer = referencer;
+		this.status = status;
+		this.auditOperator = auditOperator;
+		this.agentId = agentId;
+	}
+
+	// Property accessors
+	@Id
+	@GeneratedValue(strategy = IDENTITY)
+	@Column(name = "AgentApplyID", unique = true, nullable = false)
+	public Long getAgentApplyId() {
+		return this.agentApplyId;
+	}
+
+	public void setAgentApplyId(Long agentApplyId) {
+		this.agentApplyId = agentApplyId;
+	}
+
+	@Column(name = "WeiID")
+	public Long getWeiId() {
+		return this.weiId;
+	}
+
+	public void setWeiId(Long weiId) {
+		this.weiId = weiId;
+	}
+
+	@Column(name = "BrandID")
+	public Integer getBrandId() {
+		return this.brandId;
+	}
+
+	public void setBrandId(Integer brandId) {
+		this.brandId = brandId;
+	}
+
+	@Column(name = "Name", length = 64)
+	public String getName() {
+		return this.name;
+	}
+
+	public void setName(String name) {
+		this.name = name;
+	}
+
+	@Column(name = "ContactPhone", length = 64)
+	public String getContactPhone() {
+		return this.contactPhone;
+	}
+
+	public void setContactPhone(String contactPhone) {
+		this.contactPhone = contactPhone;
+	}
+
+	@Column(name = "QQ", length = 64)
+	public String getQq() {
+		return this.qq;
+	}
+
+	public void setQq(String qq) {
+		this.qq = qq;
+	}
+
+	@Column(name = "Province")
+	public Integer getProvince() {
+		return this.province;
+	}
+
+	public void setProvince(Integer province) {
+		this.province = province;
+	}
+
+	@Column(name = "City")
+	public Integer getCity() {
+		return this.city;
+	}
+
+	public void setCity(Integer city) {
+		this.city = city;
+	}
+
+	@Column(name = "District")
+	public Integer getDistrict() {
+		return this.district;
+	}
+
+	public void setDistrict(Integer district) {
+		this.district = district;
+	}
+
+	@Column(name = "Costs", precision = 18)
+	public Double getCosts() {
+		return this.costs;
+	}
+
+	public void setCosts(Double costs) {
+		this.costs = costs;
+	}
+
+	@Column(name = "Advantage", length = 65535)
+	public String getAdvantage() {
+		return this.advantage;
+	}
+
+	public void setAdvantage(String advantage) {
+		this.advantage = advantage;
+	}
+
+	@Column(name = "CreateTime", length = 0)
+	public Date getCreateTime() {
+		return this.createTime;
+	}
+
+	public void setCreateTime(Date createTime) {
+		this.createTime = createTime;
+	}
+
+	@Column(name = "Referencer")
+	public Long getReferencer() {
+		return this.referencer;
+	}
+
+	public void setReferencer(Long referencer) {
+		this.referencer = referencer;
+	}
+
+	@Column(name = "Status")
+	public Integer getStatus() {
+		return this.status;
+	}
+
+	public void setStatus(Integer status) {
+		this.status = status;
+	}
+
+	@Column(name = "AuditOperator")
+	public Long getAuditOperator() {
+		return this.auditOperator;
+	}
+
+	public void setAuditOperator(Long auditOperator) {
+		this.auditOperator = auditOperator;
+	}
+
+	@Column(name = "AgentID")
+	public Long getAgentId() {
+		return this.agentId;
+	}
+
+	public void setAgentId(Long agentId) {
+		this.agentId = agentId;
+	}
+
+	@Column(name = "WeiXin")
+	public String getWeiXin() {
+		return this.weiXin;
+	}
+
+	public void setWeiXin(String weixin) {
+		this.weiXin = weixin;
+	}
+}

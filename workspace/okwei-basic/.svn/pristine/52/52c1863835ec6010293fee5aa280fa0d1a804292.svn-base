@@ -1,0 +1,14 @@
+package com.okwei.service.activity;
+
+import com.okwei.bean.vo.ReturnModel;
+
+public interface IBasePerfectProductService {
+
+	
+	/**
+     * 获取精品单选列表
+     * @param weiNo 微店号 
+     */
+	public ReturnModel  findPerfectProductlist(int pageIndex,int pageSize);
+
+}

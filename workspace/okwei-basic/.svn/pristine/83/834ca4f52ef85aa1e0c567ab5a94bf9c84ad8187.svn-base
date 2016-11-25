@@ -1,0 +1,70 @@
+package com.okwei.service.impl;
+
+import java.util.HashMap;
+import java.util.Map;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.okwei.bean.dto.SantoMgtDTO;
+import com.okwei.bean.vo.SantoMgtVO;
+import com.okwei.common.Limit;
+import com.okwei.common.PageResult;
+import com.okwei.dao.IBaseDAO;
+import com.okwei.service.ISantoMgtService;
+import com.okwei.util.DateUtils;
+
+@Service
+public class SantoMgtService extends BaseService implements ISantoMgtService {
+
+	@Autowired
+	private IBaseDAO baseDAO;
+
+	@Override
+	public PageResult<SantoMgtVO> findPageSanto(SantoMgtDTO sMgtDTO, Limit limit) {
+
+		String hql = "select a.brandId as brandId,b.weiId as weiId,b.logo as logo,"
+				+ "b.headName as headName,b.brandName as brandName,a.createTime as createTime,"
+				+ "b.phoneNumber as phoneNumber,a.landLine as landLine,a.industry as industry,"
+				+ "a.province as province,a.city as city,a.district as district,a.addressDetail as addressDetail,"
+				+ "a.main as main,a.securityDeposit as securityDeposit,a.costs as costs,a.payedType as payedType,"
+				+ "a.companyName as companyName,a.companyProfile as companyProfile,a.characteristics as characteristics,"
+				+ "a.conditions as conditions,a.agency as agency,c.img as img from DBrandsInfo as a,DBrands as b,DBrandImgs as c"
+				+ " where a.brandId=b.brandId and a.brandId=c.brandId and b.brandId=c.brandId";
+		Map<String, Object> para = new HashMap<String, Object>();
+		if (sMgtDTO.getSelectprovincename() != null) {
+			hql +=  " and a.province =:province";
+			para.put("province", sMgtDTO.getSelectprovincename());
+		}
+		if (sMgtDTO.getInputSelectDistrict() != null) {
+			hql +=  " and a.district =:district";
+			para.put("district", sMgtDTO.getInputSelectDistrict());
+		}
+		if (sMgtDTO.getSelectCityName() !=null) {
+			hql +=  " and a.city =:city";
+			para.put("city", sMgtDTO.getSelectCityName());
+		}
+		if (sMgtDTO.getCreateTime() != null&&""!=sMgtDTO.getCreateTime()) {
+			hql += " and a.createTime>=:createdate";
+			para.put("createdate",
+					DateUtils.format(sMgtDTO.getCreateTime(), "yyyy-MM-dd"));
+		}
+		if (sMgtDTO.getBrandName() != null && "" != sMgtDTO.getBrandName()) {
+			hql +=  " and b.brandName like '%" + sMgtDTO.getBrandName()
+					+ "%'";
+		}
+		if (sMgtDTO.getWeiId() != null && sMgtDTO.getWeiId() > 0) {
+			hql +=  " and b.weiId =:weiId";
+			para.put("weiId", sMgtDTO.getWeiId());
+		}
+		hql += " ORDER BY a.createTime DESC";
+		PageResult<SantoMgtVO> pageResult= baseDAO.findPageResultTransByMap(hql.toString(),SantoMgtVO.class, limit,para);
+		if (pageResult != null&&pageResult.getList()!=null&&pageResult.getList().size()>0) {
+			for (SantoMgtVO stmMgtVO : pageResult.getList()) {
+				stmMgtVO.setCreateTimes(DateUtils.formatDateTime(stmMgtVO.getCreateTime()));
+			}
+		}
+		return pageResult;
+	}
+
+}

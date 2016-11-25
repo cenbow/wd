@@ -1,0 +1,125 @@
+package com.okwei.service.impl.agent;
+
+import java.util.ArrayList;
+import java.util.List;
+import java.util.ResourceBundle;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.okwei.bean.domain.DAgentInfo;
+import com.okwei.bean.domain.DAgentTop;
+import com.okwei.bean.domain.DBrandAgentInfo;
+import com.okwei.bean.domain.DBrands;
+import com.okwei.bean.domain.DBrandsInfo;
+import com.okwei.bean.domain.PBrandShevle;
+import com.okwei.bean.domain.PProducts;
+import com.okwei.bean.vo.AgentProductVO;
+import com.okwei.bean.vo.AgentUserInfoVO;
+import com.okwei.bean.vo.AgentVO;
+import com.okwei.dao.IBaseDAO;
+import com.okwei.service.agent.IAgentBrandService;
+import com.okwei.service.impl.BaseService;
+import com.okwei.util.AppSettingUtil;
+import com.okwei.util.ImgDomain;
+import com.okwei.util.RedisUtil;
+
+@Service
+public class AgentBrandServiceImpl extends BaseService implements IAgentBrandService {
+
+	@Autowired
+	private IBaseDAO baseDAO;
+
+	@Override
+	public List<AgentVO> getAgentList(int type) {
+		String AgentRedis = "AGENT_List_" + type;
+		List<AgentVO> li = (List<AgentVO>) RedisUtil.getObject(AgentRedis);
+		if (li != null && li.size() > 0) {
+			return li;
+		}
+		List<DBrands> bli = baseDAO.find(" from DBrands b where b.type=? and b.status=1", type);
+		if (bli == null || bli.size() <= 0) {
+			return null;
+		}
+		List<AgentVO> list = new ArrayList<AgentVO>();
+		for (DBrands db : bli) {
+			AgentVO av = new AgentVO();
+			av.setBrandid(db.getBrandId());
+
+			AgentUserInfoVO ai = new AgentUserInfoVO();
+			ai.setWeiid(db.getWeiId());
+			ai.setBrandname(db.getBrandName());
+			// 获取分销号信息
+			DBrandsInfo dbi = baseDAO.get(DBrandsInfo.class, db.getWeiId());
+			if (dbi == null)
+				continue;
+			ai.setQq(dbi.getQq());// ?没有qq
+			String qrurl = AppSettingUtil.getSingleValue("AgentQrUrl");
+			ai.setQrurl(qrurl.replace("{weiid}", db.getWeiId().toString()));// 二维码url
+																			// 店铺地址
+			ai.setImgurl(db.getLogo());
+			String agenturl = AppSettingUtil.getSingleValue("AgentApplyUrl");
+			ai.setAgenturl(agenturl + db.getBrandId());
+			// 统计代理商数量
+			long agentcount = baseDAO.count(" select count(*) from DAgentInfo d where d.brandId=?", db.getBrandId());
+			ai.setAgentcount(Integer.parseInt(String.valueOf(agentcount)));
+
+			// 统计产品数量
+			long productcount = baseDAO.count(" select count(*) from PBrandShevle p where p.brandId=? and p.type=1", db.getBrandId());
+			ai.setProductcount(Integer.parseInt(String.valueOf(productcount)));
+			av.setUser(ai);
+			ResourceBundle bundle = ResourceBundle.getBundle("domain");
+			String domain = bundle.getString("okweidomain");
+			av.setAgenturl("http://" + db.getWeiId() + "." + domain);// 店铺页
+
+			List<AgentProductVO> product = new ArrayList<AgentProductVO>();
+			List<PBrandShevle> pbli = baseDAO.findPage(" from PBrandShevle p where p.brandId=? and p.type=1 order by p.createTime desc", 0, 4, db.getBrandId());
+			if (pbli != null && pbli.size() > 0) {
+				for (PBrandShevle p : pbli) {
+					AgentProductVO apv = new AgentProductVO();
+					PProducts pp = baseDAO.get(PProducts.class, p.getProductId());
+					apv.setImgurl(ImgDomain.GetFullImgUrl(pp.getDefaultImg(), 24));
+					apv.setPrice(pp.getDefaultPrice());
+					apv.setProductid(p.getProductId());
+					apv.setTitle(pp.getProductTitle());
+					apv.setPid(p.getBid());
+					product.add(apv);
+				}
+			}
+			av.setProduct(product);
+			list.add(av);
+			continue;
+		}
+		RedisUtil.setObject(AgentRedis, list, 1800);
+		return list;
+	}
+
+	@Override
+	public List<AgentProductVO> getTopAgentList() {
+		List<DAgentTop> list = baseDAO.loadAll(DAgentTop.class);
+		if (list == null || list.size() <= 0)
+			return null;
+		List<AgentProductVO> li = new ArrayList<AgentProductVO>();
+		for (DAgentTop da : list) {
+			AgentProductVO av = new AgentProductVO();
+			av.setPid(da.getPbid());
+			PProducts pp = baseDAO.get(PProducts.class, da.getProductId());
+			if (pp == null)
+				continue;
+			av.setImgurl(ImgDomain.GetFullImgUrl(pp.getDefaultImg(), 24));
+			av.setProductid(da.getProductId());
+			av.setPrice(pp.getDefaultPrice());
+			li.add(av);
+		}
+		return li;
+	}
+	
+	@Override
+	public DBrandAgentInfo getDBrandAgentInfo(Integer brandId){
+		DBrandAgentInfo brandAgentInfo=baseDAO.get(DBrandAgentInfo.class,brandId);
+		return brandAgentInfo;
+	}
+	
+	
+
+}

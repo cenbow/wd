@@ -1,0 +1,852 @@
+package com.okwei.service.impl.order;
+
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import net.sf.json.JSONArray;
+import net.sf.json.JSONObject;
+
+import org.apache.log4j.Logger;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.okwei.bean.domain.OBookAssist;
+import com.okwei.bean.domain.OOrderAddr;
+import com.okwei.bean.domain.OOrderFlow;
+import com.okwei.bean.domain.OPayOrder;
+import com.okwei.bean.domain.OProductOrder;
+import com.okwei.bean.domain.OSupplyerOrder;
+import com.okwei.bean.domain.TOrderBackTotal;
+import com.okwei.bean.domain.UPushMessage;
+import com.okwei.bean.domain.USupplyer;
+import com.okwei.bean.domain.UWeiCoinLog;
+import com.okwei.bean.domain.UWeiSeller;
+import com.okwei.bean.enums.BookPayTypeEnum;
+import com.okwei.bean.enums.OrderStatusEnum;
+import com.okwei.bean.enums.OrderTypeEnum;
+import com.okwei.bean.enums.PayTypeEnum;
+import com.okwei.bean.enums.PushMessageType;
+import com.okwei.bean.enums.TailPayTypeEnum;
+import com.okwei.bean.vo.ReturnModel;
+import com.okwei.bean.vo.ReturnStatus;
+import com.okwei.bean.vo.order.BAddressVO;
+import com.okwei.bean.vo.order.LogisticsVO;
+import com.okwei.bean.vo.order.OrderModelReturn;
+import com.okwei.bean.vo.order.ProductOrderVO;
+import com.okwei.bean.vo.order.SupplyBookOrderParam;
+import com.okwei.bean.vo.order.SupplyOrderDetailsVO;
+import com.okwei.dao.order.IBasicOrdersDao;
+import com.okwei.dao.product.IBaseProductDao;
+import com.okwei.dao.wallet.IBasicWalletDao;
+import com.okwei.service.IBaseCommonService;
+import com.okwei.service.IConfirmRefundService;
+import com.okwei.service.ILogisticsService;
+import com.okwei.service.IRegionService;
+import com.okwei.service.impl.BaseService;
+import com.okwei.service.order.IBasicOrdersService;
+import com.okwei.service.order.IBasicPayService;
+import com.okwei.util.AppSettingUtil;
+import com.okwei.util.DateUtils;
+import com.okwei.util.ImgDomain;
+import com.okwei.util.ObjectUtil;
+import com.okwei.util.ParseHelper;
+import com.okwei.util.SendSMSByMobile;
+
+@Service
+public class BasicOrdersService extends BaseService implements IBasicOrdersService {
+
+	@Autowired
+	private IRegionService regionService;
+
+	@Autowired
+	private IBasicOrdersDao basicOrdersDao;
+
+	@Autowired
+	private IBaseCommonService baseCommonService;
+
+	@Autowired
+	private IConfirmRefundService confirmRefundService;
+
+	@Autowired
+	private ILogisticsService logisticsService;
+	@Autowired
+	private IBasicOrdersDao ordersService;
+	@Autowired
+	private IBasicPayService payService;
+	@Autowired 
+	private IBaseProductDao productDao;
+	@Autowired
+	private IBasicWalletDao walletDao;
+
+	protected Logger log = Logger.getLogger(this.getClass());
+
+	/**
+	 * 供应商发货
+	 */
+	public ReturnModel sendGoods(String supplyOrderid, long supplyWeiid, String dcomanpyNo, String deliveryCompany, String deliveryOrderNo) {
+		ReturnModel result = new ReturnModel();
+		if (ObjectUtil.isEmpty(supplyOrderid) || ObjectUtil.isEmpty(deliveryCompany) || ObjectUtil.isEmpty(deliveryOrderNo)) {
+			result.setStatu(ReturnStatus.ParamError);
+			result.setStatusreson("参数不全");
+			return result;
+		}
+		OSupplyerOrder order = basicOrdersDao.get(OSupplyerOrder.class, supplyOrderid);
+		if (order == null) {
+			result.setStatu(ReturnStatus.ParamError);
+			result.setStatusreson("订单不存在");
+			return result;
+		} else if (supplyWeiid != order.getSupplyerId()) {
+			result.setStatu(ReturnStatus.ParamError);
+			result.setStatusreson("您没有操作权限");
+			return result;
+		}
+		boolean isOkLogistics = false;
+		List<Map<String, String>> logistics = AppSettingUtil.getMaplist("transports");
+		if (logistics != null && logistics.size() > 0) {
+			for (Map<String, String> map : logistics) {
+				if (map.get("typeName").equals(deliveryCompany)) {
+					dcomanpyNo = map.get("typeNo");
+					isOkLogistics = true;
+				}
+			}
+		}
+		if (!isOkLogistics) {
+			result.setStatu(ReturnStatus.ParamError);
+			result.setStatusreson("不支持的物流公司");
+			return result;
+		}
+		OrderTypeEnum typeEnum = null;
+		for (OrderTypeEnum tt : OrderTypeEnum.values()) {
+			if (Integer.parseInt(tt.toString()) == order.getOrderType())
+				typeEnum = tt;
+		}
+		if (typeEnum == null) {
+			result.setStatu(ReturnStatus.SystemError);
+			result.setStatusreson("系统错误303");
+			return result;
+		}
+		switch (typeEnum) {
+		case Pt:
+		case BatchOrder:
+		case BatchWholesale:
+		case Jinhuo:
+		case RetailPTH:
+			if (Short.parseShort(OrderStatusEnum.Payed.toString()) == order.getState() || Short.parseShort(OrderStatusEnum.Deliveried.toString()) == order.getState()) {
+				order.setdComanpyNo(dcomanpyNo);
+				order.setDeliveryCompany(deliveryCompany);
+				order.setDeliveryOrder(deliveryOrderNo);
+			} else {
+				result.setStatu(ReturnStatus.ParamError);
+				result.setStatusreson("当前状态不是已支付/已发货状态，不能发货！");
+				return result;
+			}
+			break;
+		case Puhuo:
+		case BookOrder:
+			OBookAssist assist = basicOrdersDao.get(OBookAssist.class, supplyOrderid);
+			if (assist == null) {
+				result.setStatu(ReturnStatus.ParamError);
+				result.setStatusreson("订单类型错误!");
+				return result;
+			}
+			if ((Short.parseShort(BookPayTypeEnum.Full.toString()) == assist.getBookPayType() && Short.parseShort(OrderStatusEnum.Payed.toString()) == order.getState())
+					|| (Short.parseShort(TailPayTypeEnum.afterdelivery.toString()) == assist.getTailPayType() && Short.parseShort(OrderStatusEnum.PayedDeposit.toString()) == order.getState())
+					|| (Short.parseShort(TailPayTypeEnum.predelivery.toString()) == assist.getTailPayType() && Short.parseShort(OrderStatusEnum.Payed.toString()) == order.getState())) {
+				order.setdComanpyNo(dcomanpyNo);
+				order.setDeliveryCompany(deliveryCompany);
+				order.setDeliveryOrder(deliveryOrderNo);
+			}
+			break;
+		default:
+			result.setStatu(ReturnStatus.SystemError);
+			result.setStatusreson("系统错误304");
+			return result;
+		}
+		OOrderFlow OrderFlow = new OOrderFlow();
+		OrderFlow.setSupplierOrderId(order.getSupplierOrderId());
+		OrderFlow.setOperateContent("供应商发货成功");
+		Date operateTime = new Date();
+		OrderFlow.setOperateTime(operateTime);
+		OrderFlow.setWeiId(order.getSupplyerId());
+		basicOrdersDao.save(OrderFlow); // 保存实体
+
+		order.setState(Short.parseShort(OrderStatusEnum.Deliveried.toString()));
+		order.setSendTime(new Date());
+		super.update(order);
+		result.setStatu(ReturnStatus.Success);
+		result.setStatusreson("发货成功");
+		// 发送短信
+		OOrderAddr oAddr = basicOrdersDao.get(OOrderAddr.class, order.getAddrId());
+		USupplyer usu = basicOrdersDao.get(USupplyer.class, order.getSupplyerId());
+		String content = "亲爱的微粉，您的订单" + order.getSupplierOrderId() + "，供应商[" + usu.getCompanyName() + "]已经发货，物流公司：" + deliveryCompany + "，物流单号：" + deliveryOrderNo + "。请您留意查收，如有问题请及时与供应商联系！感谢购买,祝您生活愉快！[微店网]";
+		String lr = SendSMSByMobile.sendSMS(oAddr.getMobilePhone(), content);
+		return result;
+	}
+
+	/**
+	 * 买家退款发货
+	 * 
+	 * @param weiid
+	 * @param backOrder
+	 * @param transNo
+	 * @param transName
+	 * @return
+	 */
+	public ReturnModel buyersDelivery(long weiid, long backOrder, String transNo, String transName) {
+		ReturnModel rm = new ReturnModel();
+		// 修改退款表的收货地址
+		if (basicOrdersDao.updateTrans(weiid, backOrder, transNo, transName) > 0) {
+			rm.setBasemodle("1");
+			rm.setStatu(ReturnStatus.Success);
+			rm.setStatusreson("成功！");
+			return rm;
+		}
+		rm.setStatu(ReturnStatus.SystemError);
+		rm.setStatusreson("提交信息失败！");
+		return rm;
+	}
+
+	/**
+	 * 确认或取消铺货单（param.isSured()）
+	 * 
+	 * @param param
+	 * @return
+	 */
+	public ReturnModel insertBookOrder(SupplyBookOrderParam param) {
+		ReturnModel result = new ReturnModel();
+		if (param == null || param.getWeiid() <= 0 || ObjectUtil.isEmpty(param.getSupplyOrderid())) {
+			result.setStatu(ReturnStatus.ParamError);
+			result.setStatusreson("参数有误");
+			return result;
+		}
+		if (param.isSured())// 确认 铺货单
+		{
+			// 清楚之前的铺货单
+			List<OPayOrder> payList = basicOrdersDao.getOPayOrderlistBySupplyOrderIds(new String[] { param.getSupplyOrderid() });
+			if (payList != null && payList.size() > 0) {
+				for (OPayOrder oo : payList) {
+					super.delete(oo);
+				}
+			}
+			OBookAssist payAssist = basicOrdersDao.get(OBookAssist.class, param.getSupplyOrderid());
+			if (payAssist != null)
+				super.delete(payAssist);
+			OSupplyerOrder supplyerOrder = basicOrdersDao.get(OSupplyerOrder.class, param.getSupplyOrderid());
+			if (supplyerOrder == null || supplyerOrder.getSupplyerId().longValue() != param.getWeiid()) {
+				result.setStatu(ReturnStatus.ParamError);
+				;
+				result.setStatusreson("非法操作");
+				return result;
+			}
+			// 需要支付的总价
+			double paytotalprice = 0;
+			// 1 .修改订单价格方式
+			switch (param.getEditPriceType()) {
+			case 1:// 修改产品单价
+				if (param.getProducts() != null && param.getProducts().size() > 0) {
+					double totalprice = 0;
+					// String[] supplyOrderIds = new String[] {
+					// param.getSupplyOrderid() };
+					// 供应商订单包含的产品列表
+					List<OProductOrder> proList = basicOrdersDao.getProductOrderListBySupplyOrderIds(new String[] { param.getSupplyOrderid() }, null, 0);
+					if (proList != null && proList.size() > 0) {
+						for (OProductOrder pl : proList) {
+							for (OProductOrder pp : param.getProducts()) {
+								if (!ObjectUtil.isEmpty(pp.getProductOrderId()) && pp.getPrice() != null) {
+									if (pl.getProductOrderId().equals(pp.getProductOrderId())) {
+										pl.setPrice(pp.getPrice());
+										super.update(pl);
+									}
+								}
+							}
+							paytotalprice += (pl.getPrice().doubleValue() + pl.getCommision().doubleValue()) * pl.getCount().intValue();
+							totalprice += pl.getPrice().doubleValue() * pl.getCount().intValue();
+						}
+						paytotalprice += ParseHelper.getDoubleDefValue(param.getEditPostPrice());
+						supplyerOrder.setPostage(param.getEditPostPrice());
+						supplyerOrder.setTotalPrice(totalprice);
+					}
+				}
+				break;
+			case 2:// 修改订单总价
+				if (param.getEditTotalPrice() > 0.1) {
+					supplyerOrder.setTotalPrice(param.getEditTotalPrice());
+					supplyerOrder.setPostage(0d);
+					paytotalprice = param.getEditTotalPrice();
+				} else {
+					result.setStatu(ReturnStatus.ParamError);
+					;
+					result.setStatusreson("总价不能小于0.1元");
+				}
+				break;
+			default:// 不修改价格，不操作
+				paytotalprice = supplyerOrder.getTotalPrice().doubleValue() + supplyerOrder.getPostage().doubleValue();
+				if (param.getEditPostPrice() > 0) {
+					paytotalprice = supplyerOrder.getTotalPrice().doubleValue() + param.getEditPostPrice();
+				}
+				break;
+			}
+
+			OBookAssist ass = new OBookAssist();
+			ass.setSupplierOrderId(param.getSupplyOrderid());
+			ass.setPreSendTime(param.getPreDeliverTime()); // 预计发货时间
+			// 2. 首款 付款方式
+			switch (param.getPayType()) {
+			case 1:// 百分比
+				ass.setBookPayType(Short.parseShort(BookPayTypeEnum.percent.toString()));
+				ass.setPersent(Short.parseShort(String.valueOf(param.getFirstPercent())));
+				ass.setAmount(paytotalprice * param.getFirstPercent() * 0.01);
+				break;
+			case 2:// 指定金额
+				ass.setBookPayType(Short.parseShort(BookPayTypeEnum.specifyamount.toString()));
+				ass.setAmount(param.getFirstPrice());
+				break;
+			default:// 全款
+				ass.setBookPayType(Short.parseShort(BookPayTypeEnum.Full.toString()));
+				ass.setAmount(paytotalprice);
+				break;
+			}
+			// 总价加邮费
+			basicOrdersDao.updateSupplyerOrderStateAndPrice(param, 0.0);
+			if (param.getPayType() > 0) {
+				// 3.尾款付款方式
+				TailPayTypeEnum tailPayTypeEnum = param.getTailPayType();
+				ass.setTailPayType(Short.parseShort(tailPayTypeEnum.toString()));
+				// 4、生成 铺货单 首款、尾款
+				ReturnModel insertPayOrder = basicOrdersDao.insertPayOrder(supplyerOrder.getSupplierOrderId(), supplyerOrder.getBuyerID().longValue(), ass.getAmount(), supplyerOrder.getOrderFrom(), Short.parseShort(OrderTypeEnum.PuhuoHeader.toString()));
+				if (null != insertPayOrder) {
+					ass.sethPayOrder(insertPayOrder.getStatusreson());
+				}
+				ReturnModel insertPayOrder1 = basicOrdersDao.insertPayOrder(supplyerOrder.getSupplierOrderId(), supplyerOrder.getBuyerID().longValue(), paytotalprice - ass.getAmount(), supplyerOrder.getOrderFrom(), Short.parseShort(OrderTypeEnum.PuhuoTail.toString()));
+				if (null != insertPayOrder1) {
+					ass.setTPayOrder(insertPayOrder1.getStatusreson());
+				}
+			} else if (param.getEditPriceType() == 2) {
+				// 生成全款支付记录
+				ReturnModel insertPayOrder = basicOrdersDao.insertPayOrder(param.getSupplyOrderid(), supplyerOrder.getBuyerID().longValue(), paytotalprice, supplyerOrder.getOrderFrom(), Short.parseShort(OrderTypeEnum.PuhuoFull.toString()));
+				if (ParseHelper.toInt(insertPayOrder.getStatu().toString()) == 1) {
+					Object basemodle = insertPayOrder.getStatusreson();
+					OSupplyerOrder byId = super.getById(OSupplyerOrder.class, supplyerOrder.getSupplierOrderId());
+					if (byId.getSupplyerId().longValue() == param.getWeiid()) {
+						byId.setPayOrderId((String) basemodle);
+						super.update(byId);
+					}
+				}
+			} else {
+				ass.setTailPayType((short) 0);
+				// 生成全款支付记录
+				ReturnModel insertPayOrder = basicOrdersDao.insertPayOrder(param.getSupplyOrderid(), supplyerOrder.getBuyerID().longValue(), paytotalprice, supplyerOrder.getOrderFrom(), Short.parseShort(OrderTypeEnum.PuhuoFull.toString()));
+				if (ParseHelper.toInt(insertPayOrder.getStatu().toString()) == 1) {
+					Object basemodle = insertPayOrder.getStatusreson();
+					String hql = " update OSupplyerOrder s set s.payOrderId =? where s.supplierOrderId=? and s.supplyerId=? ";// 查询语句
+					Object[] b = new Object[3];// 参数列表
+					b[0] = (String) basemodle;
+					b[1] = supplyerOrder.getSupplierOrderId();
+					b[2] = param.getWeiid(); // 未修改订单价格
+					basicOrdersDao.executeHql(hql, b);// 更新订单
+				}
+			}
+			ass.setState((short) 1);
+			ass.setRemark(param.getMessage());
+			basicOrdersDao.save(ass);
+			supplyerOrder.setState(Short.parseShort(OrderStatusEnum.Sured.toString()));
+			basicOrdersDao.update(supplyerOrder);
+			basicOrdersDao.insertOrderFlow(supplyerOrder.getSupplierOrderId(), supplyerOrder.getSupplyerId(), "供应商确认订单");
+			result.setStatu(ReturnStatus.Success);
+			result.setStatusreson("确定成功！");
+			// 消息推送
+			UPushMessage PushMessage = new UPushMessage();
+			PushMessage.setPushWeiId(param.getWeiid());// 推送消息人
+			PushMessage.setReciptWeiId(supplyerOrder.getBuyerID()); // 接受消息人
+			PushMessage.setPushContent("您有一笔预订单供应商已同意，请尽快付款");
+			PushMessage.setMsgType(Short.parseShort(PushMessageType.buyorder.toString()));
+			PushMessage.setCreateTime(new Date());
+			PushMessage.setObjectId(supplyerOrder.getSupplierOrderId());
+			if (null != supplyerOrder && null != supplyerOrder.getOrderType()) {
+				PushMessage.setExtra(supplyerOrder.getOrderType().toString());
+			}
+			baseCommonService.insertSendPushMsg(PushMessage); // 保存推送消息
+		} else
+		// 拒绝
+		{
+			if (basicOrdersDao.UP_supplyOrder(param.getWeiid(), param.getSupplyOrderid(), OrderStatusEnum.Rejected)) {
+				result.setStatu(ReturnStatus.Success);
+				result.setStatusreson("成功拒绝此铺货单！");
+
+			} else {
+				result.setStatu(ReturnStatus.ParamError);
+				;
+				result.setStatusreson("拒绝失败！");
+			}
+		}
+		return result;
+	}
+
+	@Override
+	public ReturnModel updateConfirmcargo(Long weiid, String backOrder) {
+		ReturnModel rm = new ReturnModel();
+		rm.setStatu(ReturnStatus.Success);
+		if (backOrder == null) {
+			rm.setStatu(ReturnStatus.ParamError);
+			rm.setStatusreson("参数有误");
+			return rm;
+		}
+		// 退款
+		try {
+			TOrderBackTotal refund = basicOrdersDao.get(TOrderBackTotal.class, backOrder);
+			confirmRefundService.refundPenny(weiid, refund);
+		} catch (Exception e) {
+			log.error("卖家确认收货==退款操作失败" + e.getMessage());
+			rm.setStatu(ReturnStatus.ParamError);
+			rm.setStatusreson("参数有误");
+			return rm;
+		}
+		rm.setStatusreson("成功");
+		return rm;
+	}
+
+	@Override
+	public ReturnModel updateConfirmationReceipt(Long weiid, String supOrderID) {
+		ReturnModel rm = new ReturnModel();
+		rm.setStatu(ReturnStatus.Success);
+		rm.setStatusreson("成功！");
+		OSupplyerOrder entity = basicOrdersDao.getSupplyerOrder(supOrderID, 1);
+		if (entity != null) {
+			if (null != weiid && null != entity.getBuyerID() && weiid.longValue() == entity.getBuyerID().longValue()) {
+				if (entity.getState().equals(Short.parseShort(OrderStatusEnum.Deliveried.toString()))) {
+					// 修改订单状态
+					basicOrdersDao.updateConfirReceipt(weiid, supOrderID);
+					// 将微钱包里的钱修改为收货冻结
+					basicOrdersDao.updateFrozenOrderAmout(supOrderID);
+					// 添加订单记录
+					try {
+						basicOrdersDao.addOrderRecord(weiid, "买家确认收货", supOrderID);
+					} catch (Exception e) {
+						log.error("确认收货 添加订单记录" + e.getMessage());
+					}
+				} else if (entity.getState().equals(Short.parseShort(OrderStatusEnum.Accepted.toString()))) {
+					rm.setStatusreson("该订单已确认收货！");
+					return rm;
+				} else {
+					rm.setStatu(ReturnStatus.SystemError);
+					rm.setStatusreson("操作失败！");
+					return rm;
+				}
+			} else {
+				rm.setStatu(ReturnStatus.SystemError);
+				rm.setStatusreson("操作失败！");
+				return rm;
+			}
+		} else {
+			rm.setStatu(ReturnStatus.ParamError);
+			rm.setStatusreson("非本人操作！");
+			return rm;
+		}
+		return rm;
+	}
+
+	/**
+	 * @param supplyOrderid
+	 *            供应商订单号
+	 * @param userType
+	 *            1买家 2卖家
+	 * @return
+	 */
+	public SupplyOrderDetailsVO getOrderDetails(String supplyOrderid, int userType) {
+		SupplyOrderDetailsVO result = new SupplyOrderDetailsVO();
+		try {
+			OSupplyerOrder order = basicOrdersDao.get(OSupplyerOrder.class, supplyOrderid);
+			if (order != null) {
+				String[] supplyidStrings = new String[] { order.getSupplierOrderId() };
+				Long weiId = null;
+				if (userType == 1) {
+					weiId = order.getBuyerID();
+				} else {
+					weiId = order.getSupplyerId();
+				}
+				List<OProductOrder> prolist = basicOrdersDao.getProductOrderListBySupplyOrderIds(supplyidStrings, weiId, userType);
+				if (prolist != null && prolist.size() > 0) {
+					result.setProList(getSupplyOrderProducts(order.getSupplierOrderId(), prolist));
+				}
+				OOrderAddr addrInfo = basicOrdersDao.get(OOrderAddr.class, order.getAddrId());
+				result.setOrderNo(order.getSupplierOrderId());
+				result.setPayOrderNo(order.getPayOrderId());
+				result.setOrderTimeStr(DateUtils.format(order.getOrderTime(), "yyyy-MM-dd HH:mm:ss"));
+				result.setClientMsg(order.getMessage());
+				result.setOrderState(order.getState());
+				result.setBuyerWeiid(order.getBuyerID());
+				result.setClientMsg(order.getMessage());
+				result.setSupplyerWeiid(order.getSupplyerId());
+				result.setTotalPrice(ParseHelper.getDoubleDefValue(order.getTotalPrice()) + ParseHelper.getDoubleDefValue(order.getPostage()));
+				result.setFullprice(ParseHelper.getDoubleDefValue(order.getTotalPrice()) + ParseHelper.getDoubleDefValue(order.getPostage()));
+				result.setPostPrice(order.getPostage());
+				result.setOrderType(order.getOrderType());
+				OPayOrder payOrder = null;
+				if (Short.parseShort(OrderTypeEnum.BookOrder.toString()) == order.getOrderType() || Short.parseShort(OrderTypeEnum.Puhuo.toString()) == order.getOrderType()) {
+					List<OPayOrder> payList = basicOrdersDao.getOPayOrderlistBySupplyOrderIds(new String[] { order.getSupplierOrderId() });
+					if (payList != null && payList.size() > 0) {
+						for (OPayOrder pay : payList) {
+							if (Short.parseShort(OrderTypeEnum.BookHeadOrder.toString()) == pay.getTypeState() || Short.parseShort(OrderTypeEnum.PuhuoHeader.toString()) == pay.getTypeState()) {
+								payOrder = pay;
+								if (pay.getOrderTime() != null) {
+									result.setMakeOrderTimeStr(pay.getOrderTime().toString());
+								}
+								result.setPayWay(getpayWayStr(pay.getPayType()));
+							}
+						}
+					}
+				} else {
+					payOrder = basicOrdersDao.get(OPayOrder.class, order.getPayOrderId());
+					if (payOrder != null && payOrder.getPayTime() != null)
+						result.setPaymentTimeStr(payOrder.getPayTime().toString());
+
+					result.setPayWay(getpayWayStr(payOrder.getPayType()));
+				}
+				if (payOrder != null) {
+					PayTypeEnum payTypeEnum = null;
+					for (PayTypeEnum tt : PayTypeEnum.values()) {
+						if (tt.toString().equals(payOrder.getPayType()))
+							payTypeEnum = tt;
+					}
+					if (payTypeEnum != null)
+						result.setPayWay(getPayTypeName(payTypeEnum));
+				}
+				if (addrInfo != null) {
+					result.setReciverName(addrInfo.getReceiverName());
+					result.setReciverPhoneNumber(addrInfo.getMobilePhone());
+					// hjd6-15
+					String address = "";
+					int province = addrInfo.getProvince() == null ? 0 : addrInfo.getProvince();
+					if (province > 0) {
+						address += regionService.getNameByCode(province);
+					}
+					int city = addrInfo.getCity() == null ? 0 : addrInfo.getCity();
+					if (city > 0) {
+						address += regionService.getNameByCode(city);
+					}
+					int street = addrInfo.getDistrict() == null ? 0 : addrInfo.getDistrict();
+					if (street > 0) {
+						address += regionService.getNameByCode(street);
+					}
+					address += addrInfo.getDetailAddr();
+					result.setReciverAddress(address);
+				}
+				OrderTypeEnum typeEnum = null;
+				for (OrderTypeEnum tt : OrderTypeEnum.values()) {
+					if (Integer.parseInt(tt.toString()) == order.getOrderType())
+						typeEnum = tt;
+				}
+				result.setOrderShowType(1);
+				if (typeEnum == null)
+					typeEnum = OrderTypeEnum.Pt;
+				switch (typeEnum) {
+				case Pt:
+				case BatchOrder:
+					result.setOrderShowType(1);
+					result.setPayPriceType(1);
+					break;
+				case BatchWholesale:
+					result.setOrderShowType(2);
+					result.setPayPriceType(1);
+					break;
+				case Jinhuo:
+					result.setOrderShowType(4);
+					result.setPayPriceType(1);
+					break;
+				case BookOrder:// 预定单/铺货单
+				case Puhuo:
+					result.setOrderShowType(3);
+					OBookAssist modelAssist = basicOrdersDao.get(OBookAssist.class, order.getSupplierOrderId());
+					if (modelAssist != null) {
+						result.setDeliveryTimeStr(modelAssist.getPreSendTime() == null ? "" : DateUtils.dateToString(modelAssist.getPreSendTime(), "yyyy-MM-dd").toString());
+						if (Short.parseShort(BookPayTypeEnum.Full.toString()) == modelAssist.getBookPayType()) {
+							result.setPayPriceType(1);
+							result.setFullprice(modelAssist.getAmount());
+							result.setPayment(order.getTotalPrice());
+						} else if (Short.parseShort(BookPayTypeEnum.percent.toString()) == modelAssist.getBookPayType()) {
+							result.setPayPriceType(3);
+							result.setPercentage(modelAssist.getPersent());
+							result.setDeposit(modelAssist.getAmount());
+							result.setFinalprice(ParseHelper.getDoubleDefValue(order.getTotalPrice() + ParseHelper.getDoubleDefValue(order.getPostage()) - ParseHelper.getDoubleDefValue(modelAssist.getAmount())));
+						} else {
+							result.setPayPriceType(2);
+							result.setDeposit(modelAssist.getAmount());
+							result.setFinalprice(ParseHelper.getDoubleDefValue(order.getTotalPrice() + ParseHelper.getDoubleDefValue(order.getPostage()) - ParseHelper.getDoubleDefValue(modelAssist.getAmount())));
+						}
+						result.setSupplierMsg(modelAssist.getRemark());
+						result.setTailPayType(modelAssist.getTailPayType());
+					}
+					break;
+				default:
+					result.setOrderShowType(1);
+					break;
+				}
+
+				List<OOrderFlow> flows = basicOrdersDao.getOrderFlows(order.getSupplierOrderId());
+				result.setOrderFlows(flows);
+				// 查询物流信息
+				String wlNo = order.getDeliveryOrder();
+				String companyNo = order.getdComanpyNo();
+				String companyName = order.getDeliveryCompany();
+				List<String> wuliu = new ArrayList<String>();
+				if (wlNo != null && wlNo != "") {
+					String wlString = "";
+					if (companyNo != null && companyNo != "") {
+						wlString = logisticsService.getInfoByNo(wlNo, companyNo);
+					} else if (companyName != null && companyName != "") {
+						wlString = logisticsService.getInfoByName(wlNo, companyName);
+					}
+					wuliu = getLogisticsDetails(wlString);
+				}
+				LogisticsVO logistics = new LogisticsVO();
+				logistics.setLogisticsNo(wlNo);
+				logistics.setLongisticsName(companyName);
+				logistics.setTailList(wuliu);
+				result.setLogistics(logistics);
+			}
+		} catch (Exception e) {
+			log.error(e.getMessage());
+		}
+		return result;
+	}
+
+	/**
+	 * 处理物流信息
+	 * 
+	 * @param wuliu
+	 * @return
+	 */
+	private List<String> getLogisticsDetails(String wuliu) {
+		List<String> strList = new ArrayList<String>();
+		if (wuliu != null && wuliu != "") {
+			JSONObject json = JSONObject.fromObject(wuliu);
+			if (json != null) {
+				JSONArray array = json.getJSONArray("data");
+				if (array != null && array.size() > 0) {
+					for (int i = 0; i < array.size(); i++) {
+						JSONObject obj = array.getJSONObject(i);
+						strList.add(obj.getString("time") + "  " + obj.getString("context"));
+					}
+				}
+			}
+		}
+		return strList;
+	}
+
+	/**
+	 * 产品列表清单 根据 供应商订单id 产品列表
+	 * 
+	 * @param supplyOrderId
+	 * @param prolist
+	 * @return
+	 */
+	private List<ProductOrderVO> getSupplyOrderProducts(String supplyOrderId, List<OProductOrder> prolist) {
+		try {
+			if (ObjectUtil.isNotEmpty(prolist) && !ObjectUtil.isEmpty(supplyOrderId)) {
+				List<Long> backorderids = new ArrayList<Long>();
+				for (OProductOrder oo : prolist) {
+					if (oo.getBackOrder() != null && oo.getBackOrder().longValue() > 0)
+						backorderids.add(oo.getBackOrder());
+				}
+				List<TOrderBackTotal> reOrders = null;
+				if (backorderids != null && backorderids.size() > 0) {
+					reOrders = basicOrdersDao.getRefundOrders(backorderids.toArray());
+				}
+				List<ProductOrderVO> supProductList = new ArrayList<ProductOrderVO>();
+				for (OProductOrder pp : prolist) {
+					if (supplyOrderId.equals(pp.getSupplierOrderId())) {
+						ProductOrderVO pro = new ProductOrderVO();
+						pro.setProductId(pp.getProductId());
+						pro.setProductTitle(pp.getProdcutTitle());
+						pro.setProductState(pp.getState());
+						pro.setCount(pp.getCount());
+						pro.setSharePageProducer(pp.getMakerWeiId());
+						pro.setShareOne(pp.getShareWeiId());
+						pro.setSharePageId(pp.getShareID());
+						pro.setPrice(pp.getPrice());
+						pro.setCommission(pp.getCommision());
+						pro.setSumPrice(pp.getCount() * pp.getPrice());
+						pro.setProductOrderid(pp.getProductOrderId());
+						pro.setProductImg(ImgDomain.GetFullImgUrl(pp.getProductImg(), 24));
+						if (pp.getStyleDes() != null) {
+							pro.setProperty(pp.getStyleDes().replace("|", " "));
+						}
+						pro.setFavorable("无");
+						long sellerweiid = pp.getSellerWeiid();
+						UWeiSeller user = basicOrdersDao.get(UWeiSeller.class, sellerweiid);
+						pro.setSourceName(user.getWeiName());
+						pro.setRefundState(-1);
+						if (pp.getBackOrder() != null && pp.getBackOrder().longValue() > 0) {
+							if (reOrders != null) {
+								for (TOrderBackTotal tt : reOrders) {
+									if (tt.getBackOrder().longValue() == pp.getBackOrder().longValue()) {
+										pro.setRefundState(tt.getBackStatus());
+										pro.setRefundId(pp.getBackOrder());
+										pro.setRefundType(tt.getType());
+									}
+								}
+							}
+						}
+						supProductList.add(pro);
+					}
+				}
+				return supProductList;
+			}
+		} catch (Exception e) {
+			log.error(e.getMessage());
+		}
+		return null;
+	}
+
+	public String getpayWayStr(Short ps) {
+		if (ps == null) {
+			return "其他";
+		}
+		PayTypeEnum payType = null;
+		for (PayTypeEnum pt : PayTypeEnum.values()) {
+			if (pt.toString().equals(ps.toString())) {
+				payType = pt;
+			}
+		}
+		if (payType == null) {
+			return "其他";
+		}
+		switch (payType) {
+		case OtherPay:
+			return "其他";
+		case DinPay:
+			return "智付支付";
+		case TenPay:
+			return "财付通";
+		case ChinaPay:
+			return "银联";
+		case WxPay:
+			return "微信支付";
+		case SinaPay:
+			return "新浪支付";
+		case LLPay:
+			return "连连支付";
+		case WeiWallet:
+			return "微店钱包";
+		default:
+			return "其他";
+		}
+	}
+
+	public String getPayTypeName(PayTypeEnum paytype) {
+		if (paytype == null)
+			return "";
+		switch (paytype) {
+		case DinPay:
+			return "智付支付";
+		case TenPay:
+			return "财付通";
+		case ChinaPay:
+			return "银联";
+		case WxPay:
+			return "微信支付";
+		case SinaPay:
+			return "新浪支付";
+		case LLPay:
+			return "连连支付";
+		case WeiWallet:
+			return "钱包支付";
+		default:
+			return "其他支付";
+		}
+	}
+
+	public ReturnModel getPayBackVO(String orderno){
+		ReturnModel rqModel=new ReturnModel();
+		if(orderno==null || "".equals(orderno))
+		{
+			return null;
+		}
+		OrderModelReturn result=new OrderModelReturn();
+		OPayOrder order=payService.getOPayOrder(orderno, true);// super.get(OPayOrder.class, orderno);
+		if(order!=null){
+			result.setOrderNo(order.getPayOrderId()); 
+			result.setOrderState(order.getState());
+			result.setOrderType(order.getTypeState()); 
+			result.setTotalPrice(order.getTotalPrice()); 
+			boolean isHaveAddress=false;
+			long addressId=0;
+			if(Short.parseShort(OrderTypeEnum.BookHeadOrder.toString()) == order.getTypeState()
+					|| Short.parseShort(OrderTypeEnum.BookTailOrder.toString()) == order.getTypeState()
+					|| Short.parseShort(OrderTypeEnum.BookFullOrder.toString()) == order.getTypeState()
+					|| Short.parseShort(OrderTypeEnum.Puhuo.toString()) == order.getTypeState()
+					|| Short.parseShort(OrderTypeEnum.PuhuoFull.toString()) == order.getTypeState()
+					|| Short.parseShort(OrderTypeEnum.PuhuoTail.toString()) == order.getTypeState()
+					|| Short.parseShort(OrderTypeEnum.PuhuoHeader.toString()) == order.getTypeState()){
+			
+				OSupplyerOrder supplyerOrder=productDao.get(OSupplyerOrder.class, order.getSupplierOrder());
+				if(supplyerOrder!=null&&supplyerOrder.getAddrId()!=null&&supplyerOrder.getAddrId()>0){
+					isHaveAddress=true;
+					addressId=supplyerOrder.getAddrId();
+				}
+			}
+			else if (Short.parseShort(OrderTypeEnum.BatchGys.toString()) != order.getTypeState() 
+					&& Short.parseShort(OrderTypeEnum.BatchRzy.toString()) != order.getTypeState() 
+					&& Short.parseShort(OrderTypeEnum.GysAndVerifier.toString()) != order.getTypeState()
+					&& Short.parseShort(OrderTypeEnum.ChongZhi.toString()) != order.getTypeState() 
+					&& Short.parseShort(OrderTypeEnum.YunGys.toString()) != order.getTypeState() 
+					&& Short.parseShort(OrderTypeEnum.BatchPortNoServiceFee.toString()) != order.getTypeState()
+					&& Short.parseShort(OrderTypeEnum.YunGysNoServiceFee.toString()) != order.getTypeState()
+					&& Short.parseShort(OrderTypeEnum.Reward.toString()) != order.getTypeState()
+					&& Short.parseShort(OrderTypeEnum.ChouDian.toString()) != order.getTypeState()) {
+				
+				List<OSupplyerOrder> supplyerOrders=ordersService.find_SupplyerOrderByOrderID(order.getPayOrderId());
+				if(supplyerOrders!=null&&supplyerOrders.size()>0&&supplyerOrders.get(0).getAddrId()!=null&&supplyerOrders.get(0).getAddrId()>0){
+					isHaveAddress=true;
+					addressId=supplyerOrders.get(0).getAddrId();
+				}
+					
+				List<String> supplyOrderIds=new ArrayList<String>();
+				for (OSupplyerOrder ss : supplyerOrders) {
+					supplyOrderIds.add(ss.getSupplierOrderId());
+				}
+				if(supplyOrderIds!=null&&supplyOrderIds.size()>0){
+					String hqlString=" from UWeiCoinLog w where w.supplyOrderId in(:supplyOrderIds) and w.useType=1 ";
+					Map<String, Object> map=new HashMap<String, Object>();
+					map.put("supplyOrderIds", supplyOrderIds);
+					List<UWeiCoinLog> coinLogs=productDao.findByMap(hqlString, map);
+					if(coinLogs!=null&&coinLogs.size()>0){
+						result.setFirstShop(1);
+						double coinTotal=0;
+						for (UWeiCoinLog cc : coinLogs) {
+							coinTotal+=cc.getCoinAmount().doubleValue();
+						}
+						result.setCoinAmount(coinTotal);
+					}
+				}
+			}
+			if(isHaveAddress){
+				OOrderAddr addr=productDao.get(OOrderAddr.class, addressId);
+				if(addr!=null){
+					BAddressVO addressVO=new BAddressVO();
+					addressVO.setAddressId(String.valueOf(addressId));
+					addressVO.setReceiveName(addr.getReceiverName());
+					addressVO.setPhone(addr.getMobilePhone()); 
+					String address=regionService.getNameByCode(addr.getProvince())
+					+regionService.getNameByCode(addr.getCity())
+					+regionService.getNameByCode(addr.getDistrict())
+					+addr.getDetailAddr();
+					addressVO.setAddress(address);//addr.getDetailAddr()
+					result.setAddress(addressVO);
+				}
+			}
+			
+			double ticketAmount= walletDao.get_UTicketInfo(order.getWeiId(), orderno);
+			if(ticketAmount>0){
+				result.setIsHaveTicket(1);
+				result.setTicketAmount(ticketAmount); 
+			}
+		}
+		rqModel.setStatu(ReturnStatus.Success);
+		rqModel.setBasemodle(result);
+		return rqModel;
+	}
+}

@@ -1,0 +1,114 @@
+package com.okwei.bean.domain;
+
+import java.util.Date;
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import static javax.persistence.GenerationType.IDENTITY;
+import javax.persistence.Id;
+import javax.persistence.Table;
+
+/**
+ * UTicketUseLog entity. @author MyEclipse Persistence Tools
+ */
+@Entity
+@Table(name = "U_TicketUseLog")
+public class UTicketUseLog implements java.io.Serializable {
+
+	// Fields
+
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 5073136735925915992L;
+	private Long ticketLogId;
+	private Long weiId;
+	private Double amount;
+	private Date createTime;
+	private Integer type;
+	private Integer useType;
+	private String orderId;
+
+	// Constructors
+
+	/** default constructor */
+	public UTicketUseLog() {
+	}
+
+	/** full constructor */
+	public UTicketUseLog(Long weiId, Double amount, Date createTime,
+			Integer type, String orderId) {
+		this.weiId = weiId;
+		this.amount = amount;
+		this.createTime = createTime;
+		this.type = type;
+		this.orderId = orderId;
+	}
+
+	// Property accessors
+	@Id
+	@GeneratedValue(strategy = IDENTITY)
+	@Column(name = "TicketLogID", unique = true, nullable = false)
+	public Long getTicketLogId() {
+		return this.ticketLogId;
+	}
+
+	public void setTicketLogId(Long ticketLogId) {
+		this.ticketLogId = ticketLogId;
+	}
+
+	@Column(name = "WeiId")
+	public Long getWeiId() {
+		return this.weiId;
+	}
+
+	public void setWeiId(Long weiId) {
+		this.weiId = weiId;
+	}
+
+	@Column(name = "Amount", precision = 18)
+	public Double getAmount() {
+		return this.amount;
+	}
+
+	public void setAmount(Double amount) {
+		this.amount = amount;
+	}
+
+	@Column(name = "CreateTime", length = 0)
+	public Date getCreateTime() {
+		return this.createTime;
+	}
+
+	public void setCreateTime(Date createTime) {
+		this.createTime = createTime;
+	}
+
+	@Column(name = "Type")
+	public Integer getType() {
+		return this.type;
+	}
+
+	public void setType(Integer type) {
+		this.type = type;
+	}
+
+	@Column(name = "OrderId", length = 64)
+	public String getOrderId() {
+		return this.orderId;
+	}
+
+	public void setOrderId(String orderId) {
+		this.orderId = orderId;
+	}
+
+	public Integer getUseType() {
+		return useType;
+	}
+
+	public void setUseType(Integer useType) {
+		this.useType = useType;
+	}
+
+	
+}

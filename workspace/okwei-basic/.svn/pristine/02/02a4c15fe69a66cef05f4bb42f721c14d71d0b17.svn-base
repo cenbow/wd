@@ -1,0 +1,36 @@
+package com.okwei.service.activity;
+
+import com.okwei.bean.domain.AShopRecommend;
+import com.okwei.bean.dto.activity.AShopRecommendDTO;
+import com.okwei.bean.vo.ReturnModel;
+import com.okwei.bean.vo.activity.AShopRecommendVO;
+import com.okwei.bean.vo.activity.WeiShopModel;
+import com.okwei.common.Limit;
+import com.okwei.common.PageResult;
+
+public interface IAShopRecommendMgtService {
+    /**
+     * 添加店铺推荐
+     * 
+     * @param srdto
+     * @return
+     */
+    public ReturnModel addAShopRecommend(AShopRecommendDTO dto);
+
+    /**
+     * 获取店铺推荐列表
+     * 
+     * @param title
+     * @param state
+     * @return
+     */
+    public PageResult<AShopRecommendVO> findRecommend(AShopRecommend srds,Limit limit);
+    /**
+     * APP获取店铺推荐列表
+     * 
+     * @param title
+     * @param state
+     * @return
+     */
+    public PageResult<WeiShopModel> findRecommend(Limit limit);
+}

@@ -1,0 +1,181 @@
+package com.okwei.service.impl.activity;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.okwei.bean.domain.AShopRecommend;
+import com.okwei.bean.domain.UShopInfo;
+import com.okwei.bean.dto.activity.AShopRecommendDTO;
+import com.okwei.bean.vo.ReturnModel;
+import com.okwei.bean.vo.ReturnStatus;
+import com.okwei.bean.vo.activity.AShopRecommendVO;
+import com.okwei.bean.vo.activity.WeiShopModel;
+import com.okwei.common.Limit;
+import com.okwei.common.PageResult;
+import com.okwei.dao.IBaseDAO;
+import com.okwei.service.activity.IAShopRecommendMgtService;
+import com.okwei.service.impl.BaseService;
+import com.okwei.util.DateUtils;
+import com.okwei.util.ImgDomain;
+
+@Service
+public class AShopRecommendMgtService extends BaseService implements
+		IAShopRecommendMgtService {
+
+	@Autowired 
+	private IBaseDAO baseDAO;
+
+	@Override
+	public ReturnModel addAShopRecommend(AShopRecommendDTO dto) {
+		ReturnModel result = new ReturnModel();
+		int sort =-1;
+		Short state = (short)-1;
+		if(state!=null){
+			state = dto.getSrd().getState();
+		}
+		if(dto.getSrd().getSort()!=null){
+			sort = dto.getSrd().getSort();
+		}
+		result.setStatu(ReturnStatus.DataError);
+		UShopInfo sif = new UShopInfo();
+		String hql="";
+		if (dto.getSrd().getShopWeiId() > 0 ) {
+			sif = baseDAO.get(UShopInfo.class, dto.getSrd().getShopWeiId());
+			if (sif != null) {	
+				if(dto.getType()==0||state==0){
+					if(sort>0){
+						
+					}else{
+						result.setStatusreson("提交的数据格式不正确");
+						result.setStatu(ReturnStatus.DataError);
+						return result;
+					}
+					//修改和保存的时候进行排序
+					baseDAO.executeHql("update AShopRecommend set sort=sort+1 where sort>=?",sort);
+				}
+				if (state!=null) {				
+					if(state==0){
+						// 保存			
+						baseDAO.executeHql("delete from AShopRecommend where shopWeiId=?",sif.getWeiId());
+						baseDAO.save(dto.getSrd());
+					}else if(dto.getSrd().getBeginTime()!=null&&state==2){
+						//开启
+						hql = "update AShopRecommend set beginTime=?, state=?,recNum=recNum+1 where shopWeiId='"+sif.getWeiId()+"' ";
+						baseDAO.executeHql(hql,dto.getSrd().getBeginTime(),state);
+					}else if(dto.getSrd().getEndTime()!=null&&state==1){
+						//关闭
+						hql = "update AShopRecommend set endTime=?, state=? where shopWeiId='"+sif.getWeiId()+"' ";
+						baseDAO.executeHql(hql,dto.getSrd().getEndTime(),state);
+					}else{
+						//删除
+						baseDAO.executeHql("update AShopRecommend set sort=sort-1 where sort>?",sort);
+				    	baseDAO.executeHql("delete from AShopRecommend where shopWeiId=?",sif.getWeiId());
+					}
+				}else if(dto.getType()==0){
+					//更新
+					hql = "update AShopRecommend set title=?, sort=?,shopImg=? where shopWeiId='"+sif.getWeiId()+"' ";			
+					baseDAO.executeHql(hql,dto.getSrd().getTitle(),sort,dto.getSrd().getShopImg());
+				}
+				result.setStatu(ReturnStatus.Success);
+				//保存日志
+				dto.getAsrdlog().setRecId(dto.getSrd().getRecId());
+				baseDAO.save(dto.getAsrdlog());
+			} else {
+				result.setStatusreson("非法操作");
+				return result;
+			}
+		}else{
+			result.setStatusreson("提交的数据格式不正确");
+			result.setStatu(ReturnStatus.DataError);
+		}
+	
+		result.setBasemodle(sif.getWeiId());
+		return result;
+	}
+
+	/**
+	 * 店铺推荐列表分页
+	 * 
+	 * @param limit
+	 * @return
+	 */
+	@Override
+	public PageResult<AShopRecommendVO> findRecommend(AShopRecommend srds,
+			Limit limit) {
+		String hql = "from AShopRecommend where 1=:id";
+		Map<String, Object> params = new HashMap<String, Object>();
+		params.put("id", 1);
+		if (srds.getTitle() != null && !"".equals(srds.getTitle())) {
+			hql = hql + " and title like '%" + srds.getTitle() + "%' ";
+		}
+		if (srds.getState()!=null&&srds.getState() >= 0) {
+			hql = hql + " and state=:state1";
+			params.put("state1", srds.getState());
+		}
+		hql = hql + " ORDER BY sort";
+		PageResult<AShopRecommend> page = baseDAO.findPageResultByMap(hql, limit, params);
+		List<AShopRecommendVO> listvo=new ArrayList<AShopRecommendVO>();
+		if (page != null) {
+			List<AShopRecommend> list = page.getList();
+			if (list != null && list.size() > 0) {
+				for (AShopRecommend asrd : list) {
+					AShopRecommendVO srdvo=new AShopRecommendVO();
+					if(asrd.getBeginTime()!=null){
+						srdvo.setBeginTime(DateUtils.formatDateTime(asrd.getBeginTime()));
+					}
+					srdvo.setRecId(asrd.getRecId());
+					srdvo.setRecNum(asrd.getRecNum());
+					srdvo.setShopImg(ImgDomain.GetFullImgUrl(asrd.getShopImg()));
+					srdvo.setShopWeiId(asrd.getShopWeiId());
+					srdvo.setSort(asrd.getSort());
+					srdvo.setState(asrd.getState());
+					srdvo.setUrl(asrd.getUrl());
+					srdvo.setTitle(asrd.getTitle());
+					if(asrd.getEndTime()!=null){
+						srdvo.setEndTime(DateUtils.formatDateTime(asrd.getEndTime()));
+					}
+					listvo.add(srdvo);
+					
+				}			
+				return new PageResult<AShopRecommendVO>(page.getTotalCount(),Limit.buildLimit(page.getPageIndex(),page.getPageSize()),listvo);
+			}
+		}
+		return null;
+	}
+
+	@Override
+	public PageResult<WeiShopModel> findRecommend(Limit limit) {
+		String hql = "from AShopRecommend where state = 2 ORDER BY sort";
+		PageResult<AShopRecommend> page = baseDAO.findPageResult(hql,limit);
+		List<WeiShopModel> wsmMdl = new ArrayList<WeiShopModel>();
+		List<Long> ids = new ArrayList<Long>();	
+		if (page.getList() != null && page.getList().size() > 0) {		
+			List<AShopRecommend> temp = page.getList();
+			for (AShopRecommend asrd : temp) {
+				ids.add(asrd.getShopWeiId());
+			}
+			Map<String, Object> params = new HashMap<String, Object>();
+			params.put("ids", ids);
+			List<UShopInfo> amlist = baseDAO.findByMap("from UShopInfo where weiId in(:ids)", params);
+			for (AShopRecommend asrd : temp) {
+				WeiShopModel wsm = new WeiShopModel();
+				wsm.setUserId(asrd.getShopWeiId());
+				wsm.setShopImg(ImgDomain.GetFullImgUrl(asrd.getShopImg()));
+				wsm.setShopName(asrd.getTitle());
+				wsm.setIdentityType(asrd.getState());		
+				for(UShopInfo sfInfo : amlist){
+					if(sfInfo.getWeiId().equals(asrd.getShopWeiId())){
+						wsm.setUserName(sfInfo.getShopName());
+					}	
+				}
+				wsmMdl.add(wsm);
+			}
+		}
+		return new PageResult<WeiShopModel>(page.getTotalCount(), Limit.buildLimit(page.getPageIndex(),page.getPageSize()), wsmMdl);
+	}
+}

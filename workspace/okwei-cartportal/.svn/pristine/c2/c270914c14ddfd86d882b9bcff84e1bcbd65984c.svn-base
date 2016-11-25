@@ -1,0 +1,37 @@
+<%@ page language="java" contentType="text/html; charset=UTF-8"
+	pageEncoding="UTF-8"%>
+<%
+String path = request.getContextPath();
+%>	
+<title>个人后台首页</title>
+<!-- css -->
+<link rel="stylesheet" type="text/css"
+	href="<%=path%>/statics/css/glbdy.css" />
+<link rel="stylesheet" type="text/css"
+	href="<%=path%>/statics/css/index.css" />
+<link rel="stylesheet" type="text/css"
+	href="<%=path%>/statics/css/mzh_dd.css" />
+<link rel="stylesheet" type="text/css" href="http://base1.okwei.com/css/web/pc-base.css" />
+<link rel="stylesheet" type="text/css" href="http://base2.okwei.com/css/web/home-page.css" />
+<link rel="stylesheet" type="text/css" href="http://base3.okwei.com/css/web/header.css" />
+<link rel="stylesheet" type="text/css" href="http://base1.okwei.com/css/web/footer.css" />
+
+
+<!-- javascript -->
+<script type="text/javascript"
+	src="<%=path%>/statics/js/default.main.js"></script>
+<script type="text/javascript"
+	src="<%=path%>/statics/js/extends_fn.js"></script>
+<script type="text/javascript"
+	src="<%=path%>/statics/js/pagination.js"></script>
+<script type="text/javascript"
+	src="<%=path%>/statics/js/mzh_dd.js"></script>
+<script type="text/javascript"
+	src="<%=path%>/statics/js/common/spin.min.js"></script>
+<script type="text/javascript"
+	src="<%=path%>/statics/js/common/common.js"></script>
+<script type="text/javascript"
+	src="<%=path%>/statics/js/layer/layer.min.js"></script>
+<script type="text/javascript"
+	src="<%=path%>/statics/js/jquery-josn.js"></script>	
+<script type="text/javascript" src="<%=path %>/statics/js/header.js?_=${VERSION}"></script>

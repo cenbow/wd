@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<sitemesh>
+
+	<!-- 指明满足“/*”的页面，将被“/WEB-INF/views/decorators/decorator.html”所装饰 -->
+	<mapping path="/*" decorator="/WEB-INF/decorators/decorator.jsp" />
+	<mapping path="/*.ajax" exclue="true" />
+	<mapping path="/free/*" exclue="true"/>
+	<mapping path="/home/index" exclue="true" />
+	<mapping path="/home/index.htm" exclue="true" />
+	<mapping path="/wholesale/batchMarketShopList" exclue="true" />
+	<mapping path="/wholesale/batchMarketProductList" exclue="true" />
+</sitemesh>

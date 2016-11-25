@@ -1,0 +1,169 @@
+package com.okwei.bean.vo.order;
+
+import java.io.Serializable;
+import java.util.List;
+
+import com.okwei.bean.vo.activity.ActivityModel;
+
+
+public class BShoppingCartVO implements Serializable{//implements Serializable 
+		private static final long serialVersionUID = 1L;
+		private Short buyType;// 1零售，2预定，3批发，4进货，5铺货（*必填）
+		private String subNo;//子账号
+		private Integer buyerIdentity;//用户身份 （1落地店，2代理商）
+		private int isPlatform;//是否平台号或者品牌号
+		
+	    private String message;// 买家备注消息
+	    
+	    //-------------5.0------------
+	    private Integer isFirstOrder;//手否落地店首单
+	    private Long supplierId;//发货人id
+	    private String supplierName;//发货人
+	    private Integer source;//0零售区 1落地区，2代理区
+	    private String referrerId;//
+	    private String demandId;//招商需求Id （如果平台号订单，需传）
+		private List<BShoppingCartProductVO> productList;//店铺下商品列表 （加入购物车时*必填）
+		private String currentLogisticId;//物流方式
+		private Double totalPrice;//总价
+		private Double totalShopYoufei;//邮费
+		private Double fristOrderMoney;//首单金额
+		private Double fristOrderDiffMoney;//首单还差金额
+		
+	    private List<BKuaiDi> logisticList;//物流列表
+	    
+	    private String activityInfo;//活动提示信息
+	    
+	    
+	    
+		public String getActivityInfo() {
+			return activityInfo;
+		}
+		public void setActivityInfo(String activityInfo) {
+			this.activityInfo = activityInfo;
+		}
+		public Double getTotalShopYoufei() {
+			return totalShopYoufei;
+		}
+		public void setTotalShopYoufei(Double totalShopYoufei) {
+			this.totalShopYoufei = totalShopYoufei;
+		}
+		public Double getTotalPrice() {
+			return totalPrice;
+		}
+		public void setTotalPrice(Double totalPrice) {
+			this.totalPrice = totalPrice;
+		}
+		public Integer getIsFirstOrder() {
+			return isFirstOrder;
+		}
+		public void setIsFirstOrder(Integer isFirstOrder) {
+			this.isFirstOrder = isFirstOrder;
+		}
+		public String getSubNo() {
+			return subNo;
+		}
+		public void setSubNo(String subNo) {
+			this.subNo = subNo;
+		}
+		public Integer getBuyerIdentity() {
+			return buyerIdentity;
+		}
+		public void setBuyerIdentity(Integer buyerIdentity) {
+			this.buyerIdentity = buyerIdentity;
+		}
+		
+		public int getIsPlatform() {
+			return isPlatform;
+		}
+		public void setIsPlatform(int isPlatform) {
+			this.isPlatform = isPlatform;
+		}
+		public Long getSupplierId() {
+			return supplierId;
+		}
+		public void setSupplierId(Long supplierId) {
+			this.supplierId = supplierId;
+		}
+		
+		
+		
+		public Double getFristOrderMoney() {
+			return fristOrderMoney;
+		}
+		public void setFristOrderMoney(Double fristOrderMoney) {
+			this.fristOrderMoney = fristOrderMoney;
+		}
+		public Double getFristOrderDiffMoney() {
+			return fristOrderDiffMoney;
+		}
+		public void setFristOrderDiffMoney(Double fristOrderDiffMoney) {
+			this.fristOrderDiffMoney = fristOrderDiffMoney;
+		}
+		public String getSupplierName() {
+			return supplierName;
+		}
+		public void setSupplierName(String supplierName) {
+			this.supplierName = supplierName;
+		}
+		public Integer getSource() {
+			return source;
+		}
+		public void setSource(Integer source) {
+			this.source = source;
+		}
+	
+		
+		public String getReferrerId() {
+			return referrerId;
+		}
+		public void setReferrerId(String referrerId) {
+			this.referrerId = referrerId;
+		}
+		
+		
+		public String getDemandId() {
+			return demandId;
+		}
+		public void setDemandId(String demandId) {
+			this.demandId = demandId;
+		}
+		public List<BShoppingCartProductVO> getProductList() {
+			return productList;
+		}
+		public void setProductList(List<BShoppingCartProductVO> productList) {
+			this.productList = productList;
+		}
+		
+	
+		public String getCurrentLogisticId() {
+			return currentLogisticId;
+		}
+		public void setCurrentLogisticId(String currentLogisticId) {
+			this.currentLogisticId = currentLogisticId;
+		}
+		public Short getBuyType() {
+			return buyType;
+		}
+		public void setBuyType(Short buyType) {
+			this.buyType = buyType;
+		}
+		public String getMessage() {
+			return message;
+		}
+		public void setMessage(String message) {
+			this.message = message;
+		}
+		public List<BKuaiDi> getLogisticList() {
+			return logisticList;
+		}
+		public void setLogisticList(List<BKuaiDi> logisticList) {
+			this.logisticList = logisticList;
+		}
+	    
+	    
+	    
+	 
+
+	    
+	    
+}

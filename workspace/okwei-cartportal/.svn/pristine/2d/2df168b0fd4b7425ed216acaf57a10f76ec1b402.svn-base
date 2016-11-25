@@ -1,0 +1,204 @@
+package com.okwei.cartportal.service.impl;
+
+import java.util.ArrayList;
+import java.util.List;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.okwei.bean.domain.AActProductsShowTime;
+import com.okwei.bean.domain.AActivity;
+import com.okwei.bean.domain.AActivityProducts;
+import com.okwei.bean.domain.PProductStyles;
+import com.okwei.bean.domain.PProducts;
+import com.okwei.bean.domain.UCustomerAddr;
+import com.okwei.bean.domain.UDemandProduct;
+import com.okwei.bean.domain.USupplyDemand;
+import com.okwei.bean.enums.ActProductVerState;
+import com.okwei.bean.enums.ProductStatusEnum;
+import com.okwei.bean.enums.ShoppingCarSourceEnum;
+import com.okwei.bean.enums.UserIdentityType;
+import com.okwei.bean.vo.activity.ActProductInfo;
+import com.okwei.bean.vo.activity.ActivityModel;
+import com.okwei.bean.vo.order.BAddressVO;
+import com.okwei.bean.vo.order.BShoppingCartProductVO;
+import com.okwei.bean.vo.order.BShoppingCartVO;
+import com.okwei.cartportal.bean.vo.SettlementParam;
+import com.okwei.cartportal.bean.vo.SettlementProductParam;
+import com.okwei.cartportal.service.ICartVerFiveService;
+import com.okwei.dao.IBaseDAO;
+import com.okwei.dao.product.IProductSearchDao;
+import com.okwei.service.IBaseCommonService;
+import com.okwei.service.IBasicShoppingCartService;
+import com.okwei.service.activity.IBaseActivityService;
+import com.okwei.service.impl.BaseService;
+import com.okwei.service.order.IBasicPayService;
+import com.okwei.util.BitOperation;
+import com.okwei.util.DateUtils;
+import com.okwei.util.ImgDomain;
+import com.okwei.util.ParseHelper;
+
+@Service
+public class CartVerFiveService extends BaseService implements ICartVerFiveService {
+
+	@Autowired
+	private IBasicShoppingCartService cartService;
+	@Autowired
+	private IBaseCommonService commonService;
+	@Autowired
+	private IBasicPayService payService;
+	
+	@Autowired
+	private IBaseActivityService activityService;
+	@Autowired
+	private IBaseDAO baseDAO;
+	@Autowired
+	private IProductSearchDao searchDao;
+
+
+	public List<BShoppingCartVO> getSettlementData(List<SettlementParam> paramlist, long weiid,BAddressVO addressVO) {
+		if (paramlist != null && paramlist.size() > 0) {
+			List<BShoppingCartVO> resultlist = new ArrayList<BShoppingCartVO>();
+			for (SettlementParam settle : paramlist) {
+				if (settle.getProductList() != null && settle.getProductList().size() > 0) {
+					for (SettlementProductParam pp : settle.getProductList()) {
+						PProducts products = super.getById(PProducts.class, pp.getProNum());
+						if(products.getPublishType()!=null&&1==products.getPublishType()){
+							settle.setSource(Integer.parseInt(ShoppingCarSourceEnum.share.toString()));
+						}
+						settle.setSupplierWeiId(products.getSupplierWeiId());
+						continue;
+					}
+				}
+				if (settle.getProductList() != null && settle.getProductList().size() > 0) {
+					BShoppingCartVO vo = new BShoppingCartVO();
+					vo.setSupplierId(settle.getSupplierWeiId());
+					vo.setBuyType(settle.getBuyType());
+					vo.setSource(settle.getSource());
+					vo.setDemandId(String.valueOf(settle.getDemandId()));
+					vo.setSupplierName(commonService.getShopNameByWeiId(settle.getSupplierWeiId()));
+					vo.setIsFirstOrder(0);
+					List<BShoppingCartProductVO> prolist = new ArrayList<BShoppingCartProductVO>();
+					double totalPrice = 0;
+					double firstOrderPrice=0;//落地首单价
+					double needMore=0;//首单金额还差多少
+					if(vo.getDemandId()!=null&&!"".equals(vo.getDemandId())){
+						USupplyDemand sd = baseDAO.get(USupplyDemand.class,ParseHelper.toInt(vo.getDemandId())); 
+						if(sd!=null&&settle.getSource().shortValue() == Short.parseShort(ShoppingCarSourceEnum.Landi.toString())){
+							vo.setFristOrderMoney(sd.getOrderAmout());
+							firstOrderPrice=sd.getOrderAmout()==null?0:sd.getOrderAmout();
+							needMore=firstOrderPrice;
+						}
+					}
+					for (SettlementProductParam pp : settle.getProductList()) {
+						PProducts products = super.getById(PProducts.class, pp.getProNum());
+						if (products == null || products.getState() == null || products.getState() != Short.parseShort(ProductStatusEnum.Showing.toString())) {
+							return null;
+						}
+						PProductStyles style=super.getById(PProductStyles.class, pp.getStyleId());
+						if (style != null) {
+							BShoppingCartProductVO pro = new BShoppingCartProductVO();
+							pro.setImageUrl(ImgDomain.GetFullImgUrl(products.getDefaultImg(), 24));
+							pro.setProductPrice(style.getPrice());
+							if (settle.getSource().shortValue() == Short.parseShort(ShoppingCarSourceEnum.Landi.toString())) {
+								if (style.getLandPrice() != null && style.getLandPrice() > 0) {
+									pro.setProductPrice(style.getLandPrice());
+								}
+							} else if (settle.getSource().shortValue() == Short.parseShort(ShoppingCarSourceEnum.agency.toString())) {
+								if (style.getAgencyPrice() != null && style.getAgencyPrice() > 0) {
+									pro.setProductPrice(style.getAgencyPrice());
+								}
+							}
+							/*----------产品是否在限时抢购中----------------*/
+							AActProductsShowTime act=activityService.getAActProductsShowTime(pp.getProNum(), true);
+                            if(act!=null){
+                            	AActivityProducts actProducts=baseDAO.get(AActivityProducts.class, act.getProActId());	
+                            	if(actProducts!=null&&actProducts.getState()==Short.parseShort(ActProductVerState.Ok.toString())){
+                            		AActivity actModel=baseDAO.get(AActivity.class, actProducts.getActId());
+                            		if(actModel!=null){ 
+                            			ActivityModel model=new ActivityModel();
+                                		model.setActId(actProducts.getActId().intValue());
+                                		model.setTitle(actModel.getTitle());
+                                		model.setBeginTime(DateUtils.format(act.getBeginTime(), "yyyy-MM-dd HH:mm:ss"));
+                                		model.setEndTime(DateUtils.format(act.getEndTime(), "yyyy-MM-dd HH:mm:ss"));
+                                		model.setActPrice(actProducts.getPrice());
+                                		model.setState(1);
+                                		pro.setProductPrice(actProducts.getPrice());
+                                		pro.setActivityModel(model); 
+                                		vo.setActivityInfo("参加活动商品的库存已锁定，请在10分钟内进行支付！超过10分钟后参加活动商品的库存将释放");
+                            		}
+                            	}
+                            }
+							pro.setProNum(pp.getProNum());
+							pro.setScid(String.valueOf(pp.getScid()));
+							pro.setCount(pp.getCount());
+							pro.setBuyShopId(pp.getBuyShopId());
+							pro.setProductTitle(products.getProductTitle());
+							pro.setProductStyleName(cartService.getProductStyleName(pp.getProNum(), pp.getStyleId()));
+							pro.setProductStyleId(String.valueOf(pp.getStyleId()));
+							pro.setSupplyerWeiId(products.getSupplierWeiId());
+							if(pp.getShareOne()!=null&&pp.getShareOne()>0){
+								pro.setShareOne(pp.getShareOne());
+							}
+							else {
+								pro.setShareOne(111l);
+							}
+							pro.setSharePageId(pp.getSharePageId()); 
+							pro.setSharePageProducer(pp.getSharePageProducer());
+							UDemandProduct dp =  baseDAO.getUniqueResultByHql("from UDemandProduct where productId=?", new Object[]{products.getProductId()});
+							if (dp != null&&dp.getDemandId().intValue()==ParseHelper.toInt(vo.getDemandId())) {
+								needMore=needMore-pro.getProductPrice()*pro.getCount();
+							}
+							prolist.add(pro);
+							totalPrice += pro.getProductPrice().doubleValue() * pro.getCount().intValue();
+						}
+					}
+					
+					vo.setTotalPrice(totalPrice); 
+					if (settle.getSource().shortValue() == Short.parseShort(ShoppingCarSourceEnum.Landi.toString()) && prolist != null && prolist.size() > 0) {
+						int identity = payService.isShop(weiid, prolist.get(0).getProNum());
+						if (!BitOperation.verIdentity(identity, UserIdentityType.Ground)) {
+							vo.setFristOrderDiffMoney(needMore); 
+							if (settle.getDemandId() != null) {
+								USupplyDemand demandMod = super.getById(USupplyDemand.class, settle.getDemandId());
+								if (demandMod != null && demandMod.getOrderAmout() != null) {
+									if (totalPrice >= demandMod.getOrderAmout().doubleValue()) {
+										vo.setIsFirstOrder(1);
+									}
+								}
+							}
+						}
+					}
+					if (prolist != null && prolist.size() > 0) {
+						vo.setProductList(prolist);
+						resultlist.add(vo);
+					}
+				}
+			}
+			List<BShoppingCartVO> result = new ArrayList<BShoppingCartVO>();
+//			BAddressVO addressVO = null;
+			if(addressVO==null){
+				String hql_add = "from UCustomerAddr u where u.weiId=? and u.isDefault=1";
+				UCustomerAddr addr = baseDAO.getUniqueResultByHql(hql_add, weiid);
+				if (addr != null) {
+					addressVO = new BAddressVO();
+					addressVO.setAddressId(addr.getCaddrId().toString());
+					addressVO.setProvince(addr.getProvince());
+					addressVO.setCity(addr.getCity());
+					addressVO.setDistrict(addr.getDistrict());
+					addressVO.setPhone(addr.getMobilePhone());
+					addressVO.setReceiveName(addr.getReceiverName());
+					addressVO.setAddress(addr.getDetailAddr());
+				}
+			}
+			if (resultlist != null && resultlist.size() > 0) {
+				for (BShoppingCartVO cart : resultlist) {
+					cart = cartService.getCartModel(cart, addressVO);
+					result.add(cart);
+				}
+			}
+			return result;
+		}
+		return null;
+	}
+}

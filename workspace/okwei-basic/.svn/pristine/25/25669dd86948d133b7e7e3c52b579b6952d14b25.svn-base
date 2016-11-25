@@ -1,0 +1,592 @@
+package com.okwei.service.impl.shoppingcart;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+import net.sf.json.JSONObject;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
+import org.springframework.transaction.annotation.Transactional;
+
+import com.okwei.bean.domain.AActProductsShowTime;
+import com.okwei.bean.domain.AActShowProducts;
+import com.okwei.bean.domain.AActivityProducts;
+import com.okwei.bean.domain.PClassProducts;
+import com.okwei.bean.domain.PProductSellKey;
+import com.okwei.bean.domain.PProductSellValue;
+import com.okwei.bean.domain.PProductStyleKv;
+import com.okwei.bean.domain.PProductStyles;
+import com.okwei.bean.domain.PProducts;
+import com.okwei.bean.domain.PShevleBatchPrice;
+import com.okwei.bean.domain.TShoppingCar;
+import com.okwei.bean.domain.UDemandProduct;
+import com.okwei.bean.domain.UShopInfo;
+import com.okwei.bean.domain.USupplyChannel;
+import com.okwei.bean.domain.UWallet;
+import com.okwei.bean.dto.shoppingcart.ShopCarDTO;
+import com.okwei.bean.enums.ActProductVerState;
+import com.okwei.bean.enums.ProductStatusEnum;
+import com.okwei.bean.enums.ShoppingCarSourceEnum;
+import com.okwei.bean.enums.ShoppingCartTypeEnum;
+import com.okwei.bean.vo.ReturnModel;
+import com.okwei.bean.vo.ReturnStatus;
+import com.okwei.bean.vo.activity.ActProductInfo;
+import com.okwei.bean.vo.order.BAddressVO;
+import com.okwei.bean.vo.order.BShoppingCartProductVO;
+import com.okwei.bean.vo.order.BShoppingCartVO;
+import com.okwei.bean.vo.shoppingcart.ShoppingCar;
+import com.okwei.bean.vo.shoppingcart.ShoppingCarList;
+import com.okwei.bean.vo.shoppingcart.Style;
+import com.okwei.bean.vo.shoppingcart.WholesalePrice;
+import com.okwei.common.CommonMethod;
+import com.okwei.common.JsonUtil;
+import com.okwei.dao.impl.BaseDAO;
+import com.okwei.dao.product.IProductSearchDao;
+import com.okwei.dao.shoppingcart.IBasicPProductSellKeyMgtDAO;
+import com.okwei.dao.shoppingcart.IBasicPProductSellValueMgtDAO;
+import com.okwei.dao.shoppingcart.IBasicPProductStyleKvMgtDAO;
+import com.okwei.dao.shoppingcart.IBasicPProductStylesMgtDAO;
+import com.okwei.dao.shoppingcart.IBasicPProductsMgtDAO;
+import com.okwei.dao.shoppingcart.IBasicTShoppingCarMgtDAO;
+import com.okwei.dao.shoppingcart.IBasicUDemandProductMgtDAO;
+import com.okwei.dao.shoppingcart.IBasicUSupplyChannelMgtDAO;
+import com.okwei.dao.user.IUUserAssistMgtDAO;
+import com.okwei.service.IBaseCommonService;
+import com.okwei.service.IBasicShoppingCartService;
+import com.okwei.service.activity.IBaseActivityService;
+import com.okwei.service.shoppingcart.IBaseCartNewService;
+import com.okwei.service.shoppingcart.IBasicShoppingCartMgtService;
+import com.okwei.util.ImgDomain;
+import com.okwei.util.ObjectUtil;
+import com.okwei.util.RedisUtil;
+import com.sdicons.json.mapper.MapperException;
+
+@Service
+@Transactional(propagation = Propagation.REQUIRED, rollbackFor = { Exception.class })
+public class BaseShoppingCartServiceImp extends BaseDAO implements IBaseCartNewService {
+
+	@Autowired
+	private IBasicPProductStylesMgtDAO iBasicPProductStylesMgtDAO;
+	@Autowired
+	private IBasicUDemandProductMgtDAO iBasicUDemandProductMgtDAO;
+	@Autowired
+	private IBasicPProductsMgtDAO iBasicPProductsMgtDAO;
+	@Autowired
+	private IBasicUSupplyChannelMgtDAO iBasicUSupplyChannelMgtDAO;
+	
+	/*--------------------------------------------*/
+
+	@Autowired
+	private IBasicPProductStyleKvMgtDAO iBasicPProductStyleKvMgtDAO;
+	@Autowired
+	private IBasicPProductSellKeyMgtDAO iBasicPProductSellKeyMgtDAO;
+	@Autowired
+	private IBasicPProductSellValueMgtDAO iBasicPProductSellValueMgtDAO;
+	@Autowired
+	private IBasicTShoppingCarMgtDAO iBasicTShoppingCarMgtDAO;
+	@Autowired
+	private IUUserAssistMgtDAO userDao;
+	@Autowired
+	private IBaseActivityService activityService;
+	@Autowired
+	private IBasicShoppingCartMgtService shoppingCartService;
+	@Autowired
+	private IBaseCommonService commonService;
+	
+	@Autowired
+	private IProductSearchDao searchDao;
+
+	@Autowired
+	private IBasicShoppingCartService cartService;
+
+	
+	
+	private List<PProductStyleKv> pProductStyleKVList;
+	private List<PProductSellKey> pProductSellKeyList;
+	private List<PProductSellValue> pProductSellValueList ;// 款式value
+	
+	
+	/**
+	 * 获取用户购物车列表
+	 * 1、 获取购物车列表
+	 * 2、汇总产品（同卖家不同产品）
+	 * @param weiId
+	 * @return
+	 */
+	public ReturnModel find_ShoppingCartList(long weiId) {
+		ReturnModel returnModel = new ReturnModel();
+		//买家购物清单列表
+		List<TShoppingCar> tShoppingCarList = iBasicTShoppingCarMgtDAO.getTShoppingCarList(weiId);
+		if (tShoppingCarList == null || tShoppingCarList.size() == 0) {
+			returnModel.setBasemodle(new ArrayList<ShoppingCar>());
+			returnModel.setStatu(ReturnStatus.Success);
+			return returnModel;
+		}
+		//所有卖家、成交微店的微店号
+		List<Long> shopWiidsList=new ArrayList<Long>();
+		// 产品Id List
+		List<Long> productIdList = new ArrayList<Long>();
+		// 产品款式Id list
+		List<Long> styleIdList = new ArrayList<Long>();
+		if (tShoppingCarList != null && tShoppingCarList.size() > 0) {
+			for (TShoppingCar item : tShoppingCarList) {
+				if(item.getShopWeiID()==null){
+					item.setShopWeiID(item.getSupplierWeiId());
+				} 
+				productIdList.add(item.getProNum() != null ? item.getProNum() : -1);
+				styleIdList.add(item.getStyleId() != null ? item.getStyleId() : -1);
+				shopWiidsList.add(item.getSupplierWeiId());
+				shopWiidsList.add(item.getShopWeiID());
+			}
+			List<UShopInfo> shoplist=commonService.find_shopinfolist(shopWiidsList);
+			pProductStyleKVList = iBasicPProductStyleKvMgtDAO.getPProductStyleKvByProductIdAndStyleId(styleIdList, productIdList);
+//			// 款式keyList
+			pProductSellKeyList = iBasicPProductSellKeyMgtDAO.getPProductSellKeyByProductId(productIdList);
+			List<Long> attributeIdList = new ArrayList<Long>();
+			if (pProductSellKeyList != null && pProductSellKeyList.size() > 0) {
+				for (PProductSellKey pProductSellKey : pProductSellKeyList) {
+					// 主键不需要判断是否为空
+					attributeIdList.add(pProductSellKey.getAttributeId());
+				}
+			}
+			// 款式value
+			pProductSellValueList = iBasicPProductSellValueMgtDAO.getPProductSellValueByProductIdAndAttributeId(productIdList, attributeIdList);
+				
+			// 产品列表
+			List<PProducts> pProductsList = iBasicPProductsMgtDAO.getPProductsList(productIdList);
+			// 查找款式列表
+			List<PProductStyles> pProductStylesList = iBasicPProductStylesMgtDAO.getPProductStyles(styleIdList);
+			for (TShoppingCar item : tShoppingCarList) {
+			
+//				List<UUserAssist> userAssists= userDao.find_UUserAssist(supplierWeiIdList);
+//				for (UUserAssist uu : userAssists) {//供应商是否可以销售
+//					if(uu.getWeiId()==supplierWeiId){
+//						int identity = uu.getIdentity() == null ? 0 : uu.getIdentity();
+//						if (!BitOperation.verIdentity(identity, UserIdentityType.batchSupplier) &&
+//								!BitOperation.verIdentity(identity, UserIdentityType.BrandSupplier) &&
+//								!BitOperation.verIdentity(identity, UserIdentityType.erpSupplier) && 
+//								!BitOperation.verIdentity(identity, UserIdentityType.erpSupplier) && 
+//								!BitOperation.verIdentity(identity, UserIdentityType.PlatformSupplier) &&
+//								!BitOperation.verIdentity(identity, UserIdentityType.yunSupplier)) {
+//							item.setStatus((short) 0);
+//							isCanSell = false;
+//						}
+//					}
+//				}
+				// 产品id
+				long productId = item.getProNum() != null ? item.getProNum() : -12;
+				// 款式id
+				long styleId = item.getStyleId() != null ? item.getStyleId() : -13;
+			
+				// 该产品是否在产品表
+				boolean isProduct = false;
+				PProducts product=null;
+				for (PProducts pp : pProductsList) {
+					// 主键不可能为空
+					if (productId == pp.getProductId() && (pp.getState() == Short.parseShort(String.valueOf(ProductStatusEnum.Showing)))) {
+						isProduct = true;
+						product=pp;
+						if(pp.getPublishType()!=null&&1==pp.getPublishType()){//如果是代理区（分销区的产品）
+							item.setSource(Short.parseShort(ShoppingCarSourceEnum.share.toString())); 
+//							ActProductInfo  info=searchDao.get_ProductAct(pp.getProductId());
+//							if(info!=null&&info.getActiveType()==1){
+//								item.setSource(Short.parseShort(ShoppingCarSourceEnum.retail.toString())); 
+//							}
+						}
+						break;
+					}
+				}
+				boolean haveStyle = false;
+				for (PProductStyles pProductStyles : pProductStylesList) {
+					// 款式id不相等（主键不可能为空）
+					if (styleId == pProductStyles.getStylesId()) {
+						haveStyle = true;
+						if(product!=null&&product.getPublishType()!=null&&product.getPublishType()==1){
+							item.setPrice(pProductStyles.getPrice()); 
+						}
+						break;
+					}
+				}
+				if(!isProduct||!haveStyle){
+					item.setStatus((short) 0);
+					super.update(item);
+				}
+				/*----------产品是否在限时抢购中,每人限购5件----------------*/
+				item.setCount(actProductCount(item)); 
+			}
+			returnModel.setBasemodle(getShoppingCartList(weiId,shoplist, tShoppingCarList));
+		}
+		returnModel.setStatu(ReturnStatus.Success);
+		returnModel.setStatusreson("成功");
+		
+		return returnModel;
+	}
+	
+	/**
+	 * 限时抢购的产品，限制每人顶多5个
+	 * @param cart
+	 * @return
+	 */
+	public int actProductCount(TShoppingCar cart){
+		AActProductsShowTime act = activityService.getAActProductsShowTime(cart.getProNum(), true);
+		if (act != null) {
+			AActivityProducts actProducts = super.get(AActivityProducts.class, act.getProActId());
+			if (actProducts != null && actProducts.getState() == Short.parseShort(ActProductVerState.Ok.toString())) {
+				String keyName = "BuyLimitCount_" + cart.getWeiId() + "_" + act.getActPid() + "_" + act.getProductId();
+				Integer lv = (Integer) RedisUtil.getObject(keyName);
+				int counts = (lv == null ? 0 : lv);
+				if (counts >= 5) {
+					return 0;
+				} else {
+					int count = cart.getCount();
+					if (count + counts > 5) {
+						return (5 - counts);
+					} else {
+						return count;
+					}
+				}
+			}
+		}
+		return cart.getCount();
+	}
+	
+	/**
+	 * 
+	 * @param weiid 买家weiid
+	 * @param shoplist SupplyWeiid与ShopWeiid的店铺信息集合
+	 * @param cartlist 购物车列表
+	 * @return
+	 */
+	public List<ShoppingCar> getShoppingCartList(Long weiid, List<UShopInfo>shoplist, List<TShoppingCar> cartlist){
+		List<ShoppingCar> resultList = new ArrayList<ShoppingCar>();
+		Map<String, ShoppingCar> map=new HashMap<String, ShoppingCar>();
+		List<Long> productIdList=new ArrayList<Long>();
+		//是否有进货单
+		boolean jinhuoProduct=false;
+		for (TShoppingCar cart : cartlist) {
+			productIdList.add(cart.getProNum());
+			if(cart.getBuyType()!=null&&cart.getBuyType()==Short.parseShort(ShoppingCartTypeEnum.Jinhuo.toString())){
+				jinhuoProduct=true;
+			}
+		}
+		//满足招商的产品需求列表(进货单用)
+		List<UDemandProduct> uDemandProductList = null; 
+		List<USupplyChannel> shopUSupplyChannelList =null;
+		if(jinhuoProduct){
+			uDemandProductList=iBasicUDemandProductMgtDAO.getUDemandProductListByProductId(productIdList);
+			shopUSupplyChannelList= iBasicUSupplyChannelMgtDAO.getUSupplyChannelLsitByWeiIdAndChannelTypeAndStatus(weiid, (short) 2, (short) 1);
+		}
+		//拆单（购物车产品归类）
+		for (TShoppingCar item : cartlist) {
+			String keyName=String.valueOf(item.getSupplierWeiId() + "_b" + item.getBuyType());//+"_s"+item.getSource()
+			int demandId=0;
+			if (item.getBuyType()!=null&&item.getBuyType()==Short.parseShort(ShoppingCartTypeEnum.Jinhuo.toString())) {
+				//如果是进货单（进货）
+				demandId=shoppingCartService.getDemandId(item.getProNum(), uDemandProductList);
+				keyName+="_d"+demandId;
+			}else if(item.getSource()!=null&&item.getSource()==Short.parseShort(ShoppingCarSourceEnum.share.toString())){
+				//分销区（不同的代理商进行拆单）
+				keyName+="_w"+item.getSharerWeiID();
+			}
+			//供应商订单
+			ShoppingCar shoppingCar=null;
+			//当前供应商的产品列表（不同的产品）
+			List<ShoppingCarList> proItemList=null;
+			if(!map.containsKey(keyName)){
+				proItemList=new ArrayList<ShoppingCarList>();
+				shoppingCar = new ShoppingCar();
+				shoppingCar.setSupplierWeiId(item.getSupplierWeiId()); 
+				shoppingCar.setCompanyName(commonService.getShopName(shoplist, item.getSupplierWeiId())); //
+				shoppingCar.setBuyType(item.getBuyType());
+				shoppingCar.setSource(item.getSource()==null?0:item.getSource());
+				shoppingCar.setSellerWeiId(item.getSellerWeiId());
+				shoppingCar.setShopName(commonService.getShopName(shoplist, item.getShopWeiID()));
+				if (item.getBuyType()!=null&&item.getBuyType()==Short.parseShort(ShoppingCartTypeEnum.Jinhuo.toString())) {
+					shoppingCar.setDemandId(demandId);
+					shoppingCar.setIsFirstOrder(shoppingCartService.getIsFirstOrder(shopUSupplyChannelList, demandId));  
+				}
+			}else {//已经存在
+				shoppingCar=map.get(keyName);
+				proItemList=shoppingCar.getShoppingCarList();
+			}
+			//购物车已经有相同的产品（可能款式不同）
+			boolean isHavePro=false;
+			ShoppingCarList product=new ShoppingCarList();
+			if(proItemList!=null&&proItemList.size()>0){
+				for (ShoppingCarList ss : proItemList) {
+					if(ss.getProNum()==item.getProNum()){
+						product=ss;
+						isHavePro=true;
+					}
+				}
+			}
+			if(!isHavePro){//proItemList 还没有此产品
+				product.setProNum(item.getProNum());
+				if(item.getBuyType()==Short.parseShort(ShoppingCartTypeEnum.Wholesale.toString())){
+					//批发订单
+					List<WholesalePrice> priceList=new ArrayList<WholesalePrice>();
+					List<PShevleBatchPrice> batchPrices=find_BatchPrices(item.getProNum(),item.getSupplierWeiId());
+					if(batchPrices!=null&&batchPrices.size()>0){
+						for (PShevleBatchPrice bb : batchPrices) {
+							WholesalePrice pri=new WholesalePrice();
+							pri.setCount(bb.getCount());
+							pri.setPrice(bb.getPrice());
+							priceList.add(pri);
+						}
+					}
+					product.setWholesalePriceList(priceList);
+					try {
+						product.setWholesalePriceListJson(JsonUtil.objectToJsonStr(product.getWholesalePriceList()));
+					} catch (MapperException e) {
+						product.setWholesalePriceListJson("[]");
+					}
+				}
+				product.setMakerId(item.getMakerWeiID());
+				product.setShareId(item.getSharerWeiID());
+				//设置产品（）
+				proItemList.add(getShoppingCarList(item, product));
+			}else {
+				for(int i=0;i<proItemList.size();i++){
+					if(proItemList.get(i).getProNum()==item.getProNum()){
+						proItemList.set(i, getShoppingCarList(item,product));
+					}
+				}
+			}
+			shoppingCar.setShoppingCarList(proItemList);
+			map.put(keyName, shoppingCar);
+		}
+		for (ShoppingCar ss : map.values()) {
+			resultList.add(ss);
+		}
+		return resultList;
+	}
+	
+	public ShoppingCarList getShoppingCarList(TShoppingCar cart, ShoppingCarList item){
+		List<Style> list=item.getStyle();
+		if(list==null||list.size()<=0){
+			list=new ArrayList<Style>();
+		}
+		Style model=new Style();
+		model.setStyleId(cart.getStyleId()); 
+		int tcount = cart.getCount() != null ? cart.getCount() : 0;
+		model.setCount(tcount);
+		model.setStatus(cart.getStatus()!= null ? cart.getStatus() : 0);
+		model.setScid(cart.getScid()==null?-1:cart.getScid()); 
+		model.setPrice(cart.getPrice() != null ? cart.getPrice() : 0.0);
+		model.setShareOne(cart.getSharerWeiID()==null?0:cart.getSharerWeiID());
+		model.setSharePageProducer(cart.getMakerWeiID() != null ? cart.getMakerWeiID() : 0L);
+		model.setSharePageId(cart.getShareID() != null ? cart.getShareID() : 0L);
+		//=====================限时抢购=============================
+		model.setIsActivity((short) 0);
+		AActProductsShowTime ast = activityService.getAActProductsShowTime(cart.getProNum(), true);
+		if (ast != null) // 在展示时间端内
+		{
+			model.setIsActivity((short) 1);// 在活动时间内
+			//如果是代理区产品 则不取活动价
+			PProducts products=super.get(PProducts.class, cart.getProNum());
+			if(products!=null&&products.getPublishType()!=null&&products.getPublishType()>0){
+				AActShowProducts aps = super.get(AActShowProducts.class, ast.getProActId());
+				if (aps != null)// 产品有效
+				{
+					model.setActivityPrice(aps.getPrice());
+					int count = aps.getStockCount() == null ? 0 : aps.getStockCount();
+					if (count <= tcount) {
+						model.setCount(count);
+					} 
+				} 
+			}
+		}
+		//======================================================
+		// 属性
+	    model.setProperty(cart.getProperty1());
+	    model.setImage(ImgDomain.GetFullImgUrl(cart.getImage()));
+	    model.setProTitle(cart.getProTitle());
+	    model.setTradeWeiId(cart.getSellerWeiId() != null ? cart.getSellerWeiId() : -1);
+	    PProducts pp=super.get(PProducts.class, item.getProNum());
+	    model.setDisplayPrice(CommonMethod.getInstance().getDisplayPrice(pp.getDefaultPrice(), pp.getOriginalPrice(), pp.getPercent()));
+		
+		model.setpProductStyleKVVOList(shoppingCartService.getPProductStyleKVVOList(pProductStyleKVList, pProductSellKeyList, pProductSellValueList, cart.getProNum() != null ? cart.getProNum() : -1, cart.getStyleId()));
+		String property = model.getProperty().replace("-1", "默认");
+		model.setProperty(property);
+		model.setSource(cart.getSource()==null?0:cart.getSource());
+		
+		list.add(model);
+		item.setStyle(list);
+		return item;
+	}
+	
+	
+	public List<PShevleBatchPrice> find_BatchPrices(long proid, long supid) {
+		List<PShevleBatchPrice> result = new ArrayList<PShevleBatchPrice>();
+		String hql = "from PClassProducts p where p.weiId=? and p.productId=? and p.state=1";
+		PClassProducts model = super.getUniqueResultByHql(hql, new Object[] { supid, proid });
+		if (model != null) {
+			result = getBatchPrices(model.getId());
+		}
+		return result;
+	}
+
+	public List<PShevleBatchPrice> getBatchPrices(long id) {
+		String hql = "from PShevleBatchPrice p where p.id=? order by p.count";
+		return super.find(hql, new Object[] { id });
+	}
+	
+	public ReturnModel exchangeProduct(Long weiid,String cartJson,BAddressVO address){
+		ReturnModel rqModel=new ReturnModel();
+		ReturnModel getParam=getShopCarDTO(weiid,cartJson);
+		if(getParam.getStatu().equals(ReturnStatus.Success)){
+			ShopCarDTO cartDto=(ShopCarDTO)getParam.getBasemodle();
+			if(cartDto!=null&&cartDto.getProNum()!=null){
+				BShoppingCartVO vo=new BShoppingCartVO();
+				PProducts product=super.get(PProducts.class, cartDto.getProNum());
+				PProductStyles styles=super.get(PProductStyles.class, cartDto.getStyleId());
+				if(product!=null&&styles!=null){
+					UWallet wallet=super.get(UWallet.class, weiid);
+					if(wallet==null||wallet.getAbleTicket()==null||wallet.getAbleTicket()<(styles.getPrice()*cartDto.getCount()))
+					{
+						rqModel.setStatu(ReturnStatus.SystemError);
+						rqModel.setStatusreson("您的购物券不足！");
+						return rqModel;
+					}
+					vo.setSupplierId(product.getSupplierWeiId());
+					vo.setSupplierName(commonService.getShopNameByWeiId(product.getSupplierWeiId()));
+					vo.setBuyType(Short.parseShort(ShoppingCartTypeEnum.Convert.toString()));
+					vo.setSource(Integer.parseInt(ShoppingCarSourceEnum.convert.toString()));
+					
+					BShoppingCartProductVO pro=new BShoppingCartProductVO();
+					pro.setProNum(cartDto.getProNum());
+					pro.setProductStyleId(String.valueOf(cartDto.getStyleId()));
+					pro.setCount(cartDto.getCount());
+					pro.setProperty(cartDto.getProperty1());
+					pro.setProductPrice(styles.getPrice());
+					pro.setImageUrl(ImgDomain.GetFullImgUrl(product.getDefaultImg()));
+					pro.setProductTitle(product.getProductTitle()); 
+					List<BShoppingCartProductVO> prolist=new ArrayList<BShoppingCartProductVO>();
+					prolist.add(pro);
+					vo.setProductList(prolist); 
+					List<BShoppingCartVO> result = new ArrayList<BShoppingCartVO>();
+					result.add(vo);
+					return getSettlementDataSure(result, address, weiid);
+				}else {
+					rqModel.setStatu(ReturnStatus.SystemError);
+					rqModel.setStatusreson("产品已下架或不存在");
+				}
+			}else {
+				rqModel.setStatu(ReturnStatus.SystemError);
+				rqModel.setStatusreson("参数有误");
+			}
+		}else {
+			return getParam;
+		}
+		return rqModel;
+	}
+	
+	
+	public ReturnModel getSettlementDataSure(List<BShoppingCartVO> resultlist,BAddressVO addressVO,long weiid){
+		ReturnModel rq = new ReturnModel();
+		Map<String, Object> mapResult = new HashMap<String, Object>();
+		List<BShoppingCartVO> result = new ArrayList<BShoppingCartVO>();
+		if (resultlist != null && resultlist.size() > 0) {
+			for (BShoppingCartVO cart : resultlist) {
+				cart = cartService.getCartModel(cart, addressVO);
+				result.add(cart);
+				if(cart.getProductList()!=null&&cart.getProductList().size()>0){
+					for (BShoppingCartProductVO pp : cart.getProductList()) {
+						if(pp.getActivityModel()!=null&&pp.getActivityModel().getActId()>0){
+							mapResult.put("payTimeLimit", 600);
+						}
+					}
+				}
+			}
+		}
+		mapResult.put("receiveInfo", addressVO);
+		mapResult.put("supplierOrderList", result);
+		rq.setStatu(ReturnStatus.Success);
+		rq.setBasemodle(mapResult);
+		rq.setStatusreson("成功");
+		return rq;
+	}
+	
+	public ReturnModel getShopCarDTO(long weiId,String json) {
+		ReturnModel returnModel = new ReturnModel();
+		if(ObjectUtil.isEmpty(json)){
+			returnModel.setStatu(ReturnStatus.SystemError);
+			returnModel.setStatusreson("产品不能为空");
+			return returnModel;
+		}
+		try {
+			ShopCarDTO shopCarDTO = new ShopCarDTO();
+			JSONObject obj;
+			obj = JSONObject.fromObject(json);
+			shopCarDTO.setSupplierWeiId(obj.getLong("supplierID"));
+			if (shopCarDTO.getSupplierWeiId() < 0) {
+				returnModel.setStatu(ReturnStatus.ParamError);
+				returnModel.setStatusreson("参数supplierID错误");
+				return returnModel;
+			}
+			// sellerWeiId(成交微店号)
+			shopCarDTO.setSellerWeiId(obj.getLong("sellerWeiId"));
+			if (shopCarDTO.getSellerWeiId() <= 0) {
+				shopCarDTO.setSellerWeiId(weiId);
+			}
+			// proNum(产品id)
+			shopCarDTO.setProNum(obj.getLong("proNum"));
+			if (shopCarDTO.getProNum() <= 0) {
+				returnModel.setStatu(ReturnStatus.ParamError);
+				returnModel.setStatusreson("参数proNum错误");
+				return returnModel;
+			}
+			// count(产品数量)
+			shopCarDTO.setCount(obj.getInt("count"));
+			if (shopCarDTO.getCount() <= 0) {
+				returnModel.setStatu(ReturnStatus.ParamError);
+				returnModel.setStatusreson("参数count错误");
+				return returnModel;
+			}
+			shopCarDTO.setImage(obj.getString("image"));
+			shopCarDTO.setProTitle(obj.getString("proTitle"));
+			if (shopCarDTO.getProTitle() == null || "".equals(shopCarDTO.getProTitle()) || "null".equals(shopCarDTO.getProTitle())) {
+				returnModel.setStatu(ReturnStatus.ParamError);
+				returnModel.setStatusreson("参数proTitle错误");
+				return returnModel;
+			}
+			// property
+			shopCarDTO.setProperty1(obj.getString("property"));
+			String property = shopCarDTO.getProperty1().replace("-1", "默认");
+			shopCarDTO.setProperty1(property);
+		
+			// 订单类型
+			shopCarDTO.setBuyType((short) obj.getInt("buyType"));
+			if (shopCarDTO.getBuyType() <= 0) {
+				returnModel.setStatu(ReturnStatus.ParamError);
+				returnModel.setStatusreson("参数BuyType错误");
+				return returnModel;
+			}
+			// styleId（款式id）
+			shopCarDTO.setStyleId(obj.getLong("styleId"));
+			if (shopCarDTO.getStyleId() <= 0) {
+				returnModel.setStatu(ReturnStatus.ParamError);
+				returnModel.setStatusreson("参数styleId错误");
+				return returnModel;
+			}
+			// source(区)
+			shopCarDTO.setSource((short) obj.getInt("source"));
+			if (shopCarDTO.getSource() < 0 || shopCarDTO.getSource() > 2) {
+				returnModel.setStatu(ReturnStatus.ParamError);
+				returnModel.setStatusreson("参数source错误");
+				return returnModel;
+			}
+			returnModel.setStatu(ReturnStatus.Success);
+			returnModel.setBasemodle(shopCarDTO);
+		} catch (Exception ex) {
+			returnModel.setStatu(ReturnStatus.SystemError);
+			returnModel.setBasemodle(ex);
+			returnModel.setStatusreson(ex.getMessage());
+		}
+		return returnModel;
+	}
+}

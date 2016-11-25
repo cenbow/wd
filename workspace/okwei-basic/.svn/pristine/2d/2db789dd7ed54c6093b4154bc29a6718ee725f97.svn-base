@@ -1,0 +1,53 @@
+package com.okwei.service;
+
+import java.util.List;
+
+import com.okwei.bean.domain.DBrands;
+import com.okwei.bean.dto.SantoMgtDTO;
+import com.okwei.bean.vo.ReturnModel;
+import com.okwei.bean.vo.SantoMgtVO;
+import com.okwei.common.Limit;
+import com.okwei.common.PageResult;
+
+public interface ISantoMgtService extends IBaseService{
+	  /**
+     * 查询品牌商管理列表
+     * 
+     * @param title
+     * @param state
+     * @return
+     */
+    public PageResult<SantoMgtVO> findPageSanto(SantoMgtDTO sMgtDTO,Limit limit);
+    /**
+     * 验证页面返回值
+     * 
+     * @param title
+     * @param state
+     * @return
+     */
+    ReturnModel getSantoDTO(String json);
+    /**
+     * 增加品牌
+     * 
+     * @param title
+     * @param state
+     * @return
+     */
+    ReturnModel saveSantoDTO(SantoMgtVO vo);
+    /**
+     * 增加品牌
+     * 
+     * @param title
+     * @param state
+     * @return
+     */
+    List<DBrands> findDBrands(); 
+    /**
+     * 查询代理商管理列表
+     * 
+     * @param title
+     * @param state
+     * @return
+     */
+    public PageResult<SantoMgtVO> findPageAgent(SantoMgtDTO sMgtDTO,Limit limit);
+}

@@ -1,0 +1,101 @@
+package com.okwei.bean.domain;
+
+import static javax.persistence.GenerationType.IDENTITY;
+
+import java.util.Date;
+
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.Id;
+import javax.persistence.Table;
+
+/**
+ * DAgentTasks entity. @author MyEclipse Persistence Tools
+ */
+@Entity
+@Table(name = "D_AgentTasks")
+public class DAgentTasks implements java.io.Serializable {
+
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = -5990003499428203047L;
+	// Fields
+
+	private Long taskId;
+	private Integer brandId;
+	private Long weiId;
+	private String content;
+	private Date createTime;
+
+	// Constructors
+
+	/** default constructor */
+	public DAgentTasks() {
+	}
+
+	/** minimal constructor */
+	public DAgentTasks(Long taskId) {
+		this.taskId = taskId;
+	}
+
+	/** full constructor */
+	public DAgentTasks(Long taskId, Integer brandId, Long weiId,
+			String content, Date createTime) {
+		this.taskId = taskId;
+		this.brandId = brandId;
+		this.weiId = weiId;
+		this.content = content;
+		this.createTime = createTime;
+	}
+
+	// Property accessors
+	@Id
+	@GeneratedValue(strategy = IDENTITY)
+	@Column(name = "TaskID", unique = true, nullable = false)
+	public Long getTaskId() {
+		return this.taskId;
+	}
+
+	public void setTaskId(Long taskId) {
+		this.taskId = taskId;
+	}
+
+	@Column(name = "BrandID")
+	public Integer getBrandId() {
+		return this.brandId;
+	}
+
+	public void setBrandId(Integer brandId) {
+		this.brandId = brandId;
+	}
+
+	@Column(name = "WeiID")
+	public Long getWeiId() {
+		return this.weiId;
+	}
+
+	public void setWeiId(Long weiId) {
+		this.weiId = weiId;
+	}
+
+	@Column(name = "Content", length = 65535)
+	public String getContent() {
+		return this.content;
+	}
+
+	public void setContent(String content) {
+		this.content = content;
+	}
+
+	@Column(name = "CreateTime", length = 0)
+	public Date getCreateTime() {
+		return this.createTime;
+	}
+
+	public void setCreateTime(Date createTime) {
+		this.createTime = createTime;
+	}
+
+}

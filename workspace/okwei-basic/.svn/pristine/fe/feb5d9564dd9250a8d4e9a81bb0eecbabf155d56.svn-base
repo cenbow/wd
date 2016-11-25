@@ -1,0 +1,334 @@
+package com.okwei.dao.agent;
+
+import java.util.List;
+
+import com.okwei.bean.domain.DAgentInfo;
+import com.okwei.bean.domain.DAgentMembers;
+import com.okwei.bean.domain.DAgentTasks;
+import com.okwei.bean.domain.DAgentTeam;
+import com.okwei.bean.domain.DCastellans;
+import com.okwei.common.Limit;
+import com.okwei.common.PageResult;
+
+public interface IDAgentMgtDao {
+
+	/**
+	 * 获取代理商 信息
+	 * zy
+	 * @param weiid 用户weiid
+	 * @param brandid  品牌id
+	 * @return
+	 */
+	public DAgentInfo getDAgentInfo(Long weiid, Integer brandid);
+	/**
+	 * 获取代理商代理的品牌列表 
+	 * @param weiid
+	 * @return
+	 */
+	public List<DAgentInfo> findDagentInfoByWeiid(Long weiid);
+	
+	public List<DAgentInfo> find_DAgentInfoBySuperWeiid(Long weiid,Integer brandid);
+
+	/**
+	 * 新增编外代理（或者 城主拉进来的代理）
+	 * zy
+	 * @param weiid
+	 * @param supweiid
+	 * @param brandid
+	 * @return 代理商 agentID
+	 */
+	public long add_DAgentInfo(Long weiid, Long supweiid, Integer brandid);
+
+	/**
+	 * 获取代理团队列表
+	 * zy
+	 * @param weiid  队长weiid
+	 * @param brandid  品牌id
+	 * @param pageIndex
+	 * @param pageSize
+	 * @return
+	 */
+	public PageResult<DAgentMembers> find_DAgentMembers(Long weiid, Integer brandid, int pageIndex, int pageSize);
+
+	/**
+	 * 获取代理团队列表
+	 * zy
+	 * @param weiid   队长weiid
+	 * @param brandid  品牌id
+	 * @return
+	 */
+	public List<DAgentMembers> find_DAgentMembers(Long weiid, Integer brandid);
+
+	/**
+	 * 获取成员信息
+	 * zy
+	 * @param weiid
+	 * @param brandid
+	 * @return
+	 */
+	public DAgentMembers get_DAgentMembers(Long weiid, Integer brandid);
+
+	/**
+	 * 获取代理团队 成员数量
+	 * zy
+	 * @param weiid
+	 * @param brandid
+	 * @return
+	 */
+	public long count_DAgentMembers(Long weiid, Integer brandid);
+
+	/**
+	 * 新增代理成员(加入到城主报名者的团队中)
+	 * zy
+	 * @param agentid 当前用户的代理商id()
+	 * @param weiid 用户id
+	 * @param supweiid 城主报名者的微店号
+	 * @param brandid 品牌id
+	 * @return
+	 */
+	public boolean add_DAgentMembers(Long agentid, Long weiid, Long supweiid, Integer brandid);
+	/**
+	 * 新增团队队长（城主申请）
+	 * zy
+	 * @param brandid
+	 * @param weiid
+	 * @param province
+	 * @param city
+	 * @param district
+	 * @return
+	 */
+	public int add_DAgentTeam(Integer brandid,Long weiid,Integer province,Integer city,Integer district);
+
+	/**
+	 * 城主任务列表
+	 * zy(2016-6-20)
+	 * zlp(2016-7-1)
+	 * @param weiid 城主（发布者）
+	 * @param brandid 品牌id
+	 * @param pageIndex
+	 * @param pageSize
+	 * @return
+	 */
+	public PageResult<DAgentTasks> find_DAgentTasks(Long weiid, Integer brandid, int pageIndex, int pageSize);
+
+	/**
+	 * 新增任务
+	 * zy
+	 * @param weiid
+	 * @param brandid
+	 * @param content
+	 * @return
+	 */
+	public boolean add_DAgentTasks(Long weiid, Integer brandid, String content);
+
+	/**
+	 * 城主竞选的 团队列表
+	 * zy
+	 * @param brandid
+	 * @param province
+	 * @param city
+	 * @param district
+	 * @return
+	 */
+	public List<DAgentTeam> find_DAgentTeams(Integer brandid, Integer province, Integer city, Integer district);
+
+	/**
+	 * 获取成员数量最多的团队信息
+	 * zy
+	 * @param brandid
+	 * @param province
+	 * @param city
+	 * @param district
+	 * @return
+	 */
+	public DAgentTeam getDAgentTeamMaxNum(Integer brandid, Integer province, Integer city, Integer district);
+
+	/**
+	 * 获取团队 信息
+	 * zy
+	 * @param brandid
+	 * @param weiid
+	 * @return
+	 */
+	public DAgentTeam getDAgentTeam(Integer brandid, Long weiid);
+
+	/**
+	 * 城主竞选的 团队数量
+	 * zy
+	 * @param brandid
+	 * @param province
+	 * @param city
+	 * @param district
+	 * @return
+	 */
+	public long count_DAgentTeams(Integer brandid, Integer province, Integer city, Integer district);
+
+	/**
+	 * 获取某个区域的城主 列表（包括副城主）
+	 * zy
+	 * @param brandid
+	 * @param province
+	 * @param city
+	 * @param district
+	 * @return
+	 */
+	public List<DCastellans> find_DCastellans(Integer brandid, Integer province, Integer city, Integer district);
+
+	/**
+	 * 获取城主列表(判断用户是否为城主/副城主)
+	 * zy
+	 * @param brandid
+	 * @param weiids
+	 * @return
+	 */
+	public List<DCastellans> find_DCastellans(Integer brandid, List<Long> weiids);
+	/**
+	 * 获取代理商列表（判断用户是否属于某品牌代理）
+	 * zy
+	 * @param brandid
+	 * @param weiids
+	 * @return
+	 */
+	public List<DAgentInfo> find_DAgentInfos(Integer brandid,List<Long> weiids);
+	/**
+	 * 获取代理品牌列表
+	 * @param brandid
+	 * @param weiid
+	 * @return
+	 */
+	public List<DAgentInfo> find_DAgentInfos(Long weiid,Integer brandid);
+	
+
+	/**
+	 * 后去品牌代理列表
+	 * zy(2016-10-12)
+	 * @param brandid
+	 * @param step
+	 * @return
+	 */
+	public List<DAgentInfo> find_DAgentInfosByBrandId(Integer brandid,Integer step);
+
+	/**
+	 * 获取某地城主申请数量
+	 * zy
+	 * @param brandid
+	 * @param province
+	 * @param city
+	 * @param district
+	 * @return
+	 */
+	public long count_DAgentApplys(Integer brandid, Integer province, Integer city, Integer district);
+
+	/**
+	 * 获取品牌名称
+	 * 
+	 * @param brandid
+	 * @return
+	 */
+	public String BrandName(Integer brandid);
+
+	/**
+	 * 获取品牌代理金额
+	 * 
+	 * @param brandid
+	 * @return
+	 */
+	public Double BrandCost(Integer brandid);
+
+
+	/**
+	 * 查看该区域是否有城主
+	 * zy
+	 * @param brandid
+	 * @param province
+	 * @param city
+	 * @param district
+	 * @return
+	 */
+	public DCastellans get_DCastellan(Integer brandid, Integer province, Integer city, Integer district);
+
+	/**
+	 * 查询全国有多少人报名
+	 * 
+	 * @param brandid
+	 * @return
+	 */
+	public List<DAgentTeam> find_DAgentTeams1(Integer brandid);
+
+	/**
+	 * 品牌代理总区域数量
+	 * 
+	 * @param brandid
+	 * @param province
+	 * @param city
+	 * @param district
+	 * @return
+	 */
+	public long count_DAgentTeamsDistrict(Integer brandid);
+
+	/**
+	 * 品牌代理的总团队数
+	 * 
+	 * @param brandid
+	 * @param province
+	 * @param city
+	 * @param district
+	 * @return
+	 */
+	public long count_DAgentTeamsByBrand(Integer brandid);
+
+	/**
+	 * 品牌区域的编内或编外城主信息
+	 * 
+	 * @param brandid
+	 * @param province
+	 * @param city
+	 * @param district
+	 * @return
+	 */
+	DCastellans find_DCastellans(Integer brandid, Integer province, Integer city, Integer district, Integer outOrIn);
+
+	/**
+	 * 查询全国有多少人报名 用于分页
+	 * 
+	 * @param brandid
+	 * @return
+	 */
+	PageResult<DAgentTeam> find_DAgentTeamsPage(Integer brandid, Integer province, Integer city, Integer district, Limit limit);
+	/**
+	 * 更新品牌辅助表（城主、副城主、代理商 数量变化）
+	 * zy(2016-7-1)
+	 * @param brandid 品牌id
+	 * @param castllantype 城主类型（枚举 CastellanType：1城主、2副城主）PS：如果是代理商数量变化，参数传null。
+	 * @param agentType 代理商类型（枚举AgentType：1编内，2编外）必填项目
+	 * @param count 新增数量
+	 */
+	public void edit_DBrandsExt(Integer brandid,Integer castllantype, Integer agentType,int count);
+	/**
+	 * 更新城主信息（城主晋升/代理商数量变化）
+	 * 备注： 加入竞选人团队后 做此操作
+	 * zy (2016-7-4)
+	 * @param weiid 竞选城主的 竞选人weiid （supperweiid）
+	 * @param brandid 品牌id
+	 * @param province 省
+	 * @param city 市
+	 * @param district 区
+	 */
+	public void edit_CastellanInfo(Long weiid,Integer brandid,Integer province,Integer city,Integer district);
+	
+	/**判断自已是否是城主或副城主
+	 * @author zlp(2016-7-4)
+	 * @param brandid
+	 * @param weiid
+	 * @return
+	 */
+	DCastellans get_DCastellan(Integer brandid, long weiid);
+	/**
+	 * 获取用户针对某个品牌的身份标识
+	 * @param weiid
+	 * @param brandid
+	 * @return
+	 */
+	public int getUserIdentityForBrand(Long weiid,Integer brandid);
+	
+}
